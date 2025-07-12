@@ -130,6 +130,18 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'API healthy - v2.3 [EXTENSION ROUTES]' });
 });
 
+// Migration endpoint  
+app.post('/api/migrate', async (_req, res) => {
+  try {
+    const { runMigrations } = await import('./utils/migrate');
+    const result = await runMigrations();
+    res.json(result);
+  } catch (error) {
+    console.error('Migration failed:', error);
+    res.status(500).json({ success: false, error: 'Migration failed', details: error });
+  }
+});
+
 // Quick check endpoint
 app.get('/api/debug/counts', async (_req, res) => {
   try {
