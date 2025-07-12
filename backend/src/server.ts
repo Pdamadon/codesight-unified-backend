@@ -48,7 +48,7 @@ app.get('/health', (_req, res) => {
 // Database connection will be tested when routes are accessed
 
 // Import routes with individual error handling
-console.log('🔍 Starting route imports...');
+console.log('🔍 Starting route imports... [FORCED REDEPLOY]');
 
 let workersRouter: any;
 try {
@@ -99,7 +99,7 @@ console.log('📦 Route import phase completed');
 
 // API Routes
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'API healthy - v2.2' });
+  res.json({ status: 'API healthy - v2.3 [EXTENSION ROUTES]' });
 });
 
 // Quick check endpoint
