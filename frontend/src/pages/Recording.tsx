@@ -121,9 +121,14 @@ const Recording: React.FC = () => {
 
   const startRecording = async () => {
     try {
-      // Get screen recording permission
+      // Get screen recording permission with compression settings
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
+        video: {
+          width: { ideal: 1280, max: 1280 },    // 720p width
+          height: { ideal: 720, max: 720 },     // 720p height  
+          frameRate: { ideal: 15, max: 20 },    // Lower framerate for smaller files
+          cursor: "always"                       // Always show cursor for AI training
+        },
         audio: true // Include system audio if available
       });
 
@@ -139,15 +144,44 @@ const Recording: React.FC = () => {
       screenStreamRef.current = screenStream;
       audioStreamRef.current = audioStream;
 
-      // Set up screen recording
-      const mediaRecorder = new MediaRecorder(screenStream, {
-        mimeType: 'video/webm;codecs=vp9'
-      });
+      // Set up screen recording with compression and fallbacks
+      let mediaRecorderOptions;
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+        mediaRecorderOptions = {
+          mimeType: 'video/webm;codecs=vp8',
+          videoBitsPerSecond: 1000000,        // 1 Mbps 
+          audioBitsPerSecond: 128000          // 128 kbps
+        };
+      } else if (MediaRecorder.isTypeSupported('video/webm')) {
+        mediaRecorderOptions = {
+          mimeType: 'video/webm',
+          videoBitsPerSecond: 1000000
+        };
+      } else {
+        mediaRecorderOptions = { videoBitsPerSecond: 1000000 };
+      }
+      
+      const mediaRecorder = new MediaRecorder(screenStream, mediaRecorderOptions);
+      console.log('Video compression settings:', mediaRecorderOptions);
 
-      // Set up audio recording  
-      const audioRecorder = new MediaRecorder(audioStream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      // Set up audio recording with fallbacks
+      let audioRecorderOptions;
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        audioRecorderOptions = {
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: 64000         // 64 kbps - sufficient for voice narration
+        };
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        audioRecorderOptions = {
+          mimeType: 'audio/webm',
+          audioBitsPerSecond: 64000
+        };
+      } else {
+        audioRecorderOptions = { audioBitsPerSecond: 64000 };
+      }
+      
+      const audioRecorder = new MediaRecorder(audioStream, audioRecorderOptions);
+      console.log('Audio compression settings:', audioRecorderOptions);
 
       chunksRef.current = [];
       audioChunksRef.current = [];
