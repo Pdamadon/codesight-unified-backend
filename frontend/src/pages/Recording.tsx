@@ -126,8 +126,7 @@ const Recording: React.FC = () => {
         video: {
           width: { ideal: 1280, max: 1280 },    // 720p width
           height: { ideal: 720, max: 720 },     // 720p height  
-          frameRate: { ideal: 15, max: 20 },    // Lower framerate for smaller files
-          cursor: "always"                       // Always show cursor for AI training
+          frameRate: { ideal: 15, max: 20 }     // Lower framerate for smaller files
         },
         audio: true // Include system audio if available
       });

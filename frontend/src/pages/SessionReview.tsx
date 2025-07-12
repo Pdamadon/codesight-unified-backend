@@ -348,8 +348,8 @@ const SessionReview: React.FC = () => {
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
                   {new Set([
-                    ...(extensionData.clickEvents?.map(c => new URL(c.url).hostname) || []),
-                    ...(extensionData.inputEvents?.map(i => new URL(i.url).hostname) || [])
+                    ...(extensionData.clickEvents?.map((c: any) => new URL(c.url).hostname) || []),
+                    ...(extensionData.inputEvents?.map((i: any) => new URL(i.url).hostname) || [])
                   ]).size}
                 </div>
                 <div className="text-sm text-gray-600">Shopping Sites</div>
@@ -361,7 +361,7 @@ const SessionReview: React.FC = () => {
               <h4 className="font-medium text-gray-900 mb-2">Sample Shopping Interactions:</h4>
               <div className="space-y-1 text-sm text-gray-600 max-h-32 overflow-y-auto">
                 {/* Show shopping clicks */}
-                {extensionData.clickEvents?.slice(0, 3).map((click, index) => (
+                {extensionData.clickEvents?.slice(0, 3).map((click: any, index: number) => (
                   <div key={`click-${index}`} className="flex justify-between">
                     <span className="text-red-600 font-medium">Product Click</span>
                     <span>
@@ -371,7 +371,7 @@ const SessionReview: React.FC = () => {
                 ))}
                 
                 {/* Show form inputs */}
-                {extensionData.inputEvents?.slice(0, 3).map((input, index) => (
+                {extensionData.inputEvents?.slice(0, 3).map((input: any, index: number) => (
                   <div key={`input-${index}`} className="flex justify-between">
                     <span className="text-blue-600 font-medium">Form Input</span>
                     <span>
@@ -381,7 +381,7 @@ const SessionReview: React.FC = () => {
                 ))}
                 
                 {/* Show navigation */}
-                {extensionData.navigationEvents?.slice(0, 2).map((nav, index) => (
+                {extensionData.navigationEvents?.slice(0, 2).map((nav: any, index: number) => (
                   <div key={`nav-${index}`} className="flex justify-between">
                     <span className="text-green-600 font-medium">Navigation</span>
                     <span>
