@@ -91,19 +91,12 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'API healthy - v2.0' });
 });
 
-// Temporary migration endpoint (remove in production)
+// Migration endpoint
 app.post('/api/migrate', async (_req, res) => {
   try {
-    const pool = (await import('./database')).default;
-    
-    // Add new columns if they don't exist
-    await pool.query(`
-      ALTER TABLE workers 
-      ADD COLUMN IF NOT EXISTS paypal_email VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS worker_data JSONB;
-    `);
-    
-    res.json({ success: true, message: 'Migration completed' });
+    const { runMigrations } = await import('./database/migrate');
+    const result = await runMigrations();
+    res.json(result);
   } catch (error) {
     console.error('Migration error:', error);
     res.status(500).json({ error: 'Migration failed', details: error });
