@@ -76,6 +76,15 @@ const Recording: React.FC = () => {
   };
 
   const currentScenario = scenarioDetails[scenario] || scenarioDetails.electronics;
+  const [sessionId, setSessionId] = useState<string>('');
+
+  useEffect(() => {
+    // Get session ID from localStorage
+    const storedSessionId = localStorage.getItem('sessionId');
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+    }
+  }, []);
 
   useEffect(() => {
     // Initialize interaction tracker
@@ -304,6 +313,25 @@ const Recording: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 <strong>Your Task:</strong> {currentScenario.task}
               </p>
+              {sessionId && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                  <p className="text-sm text-blue-900">
+                    <strong>Session ID for Extension:</strong> 
+                    <code className="ml-2 bg-white px-2 py-1 rounded font-mono text-xs select-all">
+                      {sessionId}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(sessionId)}
+                      className="ml-2 text-blue-600 hover:text-blue-800 text-xs underline"
+                    >
+                      Copy
+                    </button>
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Enter this ID in the browser extension to link the data
+                  </p>
+                </div>
+              )}
             </div>
             
             {/* Recording Status */}

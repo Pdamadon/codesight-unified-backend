@@ -133,6 +133,15 @@ const SessionSetup: React.FC = () => {
       return;
     }
     
+    // Generate session ID that matches extension format
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substr(2, 5);
+    const sessionId = `cs_${timestamp}_${random}`;
+    
+    // Store session ID for later use
+    localStorage.setItem('sessionId', sessionId);
+    console.log('Generated session ID:', sessionId);
+    
     // Pass scenario to recording page
     navigate(`/recording?scenario=${scenario}`);
   };

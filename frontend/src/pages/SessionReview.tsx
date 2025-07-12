@@ -132,11 +132,14 @@ const SessionReview: React.FC = () => {
       
       if (sessionId) {
         try {
+          console.log('Fetching extension data for session:', sessionId);
           const extensionResponse = await apiService.getExtensionData(sessionId);
+          console.log('Extension response:', extensionResponse);
           extensionData = extensionResponse.data;
           
           // Upload extension data as JSON file
           if (extensionData) {
+            console.log('Extension data found:', extensionData);
             const trainingData = {
               sessionId: sessionId,
               workerId: workerId,
@@ -163,18 +166,27 @@ const SessionReview: React.FC = () => {
             });
             
             const dataFileName = `session-${Date.now()}-data.json`;
+            console.log('Getting upload URL for JSON file:', dataFileName);
             const dataUploadResponse = await apiService.getUploadUrl('data', dataFileName, workerId);
+            console.log('Data upload response:', dataUploadResponse);
             
             if (dataUploadResponse.success && dataUploadResponse.data) {
+              console.log('Uploading JSON to S3...');
               await apiService.uploadFile(
                 dataUploadResponse.data.uploadUrl,
                 jsonBlob,
                 (progress) => setUploadProgress(80 + progress * 0.15) // 80-95% for JSON
               );
               dataFileKey = dataUploadResponse.data.fileKey;
+              console.log('JSON uploaded successfully with key:', dataFileKey);
+            } else {
+              console.error('Failed to get upload URL for JSON data');
             }
+          } else {
+            console.log('No extension data available for this session');
           }
         } catch (error) {
+          console.error('Error handling extension data:', error);
           console.warn('No extension data found for session:', sessionId);
         }
       }
