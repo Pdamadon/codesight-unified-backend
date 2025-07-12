@@ -91,6 +91,21 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'API healthy - v2.0' });
 });
 
+// Quick check endpoint
+app.get('/api/debug/counts', async (_req, res) => {
+  try {
+    const pool = (await import('./database')).default;
+    const workers = await pool.query('SELECT COUNT(*) FROM workers');
+    const sessions = await pool.query('SELECT COUNT(*) FROM sessions');
+    res.json({ 
+      workers: workers.rows[0].count, 
+      sessions: sessions.rows[0].count 
+    });
+  } catch (error) {
+    res.json({ error: String(error) });
+  }
+});
+
 // Migration endpoint
 app.post('/api/migrate', async (_req, res) => {
   try {
