@@ -87,24 +87,13 @@ const Recording: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Initialize interaction tracker
-    interactionTrackerRef.current = new InteractionTracker();
-    
-    // Initialize click overlay with real-time update callback
-    clickOverlayRef.current = new ClickOverlay((click) => {
-      setRecordingState(prev => ({
-        ...prev,
-        clickCaptures: [...prev.clickCaptures, click]
-      }));
-    });
+    // Note: Interaction tracking now handled by browser extension
+    // Only webapp recording is handled here
     
     return () => {
       // Cleanup on unmount
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
-      }
-      if (clickOverlayRef.current) {
-        clickOverlayRef.current.stop();
       }
       stopAllStreams();
     };
@@ -219,15 +208,8 @@ const Recording: React.FC = () => {
       mediaRecorder.start(1000); // Collect data every second
       audioRecorder.start(1000);
 
-      // Start interaction tracking
-      if (interactionTrackerRef.current) {
-        interactionTrackerRef.current.start();
-      }
-
-      // Start click overlay tracking
-      if (clickOverlayRef.current) {
-        clickOverlayRef.current.start();
-      }
+      // Note: Extension tracking is handled separately by browser extension
+      // No automatic webapp click tracking needed
 
       setRecordingState(prev => ({ 
         ...prev, 
