@@ -99,7 +99,7 @@ console.log('📦 Route import phase completed');
 
 // API Routes
 app.get('/api/health', (_req, res) => {
-  res.json({ status: 'API healthy - v2.1' });
+  res.json({ status: 'API healthy - v2.2' });
 });
 
 // Quick check endpoint
