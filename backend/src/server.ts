@@ -94,7 +94,7 @@ app.get('/api/health', (_req, res) => {
 // Migration endpoint
 app.post('/api/migrate', async (_req, res) => {
   try {
-    const { runMigrations } = await import('./database/migrate');
+    const { runMigrations } = await import('./utils/migrate');
     const result = await runMigrations();
     res.json(result);
   } catch (error) {

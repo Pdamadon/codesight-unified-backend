@@ -102,13 +102,9 @@ app.get('/api/health', (_req, res) => {
 });
 app.post('/api/migrate', async (_req, res) => {
     try {
-        const pool = (await Promise.resolve().then(() => __importStar(require('./database')))).default;
-        await pool.query(`
-      ALTER TABLE workers 
-      ADD COLUMN IF NOT EXISTS paypal_email VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS worker_data JSONB;
-    `);
-        res.json({ success: true, message: 'Migration completed' });
+        const { runMigrations } = await Promise.resolve().then(() => __importStar(require('./database/migrate')));
+        const result = await runMigrations();
+        res.json(result);
     }
     catch (error) {
         console.error('Migration error:', error);
