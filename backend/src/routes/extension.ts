@@ -180,6 +180,110 @@ router.get('/sessions/:sessionId/training-data', asyncHandler(async (req, res) =
   }
 }));
 
+// POST /api/extension/session-start - Start tracking session via HTTP
+router.post('/session-start', asyncHandler(async (req, res) => {
+  const { sessionId, status, userAgent, extensionData } = req.body;
+  
+  try {
+    await pool.query(
+      `INSERT INTO extension_sessions (session_id, status, start_time, user_agent, extension_data)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (session_id) DO UPDATE SET
+       status = $2, start_time = $3, user_agent = $4, extension_data = $5`,
+      [sessionId, status, new Date(), userAgent, JSON.stringify(extensionData)]
+    );
+
+    res.json({
+      success: true,
+      message: 'Session started successfully',
+      sessionId: sessionId
+    });
+  } catch (error) {
+    console.error('Failed to start session:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start session'
+    });
+  }
+}));
+
+// POST /api/extension/session-stop - Stop tracking session via HTTP
+router.post('/session-stop', asyncHandler(async (req, res) => {
+  const { sessionId, status, endTime } = req.body;
+  
+  try {
+    await pool.query(
+      `UPDATE extension_sessions 
+       SET status = $1, end_time = $2 
+       WHERE session_id = $3`,
+      [status, new Date(endTime), sessionId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Session stopped successfully',
+      sessionId: sessionId
+    });
+  } catch (error) {
+    console.error('Failed to stop session:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to stop session'
+    });
+  }
+}));
+
+// POST /api/extension/event - Store interaction event via HTTP
+router.post('/event', asyncHandler(async (req, res) => {
+  const { sessionId, eventType, eventData, timestamp } = req.body;
+  
+  try {
+    await pool.query(
+      `INSERT INTO extension_events (session_id, event_type, event_data, timestamp)
+       VALUES ($1, $2, $3, $4)`,
+      [sessionId, eventType, JSON.stringify(eventData), new Date(timestamp)]
+    );
+
+    res.json({
+      success: true,
+      message: 'Event stored successfully'
+    });
+  } catch (error) {
+    console.error('Failed to store event:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to store event'
+    });
+  }
+}));
+
+// POST /api/extension/session-complete - Complete session via HTTP
+router.post('/session-complete', asyncHandler(async (req, res) => {
+  const { sessionId, events, summary, completedAt } = req.body;
+  
+  try {
+    await pool.query(
+      `UPDATE extension_sessions 
+       SET status = $1, end_time = $2, total_events = $3, session_summary = $4
+       WHERE session_id = $5`,
+      ['completed', new Date(completedAt), events.length, JSON.stringify(summary), sessionId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Session completed successfully',
+      sessionId: sessionId,
+      eventCount: events.length
+    });
+  } catch (error) {
+    console.error('Failed to complete session:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to complete session'
+    });
+  }
+}));
+
 // GET /api/extension/sessions - List all extension sessions
 router.get('/sessions', asyncHandler(async (req, res) => {
   const { status, limit = 50, offset = 0 } = req.query;
