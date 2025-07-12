@@ -129,7 +129,7 @@ const SessionReview: React.FC = () => {
         extensionData: extensionData, // Include precise clicks
         videoFileKey,
         audioFileKey,
-        sessionId: sessionId
+        sessionId: sessionId || undefined
       });
 
       if (!sessionResponse.success) {
