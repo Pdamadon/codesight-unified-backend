@@ -77,7 +77,7 @@ router.post('/presigned-url', async (req, res) => {
       success: true,
       uploadUrl: signedUrl,
       fileUrl: fileUrl,
-      key: uniqueFileName,
+      fileKey: uniqueFileName,
     });
     return;
   } catch (error) {
@@ -127,7 +127,7 @@ router.post('/direct', upload.single('file'), async (req, res) => {
     res.json({
       success: true,
       fileUrl: fileUrl,
-      key: uniqueFileName,
+      fileKey: uniqueFileName,
       size: req.file.size,
     });
     return;
@@ -178,7 +178,7 @@ router.post('/multiple', upload.array('files', 10), async (req, res) => {
       return {
         originalName: file.originalname,
         fileUrl: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${uniqueFileName}`,
-        key: uniqueFileName,
+        fileKey: uniqueFileName,
         size: file.size,
       };
     });
