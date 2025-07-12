@@ -103,6 +103,36 @@ app.post('/api/migrate', async (_req, res) => {
   }
 });
 
+// Admin endpoint to check recent activity
+app.get('/api/admin/recent', async (_req, res) => {
+  try {
+    const pool = (await import('./database')).default;
+    
+    const workers = await pool.query(
+      'SELECT worker_id, email, worker_data, status, created_at FROM workers ORDER BY created_at DESC LIMIT 10'
+    );
+    
+    const sessions = await pool.query(
+      'SELECT id, worker_id, session_data, video_url, audio_url, status, created_at FROM sessions ORDER BY created_at DESC LIMIT 10'
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        recentWorkers: workers.rows,
+        recentSessions: sessions.rows,
+        counts: {
+          totalWorkers: workers.rowCount,
+          totalSessions: sessions.rowCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Admin query error:', error);
+    res.status(500).json({ error: 'Failed to get admin data', details: error });
+  }
+});
+
 // Register routes with safety checks
 console.log('🔍 Starting route registration...');
 
