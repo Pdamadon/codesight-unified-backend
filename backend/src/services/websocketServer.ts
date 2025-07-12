@@ -101,10 +101,20 @@ export class ExtensionWebSocketServer {
   private async handleSessionStart(ws: WebSocket, message: any): Promise<void> {
     const { sessionId } = message;
     
-    if (!sessionId) {
+    // Input validation
+    if (!sessionId || typeof sessionId !== 'string') {
       ws.send(JSON.stringify({
         type: 'error',
-        message: 'Session ID is required'
+        message: 'Valid session ID is required'
+      }));
+      return;
+    }
+
+    // Sanitize session ID (only allow alphanumeric and underscores)
+    if (!/^[a-zA-Z0-9_-]+$/.test(sessionId) || sessionId.length > 50) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid session ID format'
       }));
       return;
     }
@@ -199,8 +209,36 @@ export class ExtensionWebSocketServer {
 
   private async handleInteractionEvent(ws: WebSocket, message: any): Promise<void> {
     const { sessionId, event } = message;
-    const session = this.sessions.get(sessionId);
+    
+    // Input validation
+    if (!sessionId || typeof sessionId !== 'string' || !event || typeof event !== 'object') {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Valid sessionId and event data required'
+      }));
+      return;
+    }
 
+    // Validate event structure
+    if (!event.type || typeof event.type !== 'string' || !event.data) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid event structure'
+      }));
+      return;
+    }
+
+    // Sanitize event type (whitelist allowed types)
+    const allowedEventTypes = ['click', 'input', 'scroll', 'navigation', 'hover'];
+    if (!allowedEventTypes.includes(event.type)) {
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Invalid event type'
+      }));
+      return;
+    }
+
+    const session = this.sessions.get(sessionId);
     if (!session) {
       ws.send(JSON.stringify({
         type: 'error',
