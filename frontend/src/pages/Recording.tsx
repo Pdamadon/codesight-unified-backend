@@ -292,7 +292,7 @@ const Recording: React.FC = () => {
   };
 
   return (
-    <Layout title="Recording Session - CodeSight Research">
+    <Layout title="Recording Session - CodeSight">
       <div className="max-w-4xl mx-auto">
         {/* Session Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">

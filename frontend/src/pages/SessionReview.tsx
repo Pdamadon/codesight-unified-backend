@@ -160,7 +160,7 @@ const SessionReview: React.FC = () => {
   }
 
   return (
-    <Layout title="Review Session - CodeSight Research">
+    <Layout title="Review Session - CodeSight">
       <div className="max-w-4xl mx-auto">
         {/* Session Summary */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">

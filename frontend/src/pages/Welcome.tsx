@@ -6,7 +6,7 @@ const Welcome: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <Layout title="Welcome to CodeSight Research">
+    <Layout title="Welcome to CodeSight">
       <div className="max-w-2xl mx-auto">
         {/* Welcome Message */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
@@ -16,8 +16,8 @@ const Welcome: React.FC = () => {
           
           <div className="prose prose-gray max-w-none">
             <p className="text-lg text-gray-700 mb-4">
-              You're invited to participate in an academic research study about how people make 
-              purchasing decisions online. Your participation will help researchers understand 
+              You're invited to participate in a study about how people make 
+              purchasing decisions online. Your participation will help us understand 
               consumer behavior and improve online shopping experiences.
             </p>
 
@@ -40,7 +40,7 @@ const Welcome: React.FC = () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
               <h4 className="font-semibold text-blue-900 mb-2">💰 Compensation</h4>
               <p className="text-blue-800">
-                You will receive $15-25 compensation upon successful completion of the study,
+                You will receive $15-25 compensation upon successful completion,
                 paid via PayPal within 48 hours.
               </p>
             </div>
@@ -48,9 +48,8 @@ const Welcome: React.FC = () => {
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
               <h4 className="font-semibold text-green-900 mb-2">🔒 Privacy & Ethics</h4>
               <p className="text-green-800">
-                This study follows strict academic research ethics. All data is anonymized,
-                securely stored, and used solely for research purposes. You can withdraw
-                at any time.
+                All data is anonymized, securely stored, and used solely for understanding shopping behaviors. 
+                You can withdraw at any time.
               </p>
             </div>
           </div>
