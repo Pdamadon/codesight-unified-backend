@@ -32,7 +32,9 @@ const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const compression_1 = __importDefault(require("compression"));
 const dotenv_1 = require("dotenv");
+const http_1 = require("http");
 const errorHandler_1 = require("./middleware/errorHandler");
+const websocketServer_1 = require("./services/websocketServer");
 const logger_1 = __importDefault(require("./utils/logger"));
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
@@ -59,7 +61,7 @@ app.get('/health', (_req, res) => {
         environment: process.env.NODE_ENV || 'development'
     });
 });
-console.log('🔍 Starting route imports...');
+console.log('🔍 Starting route imports... [FORCED REDEPLOY]');
 let workersRouter;
 try {
     const workersModule = require('./routes/workers');
@@ -96,19 +98,64 @@ try {
 catch (error) {
     console.error('❌ Transcription router failed:', error instanceof Error ? error.message : String(error));
 }
+let extensionRouter;
+try {
+    const extensionModule = require('./routes/extension');
+    extensionRouter = extensionModule.default || extensionModule;
+    console.log('✅ Extension router imported:', !!extensionRouter);
+}
+catch (error) {
+    console.error('❌ Extension router failed:', error instanceof Error ? error.message : String(error));
+}
 console.log('📦 Route import phase completed');
 app.get('/api/health', (_req, res) => {
-    res.json({ status: 'API healthy - v2.0' });
+    res.json({ status: 'API healthy - v2.3 [EXTENSION ROUTES]' });
+});
+app.get('/api/debug/counts', async (_req, res) => {
+    try {
+        const pool = (await Promise.resolve().then(() => __importStar(require('./database')))).default;
+        const workers = await pool.query('SELECT COUNT(*) FROM workers');
+        const sessions = await pool.query('SELECT COUNT(*) FROM sessions');
+        res.json({
+            workers: workers.rows[0].count,
+            sessions: sessions.rows[0].count
+        });
+    }
+    catch (error) {
+        res.json({ error: String(error) });
+    }
 });
 app.post('/api/migrate', async (_req, res) => {
     try {
-        const { runMigrations } = await Promise.resolve().then(() => __importStar(require('./database/migrate')));
+        const { runMigrations } = await Promise.resolve().then(() => __importStar(require('./utils/migrate')));
         const result = await runMigrations();
         res.json(result);
     }
     catch (error) {
         console.error('Migration error:', error);
         res.status(500).json({ error: 'Migration failed', details: error });
+    }
+});
+app.get('/api/admin/recent', async (_req, res) => {
+    try {
+        const pool = (await Promise.resolve().then(() => __importStar(require('./database')))).default;
+        const workers = await pool.query('SELECT worker_id, email, worker_data, status, created_at FROM workers ORDER BY created_at DESC LIMIT 10');
+        const sessions = await pool.query('SELECT id, worker_id, session_data, video_url, audio_url, status, created_at FROM sessions ORDER BY created_at DESC LIMIT 10');
+        res.json({
+            success: true,
+            data: {
+                recentWorkers: workers.rows,
+                recentSessions: sessions.rows,
+                counts: {
+                    totalWorkers: workers.rowCount,
+                    totalSessions: sessions.rowCount
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Admin query error:', error);
+        res.status(500).json({ error: 'Failed to get admin data', details: error });
     }
 });
 console.log('🔍 Starting route registration...');
@@ -140,6 +187,13 @@ if (transcriptionRouter) {
 else {
     console.log('❌ Transcription routes skipped - router not loaded');
 }
+if (extensionRouter) {
+    app.use('/api/extension', extensionRouter);
+    console.log('✅ Extension routes registered');
+}
+else {
+    console.log('❌ Extension routes skipped - router not loaded');
+}
 console.log('🚀 Route registration phase completed');
 app.use('*', errorHandler_1.notFoundHandler);
 app.use(errorHandler_1.errorHandler);
@@ -151,15 +205,25 @@ process.on('SIGINT', () => {
     console.log('SIGINT signal received: closing HTTP server');
     process.exit(0);
 });
-app.listen(PORT, () => {
+const server = (0, http_1.createServer)(app);
+try {
+    new websocketServer_1.ExtensionWebSocketServer(server);
+    console.log('✅ Extension WebSocket server initialized');
+}
+catch (error) {
+    console.error('❌ Failed to initialize WebSocket server:', error);
+}
+server.listen(PORT, () => {
     logger_1.default.info('Server started successfully', {
         port: PORT,
         environment: process.env.NODE_ENV || 'development',
         healthEndpoint: `http://localhost:${PORT}/health`,
+        websocketEndpoint: `ws://localhost:${PORT}/extension-ws`,
     });
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    console.log(`🔌 Extension WebSocket: ws://localhost:${PORT}/extension-ws`);
 });
 exports.default = app;
 //# sourceMappingURL=server.js.map
