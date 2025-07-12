@@ -5,7 +5,7 @@ class CodeSightBackground {
     this.isConnected = false;
     this.sessionId = null;
     this.eventQueue = [];
-    this.codesightUrl = 'ws://localhost:8080'; // Will be configurable
+    this.codesightUrl = 'ws://localhost:3001/extension-ws'; // Will be configurable
     
     this.initializeBackground();
   }
@@ -70,8 +70,15 @@ class CodeSightBackground {
 
   async connectWebSocket(url) {
     try {
+      console.log('Attempting to connect to:', url);
+      
       if (this.websocket) {
         this.websocket.close();
+      }
+
+      // Validate URL format
+      if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        throw new Error('Invalid WebSocket URL format. Must start with ws:// or wss://');
       }
 
       this.websocket = new WebSocket(url);
@@ -158,12 +165,26 @@ class CodeSightBackground {
     // Notify all content scripts to start tracking
     const tabs = await chrome.tabs.query({ active: true });
     for (const tab of tabs) {
-      chrome.tabs.sendMessage(tab.id, {
-        action: 'START_TRACKING',
-        sessionId: sessionId
-      }).catch(() => {
-        // Tab might not have content script injected yet
-      });
+      try {
+        // First try to inject content script if not already there
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content-script.js']
+        });
+        console.log('CodeSight: Content script injected into tab', tab.id);
+      } catch (error) {
+        console.log('CodeSight: Content script already exists or injection failed:', error.message);
+      }
+      
+      // Then send the start message
+      setTimeout(() => {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'START_TRACKING',
+          sessionId: sessionId
+        }).catch((error) => {
+          console.error('CodeSight: Failed to send START_TRACKING message:', error);
+        });
+      }, 500);
     }
   }
 

@@ -5,8 +5,48 @@ class ShoppingTracker {
     this.sessionId = null;
     this.events = [];
     this.startTime = 0;
+    this.persistentLogEntries = []; // Keep log entries across page loads
     
     this.initializeTracker();
+    this.restoreState();
+  }
+
+  // Save state to session storage
+  saveState() {
+    if (this.sessionId) {
+      sessionStorage.setItem('codesight-tracking-state', JSON.stringify({
+        isTracking: this.isTracking,
+        sessionId: this.sessionId,
+        startTime: this.startTime,
+        eventCount: this.events.length,
+        logEntries: this.persistentLogEntries,
+        allEvents: this.events // Save actual events too
+      }));
+    }
+  }
+
+  // Restore state from session storage
+  restoreState() {
+    const saved = sessionStorage.getItem('codesight-tracking-state');
+    if (saved) {
+      try {
+        const state = JSON.parse(saved);
+        this.isTracking = state.isTracking;
+        this.sessionId = state.sessionId;
+        this.startTime = state.startTime || Date.now();
+        this.persistentLogEntries = state.logEntries || [];
+        this.events = state.allEvents || []; // Restore actual events too!
+        
+        if (this.isTracking) {
+          console.log(`CodeSight: Restored tracking state for session: ${this.sessionId} with ${this.events.length} events`);
+          this.bindEvents();
+          this.showTrackingIndicator();
+          this.restoreActivityLog();
+        }
+      } catch (error) {
+        console.log('CodeSight: Failed to restore state:', error);
+      }
+    }
   }
 
   initializeTracker() {
@@ -29,16 +69,75 @@ class ShoppingTracker {
           break;
       }
     });
+
+    // Handle page navigation (SPA and full reloads)
+    this.setupNavigationHandling();
+  }
+
+  setupNavigationHandling() {
+    // For single-page applications (like many shopping sites)
+    let currentUrl = window.location.href;
+    
+    // Check for URL changes periodically
+    setInterval(() => {
+      if (this.isTracking && window.location.href !== currentUrl) {
+        console.log('CodeSight: Page navigation detected', currentUrl, '->', window.location.href);
+        
+        // Capture navigation event
+        this.captureEvent('navigation', {
+          from: currentUrl,
+          to: window.location.href,
+          title: document.title,
+          timestamp: Date.now()
+        });
+        
+        currentUrl = window.location.href;
+        
+        // Re-establish tracking on new page
+        setTimeout(() => {
+          if (this.isTracking) {
+            this.rebindEventsAfterNavigation();
+          }
+        }, 500);
+      }
+    }, 1000);
+
+    // Also listen for popstate events (back/forward navigation)
+    window.addEventListener('popstate', () => {
+      if (this.isTracking) {
+        console.log('CodeSight: Popstate navigation detected');
+        setTimeout(() => {
+          this.rebindEventsAfterNavigation();
+        }, 500);
+      }
+    });
+  }
+
+  rebindEventsAfterNavigation() {
+    console.log('CodeSight: Re-establishing tracking after navigation');
+    
+    // Make sure indicator is still visible
+    if (!document.getElementById('codesight-tracking-indicator')) {
+      this.showTrackingIndicator();
+    }
+    
+    // Events should still be bound, but let's make sure
+    // (Don't re-bind if already bound to avoid duplicates)
   }
 
   startTracking(sessionId) {
-    if (this.isTracking) return;
+    console.log('CodeSight: startTracking called with sessionId:', sessionId);
+    if (this.isTracking) {
+      console.log('CodeSight: Already tracking, ignoring');
+      return;
+    }
     
     this.isTracking = true;
     this.sessionId = sessionId;
     this.startTime = Date.now();
     this.events = [];
     
+    console.log('CodeSight: Binding events and showing indicator');
     this.bindEvents();
     this.showTrackingIndicator();
     
@@ -48,6 +147,8 @@ class ShoppingTracker {
       title: document.title,
       timestamp: Date.now()
     });
+    
+    console.log('CodeSight: Tracking started successfully');
   }
 
   stopTracking() {
@@ -57,6 +158,9 @@ class ShoppingTracker {
     this.unbindEvents();
     this.hideTrackingIndicator();
     
+    // Create downloadable file with session data
+    this.downloadSessionData();
+    
     // Send final data to background script
     chrome.runtime.sendMessage({
       action: 'TRACKING_COMPLETE',
@@ -64,7 +168,67 @@ class ShoppingTracker {
       events: this.events
     });
     
+    // Clear persistent state
+    sessionStorage.removeItem('codesight-tracking-state');
+    this.persistentLogEntries = [];
+    
     return this.events;
+  }
+
+  downloadSessionData() {
+    console.log('CodeSight: Starting download process...');
+    console.log('CodeSight: Events to download:', this.events.length);
+    
+    const sessionData = {
+      sessionId: this.sessionId,
+      startTime: new Date(this.startTime).toISOString(),
+      endTime: new Date().toISOString(),
+      duration: Date.now() - this.startTime,
+      totalEvents: this.events.length,
+      events: this.events,
+      activityLog: this.persistentLogEntries,
+      summary: {
+        clicks: this.events.filter(e => e.type === 'click').length,
+        inputs: this.events.filter(e => e.type === 'input').length,
+        scrolls: this.events.filter(e => e.type === 'scroll').length,
+        navigations: this.events.filter(e => e.type === 'navigation').length,
+        pagesVisited: [...new Set(this.events.map(e => e.data.url).filter(Boolean))]
+      }
+    };
+
+    console.log('CodeSight: Session summary:', sessionData.summary);
+
+    try {
+      // Create download
+      const dataStr = JSON.stringify(sessionData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      
+      const filename = `codesight-session-${this.sessionId}-${new Date().toISOString().slice(0,10)}.json`;
+      console.log('CodeSight: Creating download with filename:', filename);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      
+      console.log('CodeSight: Triggering download...');
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log('CodeSight: Download cleanup completed');
+      }, 100);
+      
+      // Also show an alert so you know it happened
+      alert(`CodeSight: Session data downloaded!\nFile: ${filename}\nEvents: ${sessionData.totalEvents}`);
+      
+    } catch (error) {
+      console.error('CodeSight: Download failed:', error);
+      alert('CodeSight: Download failed - check console for details');
+    }
   }
 
   bindEvents() {
@@ -234,6 +398,28 @@ class ShoppingTracker {
       event: event
     });
     
+    // Create summary for visual log
+    let summary = '';
+    switch (type) {
+      case 'click':
+        summary = `${data.element} "${data.text}" (${data.selector})`;
+        break;
+      case 'input':
+        summary = `${data.inputType} field: ${data.value} (${data.selector})`;
+        break;
+      case 'scroll':
+        summary = `Y: ${data.scrollY}px`;
+        break;
+      case 'navigation':
+        summary = `→ ${data.url || data.to}`;
+        break;
+      default:
+        summary = JSON.stringify(data).substring(0, 100);
+    }
+    
+    // Add to visual activity log
+    this.addToActivityLog(type, summary);
+    
     console.log('CodeSight captured:', type, data);
   }
 
@@ -351,9 +537,118 @@ class ShoppingTracker {
       z-index: 999999;
       pointer-events: none;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      min-width: 200px;
     `;
-    indicator.textContent = '🎯 CodeSight Tracking';
+    
+    // Create activity log area
+    const logArea = document.createElement('div');
+    logArea.id = 'codesight-activity-log';
+    logArea.style.cssText = `
+      position: fixed;
+      top: 50px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #00ff00;
+      padding: 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 10px;
+      z-index: 999998;
+      pointer-events: none;
+      max-height: 300px;
+      overflow-y: auto;
+      min-width: 300px;
+      display: none;
+    `;
+    
+    this.updateIndicatorText(indicator);
     document.body.appendChild(indicator);
+    document.body.appendChild(logArea);
+    
+    // Toggle log visibility on click
+    indicator.style.pointerEvents = 'auto';
+    indicator.style.cursor = 'pointer';
+    indicator.addEventListener('click', () => {
+      const log = document.getElementById('codesight-activity-log');
+      log.style.display = log.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+
+  updateIndicatorText(indicator = null) {
+    if (!indicator) {
+      indicator = document.getElementById('codesight-tracking-indicator');
+    }
+    if (indicator) {
+      indicator.innerHTML = `
+        🎯 CodeSight Tracking<br>
+        <small>Events: ${this.events.length} | Click to toggle log</small>
+      `;
+    }
+  }
+
+  addToActivityLog(type, summary) {
+    const timestamp = new Date().toLocaleTimeString();
+    let color = '#00ff00';
+    if (type === 'click') color = '#ff6b6b';
+    else if (type === 'input') color = '#4ecdc4';
+    else if (type === 'scroll') color = '#45b7d1';
+    else if (type === 'navigation') color = '#f9ca24';
+    
+    // Store in persistent array
+    const logEntry = {
+      timestamp,
+      type,
+      summary,
+      color,
+      url: window.location.href
+    };
+    
+    this.persistentLogEntries.push(logEntry);
+    
+    // Keep only last 100 entries
+    if (this.persistentLogEntries.length > 100) {
+      this.persistentLogEntries = this.persistentLogEntries.slice(-100);
+    }
+    
+    // Add to DOM if log exists
+    const log = document.getElementById('codesight-activity-log');
+    if (log) {
+      const entry = document.createElement('div');
+      entry.style.cssText = 'margin-bottom: 2px; border-bottom: 1px solid #333; padding-bottom: 2px;';
+      entry.innerHTML = `<span style="color: ${color}">[${timestamp}] ${type.toUpperCase()}</span>: ${summary}`;
+      
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+      
+      // Keep DOM clean
+      while (log.children.length > 50) {
+        log.removeChild(log.firstChild);
+      }
+    }
+    
+    // Save state and update counter
+    this.saveState();
+    this.updateIndicatorText();
+  }
+
+  restoreActivityLog() {
+    const log = document.getElementById('codesight-activity-log');
+    if (!log || this.persistentLogEntries.length === 0) return;
+    
+    // Clear existing entries
+    log.innerHTML = '';
+    
+    // Add last 50 entries
+    const entriesToShow = this.persistentLogEntries.slice(-50);
+    entriesToShow.forEach(logEntry => {
+      const entry = document.createElement('div');
+      entry.style.cssText = 'margin-bottom: 2px; border-bottom: 1px solid #333; padding-bottom: 2px;';
+      entry.innerHTML = `<span style="color: ${logEntry.color}">[${logEntry.timestamp}] ${logEntry.type.toUpperCase()}</span>: ${logEntry.summary}`;
+      log.appendChild(entry);
+    });
+    
+    log.scrollTop = log.scrollHeight;
+    console.log(`CodeSight: Restored ${entriesToShow.length} log entries`);
   }
 
   hideTrackingIndicator() {
@@ -400,4 +695,6 @@ class ShoppingTracker {
 }
 
 // Initialize tracker
+console.log('CodeSight: Content script loaded');
 const shoppingTracker = new ShoppingTracker();
+console.log('CodeSight: ShoppingTracker initialized');

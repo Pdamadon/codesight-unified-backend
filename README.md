@@ -1,298 +1,370 @@
-# 🌐 CodeSight Crowdsource Collector
+# CodeSight Crowdsource Collector
 
-**Scale AI training data collection using Fiverr workers - exactly how successful AI companies do it!**
+## 🎯 Overview
 
-## 🎯 Why This Works
-
-- **Scale**: 1,500+ examples in weeks instead of months
-- **Diversity**: Different shopping styles, ages, tech skills
-- **Cost**: $5-20/session vs $100+/hour of your time
-- **Efficiency**: You build AI, others do the clicking
-- **Quality**: Real human behavior variation
+A comprehensive platform for collecting high-quality shopping behavior data to train AI agents for e-commerce automation. The system combines screen/audio recording with precise click tracking via browser extension to generate training data for AI models using Playwright automation.
 
 ## 🏗️ System Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Fiverr Gig    │───▶│  Recording Site  │───▶│  Data Pipeline  │
-│   Workers        │    │  (React App)     │    │  (AI Analysis)  │
+│   Web Frontend  │    │ Browser Extension│    │     Backend     │
+│   (React/TS)    │    │   (Chrome Ext)   │    │   (Node.js/TS)  │
+│                 │    │                  │    │                 │
+│ ┌─────────────┐ │    │ ┌──────────────┐ │    │ ┌─────────────┐ │
+│ │ Video/Audio │ │    │ │ Click Tracker│ │    │ │  WebSocket  │ │
+│ │ Recording   │ │    │ │ CSS Selectors│ │    │ │   Server    │ │
+│ └─────────────┘ │    │ └──────────────┘ │    │ └─────────────┘ │
+│ ┌─────────────┐ │    │ ┌──────────────┐ │    │ ┌─────────────┐ │
+│ │ Session     │ │◄──►│ │ Real-time    │ │◄──►│ │ PostgreSQL  │ │
+│ │ Management  │ │    │ │ Data Stream  │ │    │ │  Database   │ │
+│ └─────────────┘ │    │ └──────────────┘ │    │ └─────────────┘ │
+│ ┌─────────────┐ │    │ ┌──────────────┐ │    │ ┌─────────────┐ │
+│ │ S3 Upload   │ │    │ │ Activity Log │ │    │ │ REST API    │ │
+│ │ Integration │ │    │ │ & Download   │ │    │ │ Endpoints   │ │
+│ └─────────────┘ │    │ └──────────────┘ │    │ └─────────────┘ │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-   📝 Shop naturally      🎥 Screen record       🧠 Vision analysis
-   🗣️ Narrate thinking    🎤 Audio capture       🎯 Extract patterns
-   ⏱️ Complete goals      📊 Quality metrics     📈 Training data
+        │                        │                        │
+        └────────────────────────┼────────────────────────┘
+                                 │
+                    ┌─────────────────────────┐
+                    │     External Services    │
+                    │                         │
+                    │ ┌─────────────────────┐ │
+                    │ │     AWS S3          │ │
+                    │ │   File Storage      │ │
+                    │ └─────────────────────┘ │
+                    │ ┌─────────────────────┐ │
+                    │ │    Railway.app      │ │
+                    │ │  Cloud Hosting      │ │
+                    │ └─────────────────────┘ │
+                    │ ┌─────────────────────┐ │
+                    │ │     Vercel         │ │
+                    │ │  Frontend Deploy   │ │
+                    │ └─────────────────────┘ │
+                    └─────────────────────────┘
 ```
 
-## 🚀 Quick Start
+## ✨ Key Features
 
-### 1. Deploy Recording Website
-```bash
-cd frontend
-npm install
-npm run build
-# Deploy to Vercel/Netlify (included config)
-```
+### 🎥 **Comprehensive Data Collection**
+- **Screen Recording**: Captures full shopping sessions with WebM video
+- **Audio Narration**: Records user thought process during shopping
+- **Precise Click Tracking**: CSS selectors, coordinates, and element data
+- **Cross-page Persistence**: Maintains tracking across navigation
+- **Form Input Monitoring**: Captures interactions with privacy protection
 
-### 2. Set Up Backend
+### 🛡️ **Security & Privacy**
+- **Data Sanitization**: Automatically removes passwords, emails, payment info
+- **Input Validation**: Prevents SQL injection and malformed data
+- **Secure WebSocket**: WSS encryption for production deployment
+- **Privacy-first Design**: Anonymizes sensitive user data
+
+### 🚀 **Production Ready**
+- **Cloud Deployment**: Railway backend + Vercel frontend
+- **Real-time Processing**: WebSocket streaming for immediate data capture
+- **Scalable Architecture**: Supports multiple concurrent workers
+- **Download Integration**: Automatic JSON export for training data
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **React Router** for navigation
+- **Tailwind CSS** for styling
+- **MediaRecorder API** for screen/audio capture
+- **WebRTC** for browser recording
+
+### Backend
+- **Node.js** with TypeScript
+- **Express.js** web framework
+- **WebSocket (ws)** for real-time communication
+- **PostgreSQL** database
+- **AWS S3** for file storage
+- **Railway** for cloud hosting
+
+### Browser Extension
+- **Manifest V3** Chrome extension
+- **Content Script** injection for click tracking
+- **Background Service Worker** for WebSocket management
+- **Real-time Event Streaming** to backend
+
+## 📦 Installation & Setup
+
+### Prerequisites
+- Node.js 18+
+- PostgreSQL database
+- AWS S3 bucket
+- Chrome browser (for extension)
+
+### 1. Backend Setup
+
 ```bash
 cd backend
 npm install
+
+# Environment variables
+cp .env.example .env
+# Configure: DATABASE_URL, AWS credentials, etc.
+
+# Run migrations
+npm run migrate
+
+# Start development server
 npm run dev
-# Configure AWS S3 for video storage
 ```
 
-### 3. Post Fiverr Gigs
-- Use provided templates in `/docs/fiverr-gigs/`
-- Start with 5-10 test workers
-- Scale up based on quality
+### 2. Frontend Setup
 
-### 4. Process Data
-```bash
-npm run process-recordings
-# Automatically analyze with vision AI
-# Generate training examples
-```
-
-## 💰 Cost Analysis
-
-| Approach | Cost | Time | Examples |
-|----------|------|------|----------|
-| **DIY** | $20,000 value | 3-4 months | 500 |
-| **Crowdsource** | $2,000 actual | 2-3 weeks | 1,500+ |
-| **Savings** | **10x cheaper** | **10x faster** | **3x more** |
-
-## 🎮 Worker Experience
-
-### Simple 5-Step Process:
-1. **Visit** recording website
-2. **Read** shopping goal (e.g., "Find blue jeans size 32 under $80")
-3. **Shop** naturally while recording
-4. **Narrate** thinking ("I'm clicking Men's because...")
-5. **Submit** and get paid
-
-### Quality Guidelines:
-- ✅ Clear screen recording
-- ✅ Audio narration present
-- ✅ Natural shopping behavior
-- ✅ Goal completion attempt
-- 🌟 Bonus for exceptional quality
-
-## 📊 Data Collection Scale
-
-### Tier 1: Basic ($20 - 5 scenarios)
-```json
-{
-  "scenarios": [
-    "Find black dress shoes under $100",
-    "Find laptop for college under $800",
-    "Find birthday gift for mom under $50"
-  ],
-  "duration": "1 hour",
-  "workers": "Entry level"
-}
-```
-
-### Tier 2: Complex ($35 - 10 scenarios)
-```json
-{
-  "scenarios": [
-    "Find blue jeans size 32 from local store in Seattle under $80",
-    "Find work dress professional but not boring petite size under $100"
-  ],
-  "duration": "2 hours",
-  "workers": "Experienced + narration"
-}
-```
-
-### Tier 3: Specialized ($50 - 15 scenarios)
-```json
-{
-  "scenarios": [
-    "Find anniversary gift for wife who likes jewelry budget $200-300",
-    "Find running shoes for flat feet women under $150 local pickup"
-  ],
-  "duration": "3 hours",
-  "workers": "Expert + detailed narration"
-}
-```
-
-## 🔧 Tech Stack
-
-### Frontend (React)
-- **Recording**: Browser-based screen capture
-- **Audio**: Microphone narration
-- **UI**: Simple, worker-friendly interface
-- **Validation**: Real-time quality checks
-
-### Backend (Node.js)
-- **Storage**: AWS S3 for videos
-- **Database**: Session metadata
-- **Processing**: Queue for AI analysis
-- **API**: Worker management
-
-### AI Processing
-- **Vision Analysis**: OpenAI Vision API
-- **Audio Transcription**: Whisper API
-- **Pattern Recognition**: Custom ML models
-- **Training Data**: Automated generation
-
-## 📈 Success Metrics
-
-### Target Numbers (Month 1):
-- **50 workers** recruited
-- **1,500 sessions** completed
-- **95% quality** acceptance rate
-- **2-week** average turnaround
-- **$2,000** total investment
-
-### Expected Results:
-- **15,000+ navigation steps** recorded
-- **300+ hours** of shopping behavior
-- **50+ unique** shopping patterns
-- **25+ sites** covered organically
-- **3x diversity** vs solo collection
-
-## 🎯 Quality Control
-
-### Automated Validation:
-- ✅ Video length (min 5 minutes)
-- ✅ Audio quality (clear speech)
-- ✅ Goal attempt (task tracking)
-- ✅ Natural behavior (timing analysis)
-
-### Manual Review (2 min/submission):
-- ✅ Video plays correctly
-- ✅ Narration present
-- ✅ Realistic shopping behavior
-- ✅ Worth payment amount
-
-### Worker Rating System:
-- ⭐⭐⭐⭐⭐ Exceptional (bonus eligible)
-- ⭐⭐⭐⭐ Good (repeat work)
-- ⭐⭐⭐ Acceptable (standard pay)
-- ⭐⭐ Needs improvement (revision)
-- ⭐ Rejected (no payment)
-
-## 🚀 Deployment Guide
-
-### 1. Environment Setup
-```bash
-# Frontend environment
-REACT_APP_API_URL=https://your-api.com
-REACT_APP_RECORDING_ENABLED=true
-
-# Backend environment  
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-OPENAI_API_KEY=your_openai_key
-DATABASE_URL=your_db_url
-```
-
-### 2. Deploy Frontend
 ```bash
 cd frontend
-npm run build
-# Deploy to Vercel (config included)
+npm install
+
+# Environment variables
+cp .env.example .env
+# Configure: VITE_API_URL, etc.
+
+# Start development server
+npm run dev
 ```
 
-### 3. Deploy Backend
+### 3. Browser Extension Setup
+
 ```bash
-cd backend
-npm run build
-# Deploy to Railway/Heroku (config included)
+# Load extension in Chrome
+1. Go to chrome://extensions/
+2. Enable "Developer mode"
+3. Click "Load unpacked"
+4. Select the /browser-extension folder
+5. Pin the extension to toolbar
 ```
 
-### 4. Configure Storage
-- Set up AWS S3 bucket
-- Configure CORS for uploads
-- Set up CDN for video delivery
+## 🎯 Usage Workflow
 
-## 📋 Fiverr Gig Templates
+### For Data Collection Workers
 
-### Gig Title:
-"I will help train AI shopping assistant by recording my online shopping behavior"
+1. **Install Extension**
+   - Load extension in Chrome developer mode
+   - Pin CodeSight extension to toolbar
 
-### Description:
-🛒 **HELP TRAIN THE FUTURE OF AI SHOPPING!**
+2. **Connect to Backend**
+   - Click extension icon
+   - Enter WebSocket URL: `wss://your-backend.railway.app/extension-ws`
+   - Click "Connect to CodeSight"
 
-I'm building an AI that helps people shop online and need real human shopping data.
+3. **Start Session**
+   - Enter session ID (auto-generated)
+   - Click "Start Tracking"
+   - Begin shopping session
 
-**WHAT YOU'LL DO:**
-✅ Visit my simple website
-✅ Get shopping goals (like "find blue jeans size 32 under $80")
-✅ Shop naturally while screen recording
-✅ Narrate your thinking out loud
-✅ Complete 5-10 shopping scenarios
+4. **Shop Naturally**
+   - Navigate to shopping websites
+   - Click products, read reviews, compare prices
+   - Narrate thoughts out loud
+   - Extension captures all interactions
 
-**PERFECT FOR:**
-- Students looking for flexible work
-- Stay-at-home parents
-- Anyone comfortable with online shopping
-- People who like talking through their thoughts
+5. **Complete Session**
+   - Click "Stop Tracking"
+   - Automatic JSON download with interaction data
+   - Session data stored in database
 
-**REQUIREMENTS:**
-✅ Fluent English speaker
-✅ Comfortable online shopping
-✅ Reliable internet connection
-✅ Can follow simple instructions
+### For Administrators
 
-### Packages:
-- **Basic ($20)**: 5 scenarios, 1 hour
-- **Standard ($35)**: 10 scenarios + narration, 2 hours  
-- **Premium ($50)**: 15 scenarios + detailed narration, 3 hours
+1. **Monitor Sessions**
+   ```bash
+   GET /api/extension/sessions
+   ```
 
-## 🎯 ROI Analysis
+2. **Download Training Data**
+   ```bash
+   GET /api/extension/sessions/{sessionId}/training-data
+   ```
 
-### Traditional Approach:
-- **Your time**: 200+ hours @ $100/hour = $20,000 value
-- **Examples**: ~500 (limited by your availability)
-- **Diversity**: Single perspective
-- **Timeline**: 3-4 months
+3. **View Analytics**
+   ```bash
+   GET /api/admin/recent
+   ```
 
-### Crowdsource Approach:
-- **Cost**: $2,000 (50 workers × $40 average)
-- **Examples**: 1,500+ (parallel collection)
-- **Diversity**: 50+ different shopping styles
-- **Timeline**: 2-3 weeks
+## 📊 Data Structure
 
-### **Result: 10x ROI + 10x Speed + 3x Diversity**
-
-## 🔄 Processing Pipeline
-
-### 1. Raw Data Collection
+### Extension Session Data
+```json
+{
+  "sessionId": "cs_md0ap0gn_thwyx",
+  "startTime": "2025-07-12T13:30:00.000Z",
+  "endTime": "2025-07-12T13:45:00.000Z",
+  "duration": 900000,
+  "totalEvents": 47,
+  "events": [
+    {
+      "type": "click",
+      "data": {
+        "selector": "#add-to-cart-button",
+        "element": "button",
+        "text": "Add to Cart",
+        "coordinates": { "x": 450, "y": 200 },
+        "url": "https://amazon.com/product/...",
+        "timestamp": 1641985800000
+      }
+    }
+  ],
+  "summary": {
+    "clicks": 23,
+    "inputs": 8,
+    "scrolls": 12,
+    "navigations": 4,
+    "pagesVisited": ["amazon.com", "ebay.com"]
+  }
+}
 ```
-Worker completes session → Video uploaded to S3 → Metadata stored
+
+### Training Data Format
+```json
+{
+  "video_path": "s3://bucket/session-video.webm",
+  "audio_path": "s3://bucket/session-audio.webm",
+  "annotations": [
+    {
+      "timestamp": 1641985800000,
+      "action_type": "click",
+      "target_selector": "#add-to-cart-button",
+      "coordinates": [450, 200],
+      "element_text": "Add to Cart",
+      "page_url": "https://amazon.com/product/..."
+    }
+  ]
+}
 ```
 
-### 2. Automated Processing
-```
-Video → OpenAI Vision analysis → Navigation steps extracted
-Audio → Whisper transcription → Intent analysis → Shopping patterns
+## 🔧 API Endpoints
+
+### Extension Data Collection
+- `WebSocket /extension-ws` - Real-time event streaming
+- `GET /api/extension/sessions` - List all sessions
+- `GET /api/extension/sessions/{id}/data` - Get session events
+- `GET /api/extension/sessions/{id}/training-data` - Training format
+
+### Session Management
+- `POST /api/workers` - Register worker
+- `POST /api/sessions` - Create session record
+- `GET /api/sessions` - List sessions
+
+### File Upload
+- `POST /api/upload/url` - Get S3 upload URL
+- `POST /api/upload/complete` - Mark upload complete
+
+## 🚀 Deployment
+
+### Backend (Railway)
+```bash
+# Connect to Railway
+railway login
+railway link
+
+# Deploy
+git push origin main
+# Railway auto-deploys from GitHub
 ```
 
-### 3. Training Data Generation
+### Frontend (Vercel)
+```bash
+# Connect to Vercel
+vercel login
+vercel link
+
+# Deploy
+vercel --prod
 ```
-Processed data → CodeSight format → Quality validation → Training ready
+
+### Environment Variables
+
+#### Backend (.env)
+```env
+DATABASE_URL=postgresql://...
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=codesight-recordings
+FRONTEND_URL=https://your-frontend.vercel.app
+NODE_ENV=production
 ```
 
-### 4. Model Training
+#### Frontend (.env)
+```env
+VITE_API_URL=https://your-backend.railway.app
+VITE_WS_URL=wss://your-backend.railway.app/extension-ws
 ```
-Training data → Fine-tuning → Model validation → Deployment
+
+## 🛡️ Security Features
+
+- **Parameterized Queries**: Prevents SQL injection
+- **Input Validation**: Type checking and sanitization
+- **Session ID Sanitization**: Alphanumeric-only validation
+- **Event Type Whitelisting**: Only allowed event types
+- **CORS Configuration**: Restricted origins
+- **Data Privacy**: Automatic sensitive data masking
+
+## 📈 Performance
+
+- **Real-time Processing**: WebSocket streaming < 10ms latency
+- **Efficient Storage**: Events batched and compressed
+- **Memory Management**: Automatic cleanup of stale sessions
+- **Throttled Capture**: Optimized event frequency (scroll: 200ms, hover: 1s)
+
+## 🔍 Monitoring
+
+### Health Checks
+```bash
+# Backend health
+GET /health
+
+# API health
+GET /api/health
+
+# Database connectivity
+GET /api/debug/counts
 ```
 
-## 📞 Support & Scaling
+### Logging
+- Structured logging with timestamps
+- WebSocket connection tracking
+- Error monitoring and alerting
+- Session completion metrics
 
-### Worker Support:
-- **FAQ page** with common questions
-- **Video tutorials** for first-time workers
-- **Discord/Slack** for real-time help
-- **Feedback system** for improvements
+## 🤝 Contributing
 
-### Scaling Strategy:
-1. **Week 1-2**: Test with 5-10 workers, refine process
-2. **Week 3-4**: Scale to 25 workers, optimize quality control
-3. **Month 2**: 50+ workers, full automation
-4. **Month 3+**: 100+ workers, multiple sites/scenarios
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
 
-This system will give you **professional-grade training data at scale** - exactly how companies like Scale AI, Surge AI, and others collect massive datasets! 🚀
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: [GitHub Wiki](https://github.com/your-repo/wiki)
+- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Discord**: [Development Channel](https://discord.gg/your-channel)
+
+## 🎯 Use Cases
+
+### AI Training Data
+- **E-commerce Automation**: Train AI agents for shopping tasks
+- **UX Research**: Analyze user behavior patterns
+- **A/B Testing**: Compare interface effectiveness
+- **Conversion Optimization**: Identify friction points
+
+### Research Applications
+- **Academic Studies**: Shopping behavior analysis
+- **Market Research**: Consumer decision patterns
+- **Accessibility Studies**: Interface usability testing
+- **Cross-platform Analysis**: Multi-site shopping flows
+
+---
+
+**Built with ❤️ for the AI community**
+
+Generate high-quality training data for the next generation of intelligent shopping assistants.

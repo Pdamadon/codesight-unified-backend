@@ -243,12 +243,21 @@ class PopupController {
   }
 
   showNotification(message) {
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'CodeSight Tracker',
-      message: message
-    });
+    // Use console.log instead of notifications for now
+    console.log('CodeSight:', message);
+    
+    // Try to show notification if API is available
+    if (chrome.notifications && chrome.notifications.create) {
+      try {
+        chrome.notifications.create({
+          type: 'basic',
+          title: 'CodeSight Tracker',
+          message: message
+        });
+      } catch (error) {
+        console.log('Notification failed:', error);
+      }
+    }
   }
 
   startStatusPolling() {
