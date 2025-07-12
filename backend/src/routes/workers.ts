@@ -33,7 +33,7 @@ router.post('/register',
         [workerId, email, paypalEmail, JSON.stringify(workerData), 'active', true]
       );
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: {
           workerId: result.rows[0].worker_id

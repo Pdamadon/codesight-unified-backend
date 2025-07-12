@@ -21,15 +21,32 @@ router.post('/register', (0, validation_1.rateLimitByField)('email', 3), (0, val
         timezone,
         availability
     };
-    const result = await database_1.default.query(`INSERT INTO workers (worker_id, email, paypal_email, worker_data, status, consent_given)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING worker_id, email, status, created_at`, [workerId, email, paypalEmail, JSON.stringify(workerData), 'active', true]);
-    res.status(201).json({
-        success: true,
-        data: {
-            workerId: result.rows[0].worker_id
+    try {
+        const result = await database_1.default.query(`INSERT INTO workers (worker_id, email, paypal_email, worker_data, status, consent_given)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING worker_id, email, status, created_at`, [workerId, email, paypalEmail, JSON.stringify(workerData), 'active', true]);
+        return res.status(201).json({
+            success: true,
+            data: {
+                workerId: result.rows[0].worker_id
+            }
+        });
+    }
+    catch (error) {
+        if (error.code === '23505' && error.constraint?.includes('email')) {
+            const existingUser = await database_1.default.query('SELECT worker_id FROM workers WHERE email = $1', [email]);
+            if (existingUser.rows.length > 0) {
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        workerId: existingUser.rows[0].worker_id
+                    },
+                    message: 'Welcome back! Continuing with your existing account.'
+                });
+            }
         }
-    });
+        throw error;
+    }
 }));
 router.get('/:workerId', (0, errorHandler_1.asyncHandler)(async (req, res) => {
     const { workerId } = req.params;
