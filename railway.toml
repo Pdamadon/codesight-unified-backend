@@ -5,12 +5,8 @@ builder = "nixpacks"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 
-[[services]]
-name = "backend"
-source = "backend"
+[build.env]
+NODE_ENV = "production"
 
-[services.build]
-buildCommand = "npm ci && npm run build"
-
-[services.deploy]
-startCommand = "npm start"
+[nixpacks]
+configFile = "backend/package.json"
