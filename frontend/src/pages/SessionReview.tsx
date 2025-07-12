@@ -76,7 +76,7 @@ const SessionReview: React.FC = () => {
       // Upload video file if available
       if (state.videoBlob) {
         const videoFileName = `session-${Date.now()}-screen.webm`;
-        const videoUploadResponse = await apiService.getUploadUrl('video', videoFileName);
+        const videoUploadResponse = await apiService.getUploadUrl('video', videoFileName, workerId);
         
         if (videoUploadResponse.success && videoUploadResponse.data) {
           await apiService.uploadFile(
@@ -91,7 +91,7 @@ const SessionReview: React.FC = () => {
       // Upload audio file if available
       if (state.audioBlob) {
         const audioFileName = `session-${Date.now()}-audio.webm`;
-        const audioUploadResponse = await apiService.getUploadUrl('audio', audioFileName);
+        const audioUploadResponse = await apiService.getUploadUrl('audio', audioFileName, workerId);
         
         if (audioUploadResponse.success && audioUploadResponse.data) {
           await apiService.uploadFile(

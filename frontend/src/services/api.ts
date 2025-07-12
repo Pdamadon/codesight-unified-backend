@@ -76,10 +76,10 @@ class ApiService {
   }
 
   // Get signed URL for file upload
-  async getUploadUrl(fileType: 'video' | 'audio', fileName: string): Promise<ApiResponse<{ uploadUrl: string; fileKey: string }>> {
-    return this.makeRequest<{ uploadUrl: string; fileKey: string }>('/upload/signed-url', {
+  async getUploadUrl(fileType: 'video' | 'audio', fileName: string, workerId: string): Promise<ApiResponse<{ uploadUrl: string; fileKey: string }>> {
+    return this.makeRequest<{ uploadUrl: string; fileKey: string }>('/upload/presigned-url', {
       method: 'POST',
-      body: JSON.stringify({ fileType, fileName }),
+      body: JSON.stringify({ fileType, fileName, workerId }),
     });
   }
 
