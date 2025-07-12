@@ -18,6 +18,9 @@ const SessionReview: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
+  
+  console.log('📋 SessionReview component loaded');
+  console.log('Location state:', state);
 
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [audioUrl, setAudioUrl] = useState<string>('');

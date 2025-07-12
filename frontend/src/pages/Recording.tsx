@@ -316,21 +316,38 @@ const Recording: React.FC = () => {
   };
 
   const handleFinishSession = () => {
-    if (recordingState.isRecording) {
-      stopRecording();
-    }
-    
-    // Navigate to review page with recorded data
-    navigate('/session-review', { 
-      state: { 
+    try {
+      console.log('🎬 Starting session finish process...');
+      console.log('Recording state:', recordingState);
+      
+      if (recordingState.isRecording) {
+        console.log('⏹️ Stopping recording...');
+        stopRecording();
+      }
+      
+      console.log('📊 Preparing navigation data...');
+      const navigationData = {
         scenario,
         videoBlob: recordingState.videoBlob,
         audioBlob: recordingState.audioBlob,
         duration: recordingState.recordingTime,
         interactionEvents: recordingState.interactionEvents,
         clickCaptures: recordingState.clickCaptures
-      }
-    });
+      };
+      
+      console.log('Navigation data:', navigationData);
+      console.log('🚀 Navigating to session review...');
+      
+      // Navigate to review page with recorded data
+      navigate('/session-review', { 
+        state: navigationData
+      });
+      
+      console.log('✅ Navigation completed');
+    } catch (error) {
+      console.error('❌ Error in handleFinishSession:', error);
+      alert('Error finishing session: ' + error.message);
+    }
   };
 
   return (
