@@ -23,6 +23,7 @@ const SessionReview: React.FC = () => {
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [extensionData, setExtensionData] = useState<any>(null);
 
   useEffect(() => {
     if (!state || (!state.videoBlob && !state.audioBlob)) {
@@ -41,6 +42,23 @@ const SessionReview: React.FC = () => {
       const url = URL.createObjectURL(state.audioBlob);
       setAudioUrl(url);
     }
+
+    // Fetch extension data
+    const fetchExtensionData = async () => {
+      const sessionId = localStorage.getItem('sessionId');
+      if (sessionId) {
+        try {
+          const extensionResponse = await apiService.getExtensionData(sessionId);
+          if (extensionResponse.success) {
+            setExtensionData(extensionResponse.data);
+          }
+        } catch (error) {
+          console.warn('No extension data found for session:', sessionId);
+        }
+      }
+    };
+
+    fetchExtensionData();
 
     // Cleanup URLs on unmount
     return () => {
@@ -240,75 +258,85 @@ const SessionReview: React.FC = () => {
           )}
         </div>
 
-        {/* Interaction Analytics */}
-        {((state.interactionEvents && state.interactionEvents.length > 0) || (state.clickCaptures && state.clickCaptures.length > 0)) && (
+        {/* Shopping Behavior Analytics */}
+        {extensionData && (
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
             <h3 className="text-lg font-semibold text-purple-900 mb-3">
-              📊 Interaction Analytics
+              🛒 Shopping Behavior Analytics
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
-                  {state.clickCaptures?.length || 0}
+                  {extensionData.clickEvents?.length || 0}
                 </div>
-                <div className="text-sm text-gray-600">Screen Clicks</div>
+                <div className="text-sm text-gray-600">Shopping Clicks</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {state.interactionEvents?.filter(e => e.type === 'click').length || 0}
+                  {extensionData.inputEvents?.length || 0}
                 </div>
-                <div className="text-sm text-gray-600">App Clicks</div>
+                <div className="text-sm text-gray-600">Form Inputs</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {state.interactionEvents?.filter(e => e.type === 'scroll').length || 0}
+                  {extensionData.scrollEvents?.length || 0}
                 </div>
                 <div className="text-sm text-gray-600">Scroll Events</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
-                  {state.interactionEvents?.filter(e => e.type === 'input').length || 0}
+                  {extensionData.navigationEvents?.length || 0}
                 </div>
-                <div className="text-sm text-gray-600">Form Inputs</div>
+                <div className="text-sm text-gray-600">Page Changes</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {new Set(state.clickCaptures?.map(c => c.url) || []).size}
+                  {new Set([
+                    ...(extensionData.clickEvents?.map(c => new URL(c.url).hostname) || []),
+                    ...(extensionData.inputEvents?.map(i => new URL(i.url).hostname) || [])
+                  ]).size}
                 </div>
-                <div className="text-sm text-gray-600">Pages Visited</div>
+                <div className="text-sm text-gray-600">Shopping Sites</div>
               </div>
             </div>
             
-            {/* Sample of interactions */}
+            {/* Sample of shopping interactions */}
             <div className="bg-white rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Sample Captured Interactions:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">Sample Shopping Interactions:</h4>
               <div className="space-y-1 text-sm text-gray-600 max-h-32 overflow-y-auto">
-                {/* Show screen clicks first */}
-                {state.clickCaptures?.slice(0, 5).map((click, index) => (
+                {/* Show shopping clicks */}
+                {extensionData.clickEvents?.slice(0, 3).map((click, index) => (
                   <div key={`click-${index}`} className="flex justify-between">
-                    <span className="text-red-600 font-medium">Screen Click</span>
+                    <span className="text-red-600 font-medium">Product Click</span>
                     <span>
-                      ({click.x}, {click.y}) on {new URL(click.url).hostname}
+                      "{click.text}" on {new URL(click.url).hostname}
                     </span>
                   </div>
                 ))}
                 
-                {/* Then show app interactions */}
-                {state.interactionEvents?.slice(0, 5).map((event, index) => (
-                  <div key={`event-${index}`} className="flex justify-between">
-                    <span className="capitalize">{event.type}</span>
+                {/* Show form inputs */}
+                {extensionData.inputEvents?.slice(0, 3).map((input, index) => (
+                  <div key={`input-${index}`} className="flex justify-between">
+                    <span className="text-blue-600 font-medium">Form Input</span>
                     <span>
-                      {event.type === 'click' && `${event.data.element} (${event.data.selector})`}
-                      {event.type === 'input' && `${event.data.inputType} field`}
-                      {event.type === 'scroll' && `Y: ${event.data.scrollY}px`}
-                      {event.type === 'navigation' && new URL(event.data.to).hostname}
+                      {input.label || input.inputType} on {new URL(input.url).hostname}
                     </span>
                   </div>
                 ))}
                 
-                {((state.clickCaptures?.length || 0) + (state.interactionEvents?.length || 0)) > 10 && (
+                {/* Show navigation */}
+                {extensionData.navigationEvents?.slice(0, 2).map((nav, index) => (
+                  <div key={`nav-${index}`} className="flex justify-between">
+                    <span className="text-green-600 font-medium">Navigation</span>
+                    <span>
+                      to {new URL(nav.url).hostname}
+                    </span>
+                  </div>
+                ))}
+                
+                {(extensionData.clickEvents?.length + extensionData.inputEvents?.length + extensionData.navigationEvents?.length) > 8 && (
                   <div className="text-gray-500 italic">
-                    ... and {((state.clickCaptures?.length || 0) + (state.interactionEvents?.length || 0)) - 10} more interactions
+                    ... and {(extensionData.clickEvents?.length + extensionData.inputEvents?.length + extensionData.navigationEvents?.length) - 8} more interactions
                   </div>
                 )}
               </div>
@@ -334,16 +362,16 @@ const SessionReview: React.FC = () => {
               <span className="text-green-600 mr-2">✓</span>
               Audio narration was recorded
             </div>
-            {state.interactionEvents && state.interactionEvents.length > 0 && (
+            {extensionData && (extensionData.clickEvents?.length > 0 || extensionData.inputEvents?.length > 0) && (
               <div className="flex items-center">
                 <span className="text-green-600 mr-2">✓</span>
-                App interaction data captured ({state.interactionEvents.length} events)
+                Shopping behavior captured ({(extensionData.clickEvents?.length || 0) + (extensionData.inputEvents?.length || 0) + (extensionData.scrollEvents?.length || 0)} interactions)
               </div>
             )}
-            {state.clickCaptures && state.clickCaptures.length > 0 && (
+            {extensionData && extensionData.clickEvents?.length > 0 && (
               <div className="flex items-center">
                 <span className="text-green-600 mr-2">✓</span>
-                Screen clicks captured ({state.clickCaptures.length} clicks)
+                Product clicks tracked ({extensionData.clickEvents.length} clicks on shopping sites)
               </div>
             )}
             <div className="flex items-center">

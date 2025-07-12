@@ -25,19 +25,41 @@ router.post('/register',
       availability
     };
     
-    const result = await pool.query(
-      `INSERT INTO workers (worker_id, email, paypal_email, worker_data, status, consent_given)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING worker_id, email, status, created_at`,
-      [workerId, email, paypalEmail, JSON.stringify(workerData), 'active', true]
-    );
+    try {
+      const result = await pool.query(
+        `INSERT INTO workers (worker_id, email, paypal_email, worker_data, status, consent_given)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING worker_id, email, status, created_at`,
+        [workerId, email, paypalEmail, JSON.stringify(workerData), 'active', true]
+      );
 
-    res.status(201).json({
-      success: true,
-      data: {
-        workerId: result.rows[0].worker_id
+      res.status(201).json({
+        success: true,
+        data: {
+          workerId: result.rows[0].worker_id
+        }
+      });
+    } catch (error: any) {
+      // Handle duplicate email
+      if (error.code === '23505' && error.constraint?.includes('email')) {
+        // Check if user exists and return their workerId
+        const existingUser = await pool.query(
+          'SELECT worker_id FROM workers WHERE email = $1',
+          [email]
+        );
+        
+        if (existingUser.rows.length > 0) {
+          return res.status(200).json({
+            success: true,
+            data: {
+              workerId: existingUser.rows[0].worker_id
+            },
+            message: 'Welcome back! Continuing with your existing account.'
+          });
+        }
       }
-    });
+      throw error; // Re-throw if not a duplicate email error
+    }
   }));
 
 // GET /api/workers/:workerId - Get worker info
