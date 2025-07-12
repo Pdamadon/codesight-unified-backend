@@ -153,7 +153,7 @@ router.get('/sessions/:sessionId/training-data', asyncHandler(async (req, res) =
       trainingFormat: {
         video_path: mainSessionResult.rows[0]?.video_url,
         audio_path: mainSessionResult.rows[0]?.audio_url,
-        annotations: extensionResult.rows[0].events?.map(event => ({
+        annotations: extensionResult.rows[0].events?.map((event: any) => ({
           timestamp: event.timestamp,
           action_type: event.type,
           target_selector: event.data.selector,
