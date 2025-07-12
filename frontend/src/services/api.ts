@@ -19,8 +19,10 @@ export interface SessionData {
   scenario: string;
   duration: number;
   interactionEvents: InteractionEvent[];
+  extensionData?: any; // Precise clicks from browser extension
   videoFileKey?: string;
   audioFileKey?: string;
+  sessionId?: string;
 }
 
 export interface ApiResponse<T = any> {
@@ -122,6 +124,11 @@ class ApiService {
   // Get worker sessions
   async getWorkerSessions(workerId: string): Promise<ApiResponse<any[]>> {
     return this.makeRequest<any[]>(`/workers/${workerId}/sessions`);
+  }
+
+  // Get extension data for session
+  async getExtensionData(sessionId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/extension/sessions/${sessionId}/data`);
   }
 
   // Health check

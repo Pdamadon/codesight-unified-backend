@@ -86,6 +86,15 @@ try {
   console.error('❌ Transcription router failed:', error instanceof Error ? error.message : String(error));
 }
 
+let extensionRouter: any;
+try {
+  const extensionModule = require('./routes/extension');
+  extensionRouter = extensionModule.default || extensionModule;
+  console.log('✅ Extension router imported:', !!extensionRouter);
+} catch (error) {
+  console.error('❌ Extension router failed:', error instanceof Error ? error.message : String(error));
+}
+
 console.log('📦 Route import phase completed');
 
 // API Routes
@@ -179,6 +188,13 @@ if (transcriptionRouter) {
   console.log('✅ Transcription routes registered');
 } else {
   console.log('❌ Transcription routes skipped - router not loaded');
+}
+
+if (extensionRouter) {
+  app.use('/api/extension', extensionRouter);
+  console.log('✅ Extension routes registered');
+} else {
+  console.log('❌ Extension routes skipped - router not loaded');
 }
 
 console.log('🚀 Route registration phase completed');

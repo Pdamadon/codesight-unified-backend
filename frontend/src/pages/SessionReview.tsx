@@ -107,14 +107,29 @@ const SessionReview: React.FC = () => {
 
       setUploadProgress(80);
 
-      // Create session record
+      // Fetch extension data if available
+      const sessionId = localStorage.getItem('sessionId');
+      let extensionData = null;
+      
+      if (sessionId) {
+        try {
+          const extensionResponse = await apiService.getExtensionData(sessionId);
+          extensionData = extensionResponse.data;
+        } catch (error) {
+          console.warn('No extension data found for session:', sessionId);
+        }
+      }
+
+      // Create combined session record
       const sessionResponse = await apiService.createSession({
         workerId,
         scenario: state.scenario,
         duration: state.duration,
         interactionEvents: state.interactionEvents,
+        extensionData: extensionData, // Include precise clicks
         videoFileKey,
         audioFileKey,
+        sessionId: sessionId
       });
 
       if (!sessionResponse.success) {
