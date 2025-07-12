@@ -346,7 +346,7 @@ const Recording: React.FC = () => {
       console.log('✅ Navigation completed');
     } catch (error) {
       console.error('❌ Error in handleFinishSession:', error);
-      alert('Error finishing session: ' + error.message);
+      alert('Error finishing session: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 
