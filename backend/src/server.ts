@@ -1,0 +1,176 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import compression from 'compression';
+import { config } from 'dotenv';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import logger from './utils/logger';
+
+// Load environment variables
+config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Security middleware
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false // Disable for now to simplify deployment
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL 
+    : ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true
+}));
+
+// Basic middleware
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(compression());
+app.use(morgan('combined'));
+
+// Health check
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Database connection will be tested when routes are accessed
+
+// Import routes with individual error handling
+console.log('🔍 Starting route imports...');
+
+let workersRouter: any;
+try {
+  const workersModule = require('./routes/workers');
+  workersRouter = workersModule.default || workersModule;
+  console.log('✅ Workers router imported:', !!workersRouter);
+} catch (error) {
+  console.error('❌ Workers router failed:', error instanceof Error ? error.message : String(error));
+}
+
+let sessionsRouter: any;
+try {
+  const sessionsModule = require('./routes/sessions');
+  sessionsRouter = sessionsModule.default || sessionsModule;
+  console.log('✅ Sessions router imported:', !!sessionsRouter);
+} catch (error) {
+  console.error('❌ Sessions router failed:', error instanceof Error ? error.message : String(error));
+}
+
+let uploadRouter: any;
+try {
+  const uploadModule = require('./routes/upload');
+  uploadRouter = uploadModule.default || uploadModule;
+  console.log('✅ Upload router imported:', !!uploadRouter);
+} catch (error) {
+  console.error('❌ Upload router failed:', error instanceof Error ? error.message : String(error));
+}
+
+let transcriptionRouter: any;
+try {
+  const transcriptionModule = require('./routes/transcription');
+  transcriptionRouter = transcriptionModule.default || transcriptionModule;
+  console.log('✅ Transcription router imported:', !!transcriptionRouter);
+} catch (error) {
+  console.error('❌ Transcription router failed:', error instanceof Error ? error.message : String(error));
+}
+
+console.log('📦 Route import phase completed');
+
+// API Routes
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'API healthy - v2.0' });
+});
+
+// Temporary migration endpoint (remove in production)
+app.post('/api/migrate', async (_req, res) => {
+  try {
+    const pool = (await import('./database')).default;
+    
+    // Add new columns if they don't exist
+    await pool.query(`
+      ALTER TABLE workers 
+      ADD COLUMN IF NOT EXISTS paypal_email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS worker_data JSONB;
+    `);
+    
+    res.json({ success: true, message: 'Migration completed' });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: 'Migration failed', details: error });
+  }
+});
+
+// Register routes with safety checks
+console.log('🔍 Starting route registration...');
+
+if (workersRouter) {
+  app.use('/api/workers', workersRouter);
+  console.log('✅ Workers routes registered');
+} else {
+  console.log('❌ Workers routes skipped - router not loaded');
+}
+
+if (sessionsRouter) {
+  app.use('/api/sessions', sessionsRouter);
+  console.log('✅ Sessions routes registered');
+} else {
+  console.log('❌ Sessions routes skipped - router not loaded');
+}
+
+if (uploadRouter) {
+  app.use('/api/upload', uploadRouter);
+  console.log('✅ Upload routes registered');
+} else {
+  console.log('❌ Upload routes skipped - router not loaded');
+}
+
+if (transcriptionRouter) {
+  app.use('/api/transcription', transcriptionRouter);
+  console.log('✅ Transcription routes registered');
+} else {
+  console.log('❌ Transcription routes skipped - router not loaded');
+}
+
+console.log('🚀 Route registration phase completed');
+
+// 404 handler
+app.use('*', notFoundHandler);
+
+// Global error handler
+app.use(errorHandler);
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  process.exit(0);
+});
+
+// Start server
+app.listen(PORT, () => {
+  logger.info('Server started successfully', {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    healthEndpoint: `http://localhost:${PORT}/health`,
+  });
+  
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+});
+
+export default app;
