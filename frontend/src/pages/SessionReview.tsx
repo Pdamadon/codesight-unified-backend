@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { InteractionEvent } from '../utils/interactionTracker';
+import { ClickCapture } from '../utils/clickOverlay';
 import { apiService } from '../services/api';
 
 interface LocationState {
@@ -10,6 +11,7 @@ interface LocationState {
   audioBlob: Blob | null;
   duration: number;
   interactionEvents: InteractionEvent[];
+  clickCaptures: ClickCapture[];
 }
 
 const SessionReview: React.FC = () => {
@@ -224,33 +226,39 @@ const SessionReview: React.FC = () => {
         </div>
 
         {/* Interaction Analytics */}
-        {state.interactionEvents && state.interactionEvents.length > 0 && (
+        {((state.interactionEvents && state.interactionEvents.length > 0) || (state.clickCaptures && state.clickCaptures.length > 0)) && (
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
             <h3 className="text-lg font-semibold text-purple-900 mb-3">
               📊 Interaction Analytics
             </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {state.clickCaptures?.length || 0}
+                </div>
+                <div className="text-sm text-gray-600">Screen Clicks</div>
+              </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {state.interactionEvents.filter(e => e.type === 'click').length}
+                  {state.interactionEvents?.filter(e => e.type === 'click').length || 0}
                 </div>
-                <div className="text-sm text-gray-600">Total Clicks</div>
+                <div className="text-sm text-gray-600">App Clicks</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {state.interactionEvents.filter(e => e.type === 'scroll').length}
+                  {state.interactionEvents?.filter(e => e.type === 'scroll').length || 0}
                 </div>
                 <div className="text-sm text-gray-600">Scroll Events</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
-                  {state.interactionEvents.filter(e => e.type === 'input').length}
+                  {state.interactionEvents?.filter(e => e.type === 'input').length || 0}
                 </div>
                 <div className="text-sm text-gray-600">Form Inputs</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
-                  {new Set(state.interactionEvents.filter(e => e.data.url).map(e => e.data.url)).size}
+                  {new Set(state.clickCaptures?.map(c => c.url) || []).size}
                 </div>
                 <div className="text-sm text-gray-600">Pages Visited</div>
               </div>
@@ -260,8 +268,19 @@ const SessionReview: React.FC = () => {
             <div className="bg-white rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">Sample Captured Interactions:</h4>
               <div className="space-y-1 text-sm text-gray-600 max-h-32 overflow-y-auto">
-                {state.interactionEvents.slice(0, 10).map((event, index) => (
-                  <div key={index} className="flex justify-between">
+                {/* Show screen clicks first */}
+                {state.clickCaptures?.slice(0, 5).map((click, index) => (
+                  <div key={`click-${index}`} className="flex justify-between">
+                    <span className="text-red-600 font-medium">Screen Click</span>
+                    <span>
+                      ({click.x}, {click.y}) on {new URL(click.url).hostname}
+                    </span>
+                  </div>
+                ))}
+                
+                {/* Then show app interactions */}
+                {state.interactionEvents?.slice(0, 5).map((event, index) => (
+                  <div key={`event-${index}`} className="flex justify-between">
                     <span className="capitalize">{event.type}</span>
                     <span>
                       {event.type === 'click' && `${event.data.element} (${event.data.selector})`}
@@ -271,9 +290,10 @@ const SessionReview: React.FC = () => {
                     </span>
                   </div>
                 ))}
-                {state.interactionEvents.length > 10 && (
+                
+                {((state.clickCaptures?.length || 0) + (state.interactionEvents?.length || 0)) > 10 && (
                   <div className="text-gray-500 italic">
-                    ... and {state.interactionEvents.length - 10} more interactions
+                    ... and {((state.clickCaptures?.length || 0) + (state.interactionEvents?.length || 0)) - 10} more interactions
                   </div>
                 )}
               </div>
@@ -302,7 +322,13 @@ const SessionReview: React.FC = () => {
             {state.interactionEvents && state.interactionEvents.length > 0 && (
               <div className="flex items-center">
                 <span className="text-green-600 mr-2">✓</span>
-                Interaction data captured ({state.interactionEvents.length} events)
+                App interaction data captured ({state.interactionEvents.length} events)
+              </div>
+            )}
+            {state.clickCaptures && state.clickCaptures.length > 0 && (
+              <div className="flex items-center">
+                <span className="text-green-600 mr-2">✓</span>
+                Screen clicks captured ({state.clickCaptures.length} clicks)
               </div>
             )}
             <div className="flex items-center">

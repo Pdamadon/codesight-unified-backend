@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { InteractionTracker, InteractionEvent } from '../utils/interactionTracker';
+import { ClickOverlay, ClickCapture } from '../utils/clickOverlay';
 
 interface RecordingState {
   isRecording: boolean;
@@ -10,6 +11,7 @@ interface RecordingState {
   videoBlob: Blob | null;
   audioBlob: Blob | null;
   interactionEvents: InteractionEvent[];
+  clickCaptures: ClickCapture[];
 }
 
 const Recording: React.FC = () => {
@@ -24,6 +26,7 @@ const Recording: React.FC = () => {
     videoBlob: null,
     audioBlob: null,
     interactionEvents: [],
+    clickCaptures: [],
   });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -34,6 +37,7 @@ const Recording: React.FC = () => {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const interactionTrackerRef = useRef<InteractionTracker | null>(null);
+  const clickOverlayRef = useRef<ClickOverlay | null>(null);
 
   const scenarioDetails: Record<string, any> = {
     electronics: {
@@ -77,10 +81,21 @@ const Recording: React.FC = () => {
     // Initialize interaction tracker
     interactionTrackerRef.current = new InteractionTracker();
     
+    // Initialize click overlay with real-time update callback
+    clickOverlayRef.current = new ClickOverlay((click) => {
+      setRecordingState(prev => ({
+        ...prev,
+        clickCaptures: [...prev.clickCaptures, click]
+      }));
+    });
+    
     return () => {
       // Cleanup on unmount
       if (timerRef.current) {
         window.clearInterval(timerRef.current);
+      }
+      if (clickOverlayRef.current) {
+        clickOverlayRef.current.stop();
       }
       stopAllStreams();
     };
@@ -167,11 +182,17 @@ const Recording: React.FC = () => {
         interactionTrackerRef.current.start();
       }
 
+      // Start click overlay tracking
+      if (clickOverlayRef.current) {
+        clickOverlayRef.current.start();
+      }
+
       setRecordingState(prev => ({ 
         ...prev, 
         isRecording: true, 
         isPaused: false,
-        recordingTime: 0 
+        recordingTime: 0,
+        clickCaptures: [] // Reset click captures for new session
       }));
 
       // Start timer
@@ -229,11 +250,18 @@ const Recording: React.FC = () => {
       interactionEvents = interactionTrackerRef.current.stop();
     }
 
+    // Stop click overlay and collect clicks
+    let clickCaptures: ClickCapture[] = [];
+    if (clickOverlayRef.current) {
+      clickCaptures = clickOverlayRef.current.stop();
+    }
+
     setRecordingState(prev => ({ 
       ...prev, 
       isRecording: false, 
       isPaused: false,
-      interactionEvents 
+      interactionEvents,
+      clickCaptures 
     }));
 
     stopAllStreams();
@@ -257,7 +285,8 @@ const Recording: React.FC = () => {
         videoBlob: recordingState.videoBlob,
         audioBlob: recordingState.audioBlob,
         duration: recordingState.recordingTime,
-        interactionEvents: recordingState.interactionEvents
+        interactionEvents: recordingState.interactionEvents,
+        clickCaptures: recordingState.clickCaptures
       }
     });
   };
@@ -404,29 +433,35 @@ const Recording: React.FC = () => {
             </div>
             
             {/* Interaction Tracking Status */}
-            {recordingState.isRecording && interactionTrackerRef.current && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            {recordingState.isRecording && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="font-semibold text-red-600">
+                    {recordingState.clickCaptures.length}
+                  </div>
+                  <div className="text-gray-600">Screen Clicks</div>
+                </div>
                 <div className="text-center">
                   <div className="font-semibold text-blue-600">
-                    {interactionTrackerRef.current.getEventsSummary().clicks}
+                    {interactionTrackerRef.current?.getEventsSummary().clicks || 0}
                   </div>
-                  <div className="text-gray-600">Clicks</div>
+                  <div className="text-gray-600">App Clicks</div>
                 </div>
                 <div className="text-center">
                   <div className="font-semibold text-green-600">
-                    {interactionTrackerRef.current.getEventsSummary().scrolls}
+                    {interactionTrackerRef.current?.getEventsSummary().scrolls || 0}
                   </div>
                   <div className="text-gray-600">Scrolls</div>
                 </div>
                 <div className="text-center">
                   <div className="font-semibold text-purple-600">
-                    {interactionTrackerRef.current.getEventsSummary().inputs}
+                    {interactionTrackerRef.current?.getEventsSummary().inputs || 0}
                   </div>
                   <div className="text-gray-600">Inputs</div>
                 </div>
                 <div className="text-center">
                   <div className="font-semibold text-orange-600">
-                    {interactionTrackerRef.current.getEventsSummary().totalEvents}
+                    {recordingState.clickCaptures.length + (interactionTrackerRef.current?.getEventsSummary().totalEvents || 0)}
                   </div>
                   <div className="text-gray-600">Total Events</div>
                 </div>

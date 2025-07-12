@@ -4,7 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import { config } from 'dotenv';
+import { createServer } from 'http';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { ExtensionWebSocketServer } from './services/websocketServer';
 import logger from './utils/logger';
 
 // Load environment variables
@@ -198,17 +200,30 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+// Create HTTP server and WebSocket server
+const server = createServer(app);
+let extensionWS: ExtensionWebSocketServer;
+
+try {
+  extensionWS = new ExtensionWebSocketServer(server);
+  console.log('✅ Extension WebSocket server initialized');
+} catch (error) {
+  console.error('❌ Failed to initialize WebSocket server:', error);
+}
+
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info('Server started successfully', {
     port: PORT,
     environment: process.env.NODE_ENV || 'development',
     healthEndpoint: `http://localhost:${PORT}/health`,
+    websocketEndpoint: `ws://localhost:${PORT}/extension-ws`,
   });
   
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔌 Extension WebSocket: ws://localhost:${PORT}/extension-ws`);
 });
 
 export default app;

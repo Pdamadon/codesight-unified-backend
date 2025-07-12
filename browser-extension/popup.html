@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .logo {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      margin: 0;
+    }
+    
+    .subtitle {
+      font-size: 12px;
+      color: #6B7280;
+      margin: 4px 0 0 0;
+    }
+    
+    .status {
+      background: #F3F4F6;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      color: #374151;
+    }
+    
+    .status-value {
+      font-weight: 500;
+    }
+    
+    .status-connected {
+      color: #059669;
+    }
+    
+    .status-disconnected {
+      color: #DC2626;
+    }
+    
+    .status-tracking {
+      color: #2563EB;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .btn {
+      padding: 10px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #2563EB;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1D4ED8;
+    }
+    
+    .btn-primary:disabled {
+      background: #9CA3AF;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: #F3F4F6;
+      color: #374151;
+      border: 1px solid #D1D5DB;
+    }
+    
+    .btn-secondary:hover {
+      background: #E5E7EB;
+    }
+    
+    .btn-danger {
+      background: #DC2626;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #B91C1C;
+    }
+    
+    .input-group {
+      margin-bottom: 12px;
+    }
+    
+    .input-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    
+    .input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #D1D5DB;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    .events-summary {
+      background: #EEF2FF;
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 12px;
+      font-size: 12px;
+    }
+    
+    .events-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .event-stat {
+      text-align: center;
+    }
+    
+    .event-count {
+      font-weight: 600;
+      font-size: 16px;
+      color: #2563EB;
+    }
+    
+    .event-label {
+      color: #6B7280;
+      font-size: 11px;
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🎯</div>
+    <h1 class="title">CodeSight Tracker</h1>
+    <p class="subtitle">Shopping Behavior Research</p>
+  </div>
+
+  <div class="status">
+    <div class="status-item">
+      <span class="status-label">Connection:</span>
+      <span id="connectionStatus" class="status-value status-disconnected">Disconnected</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Session:</span>
+      <span id="sessionStatus" class="status-value">None</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Events:</span>
+      <span id="eventCount" class="status-value">0</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="input-group">
+      <label class="input-label" for="websocketUrl">CodeSight App URL:</label>
+      <input 
+        type="text" 
+        id="websocketUrl" 
+        class="input" 
+        placeholder="ws://localhost:8080"
+        value="ws://localhost:8080"
+      >
+    </div>
+
+    <button id="connectBtn" class="btn btn-secondary">Connect to CodeSight</button>
+    
+    <div id="sessionControls" class="hidden">
+      <div class="input-group">
+        <label class="input-label" for="sessionId">Session ID:</label>
+        <input 
+          type="text" 
+          id="sessionId" 
+          class="input" 
+          placeholder="Enter session ID from CodeSight app"
+        >
+      </div>
+      
+      <button id="startBtn" class="btn btn-primary">Start Tracking</button>
+      <button id="stopBtn" class="btn btn-danger hidden">Stop Tracking</button>
+    </div>
+  </div>
+
+  <div id="eventsSummary" class="events-summary hidden">
+    <div style="font-weight: 500; margin-bottom: 8px;">Live Activity:</div>
+    <div class="events-grid">
+      <div class="event-stat">
+        <div id="clickCount" class="event-count">0</div>
+        <div class="event-label">Clicks</div>
+      </div>
+      <div class="event-stat">
+        <div id="scrollCount" class="event-count">0</div>
+        <div class="event-label">Scrolls</div>
+      </div>
+      <div class="event-stat">
+        <div id="inputCount" class="event-count">0</div>
+        <div class="event-label">Inputs</div>
+      </div>
+      <div class="event-stat">
+        <div id="totalCount" class="event-count">0</div>
+        <div class="event-label">Total</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
