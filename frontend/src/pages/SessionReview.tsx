@@ -371,7 +371,7 @@ const SessionReview: React.FC = () => {
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
               <h4 className="font-semibold text-gray-900 mb-2">🔒 Data Usage</h4>
               <p className="text-gray-700 text-sm">
-                Your recordings will be used solely for academic research purposes. All data 
+                Your recordings will be used solely for research into shopping behaviors. All data 
                 is anonymized and securely stored. Personal information is never shared.
               </p>
             </div>
