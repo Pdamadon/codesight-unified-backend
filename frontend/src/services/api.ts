@@ -1,7 +1,7 @@
 import { InteractionEvent } from '../utils/interactionTracker';
 
 // Use Vite environment variable for API base URL
-const API_BASE_URL = (import.meta.env.VITE_API_URL as string) || 'https://codesight-crowdsource-collector-production.up.railway.app/api';
+const API_BASE_URL = import.meta.env?.VITE_API_URL || 'https://codesight-crowdsource-collector-production.up.railway.app/api';
 
 export interface WorkerRegistrationData {
   firstName: string;

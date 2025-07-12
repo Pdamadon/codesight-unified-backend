@@ -108,7 +108,7 @@ const SessionReview: React.FC = () => {
       setUploadProgress(80);
 
       // Fetch extension data if available
-      const sessionId = localStorage.getItem('sessionId');
+      const sessionId = localStorage.getItem('sessionId') || undefined;
       let extensionData = null;
       
       if (sessionId) {
@@ -129,7 +129,7 @@ const SessionReview: React.FC = () => {
         extensionData: extensionData, // Include precise clicks
         videoFileKey,
         audioFileKey,
-        ...(sessionId && { sessionId })
+        sessionId
       });
 
       if (!sessionResponse.success) {
