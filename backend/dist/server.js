@@ -43,11 +43,38 @@ app.use((0, helmet_1.default)({
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false
 }));
+const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? [
+        process.env.FRONTEND_URL,
+        'https://codesight-crowdsource-collector.vercel.app',
+        'https://codesight-crowdsource-collector-*.vercel.app'
+    ].filter(Boolean)
+    : ['http://localhost:3000', 'http://localhost:5173'];
 app.use((0, cors_1.default)({
-    origin: process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL
-        : ['http://localhost:3000', 'http://localhost:5173'],
-    credentials: true
+    origin: (origin, callback) => {
+        if (!origin)
+            return callback(null, true);
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (!allowed || typeof allowed !== 'string')
+                return false;
+            if (origin === allowed)
+                return true;
+            if (allowed.includes('*')) {
+                const pattern = allowed.replace(/\*/g, '.*');
+                return new RegExp(pattern).test(origin);
+            }
+            return false;
+        });
+        if (isAllowed) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express_1.default.json({ limit: '100mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '100mb' }));

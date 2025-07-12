@@ -36,10 +36,17 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     // Check if origin is in allowed list or matches pattern
-    if (allowedOrigins.some(allowed => 
-      origin === allowed || 
-      (allowed.includes('*') && new RegExp(allowed.replace('*', '.*')).test(origin))
-    )) {
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (!allowed || typeof allowed !== 'string') return false;
+      if (origin === allowed) return true;
+      if (allowed.includes('*')) {
+        const pattern = allowed.replace(/\*/g, '.*');
+        return new RegExp(pattern).test(origin);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
