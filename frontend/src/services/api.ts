@@ -23,6 +23,7 @@ export interface SessionData {
   extensionData?: any; // Precise clicks from browser extension
   videoFileKey?: string;
   audioFileKey?: string;
+  dataFileKey?: string; // JSON data file with shopping behavior
   sessionId?: string;
 }
 
@@ -79,7 +80,7 @@ class ApiService {
   }
 
   // Get signed URL for file upload
-  async getUploadUrl(fileType: 'video' | 'audio', fileName: string, workerId: string): Promise<ApiResponse<{ uploadUrl: string; fileKey: string }>> {
+  async getUploadUrl(fileType: 'video' | 'audio' | 'data', fileName: string, workerId: string): Promise<ApiResponse<{ uploadUrl: string; fileKey: string }>> {
     return this.makeRequest<{ uploadUrl: string; fileKey: string }>('/upload/presigned-url', {
       method: 'POST',
       body: JSON.stringify({ fileType, fileName, workerId }),

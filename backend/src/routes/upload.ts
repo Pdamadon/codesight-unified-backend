@@ -22,11 +22,13 @@ const upload = multer({
     fileSize: 500 * 1024 * 1024, // 500MB limit
   },
   fileFilter: (_req, file, cb) => {
-    // Accept video and audio files
-    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/')) {
+    // Accept video, audio, and JSON files
+    if (file.mimetype.startsWith('video/') || 
+        file.mimetype.startsWith('audio/') ||
+        file.mimetype === 'application/json') {
       cb(null, true);
     } else {
-      cb(new Error('Only video and audio files are allowed'));
+      cb(new Error('Only video, audio, and JSON files are allowed'));
     }
   },
 });
@@ -46,13 +48,21 @@ router.post('/presigned-url', async (req, res) => {
     const fileExtension = fileName.split('.').pop();
     const uniqueFileName = `${workerId}/${uuidv4()}.${fileExtension}`;
     
+    // Map file types to correct Content-Type
+    const contentTypeMap: { [key: string]: string } = {
+      'video': 'video/webm',
+      'audio': 'audio/webm', 
+      'data': 'application/json'
+    };
+    
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET!,
       Key: uniqueFileName,
-      ContentType: fileType,
+      ContentType: contentTypeMap[fileType] || fileType,
       Metadata: {
         workerId: workerId,
         originalName: fileName,
+        fileTypeCategory: fileType,
       },
     });
 

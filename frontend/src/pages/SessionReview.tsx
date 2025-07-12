@@ -128,15 +128,58 @@ const SessionReview: React.FC = () => {
       // Fetch extension data if available
       const sessionId = localStorage.getItem('sessionId') || undefined;
       let extensionData = null;
+      let dataFileKey = '';
       
       if (sessionId) {
         try {
           const extensionResponse = await apiService.getExtensionData(sessionId);
           extensionData = extensionResponse.data;
+          
+          // Upload extension data as JSON file
+          if (extensionData) {
+            const trainingData = {
+              sessionId: sessionId,
+              workerId: workerId,
+              scenario: state.scenario,
+              duration: state.duration,
+              timestamp: new Date().toISOString(),
+              videoFile: videoFileKey,
+              audioFile: audioFileKey,
+              shoppingBehavior: {
+                totalClicks: extensionData.clickEvents?.length || 0,
+                totalInputs: extensionData.inputEvents?.length || 0,
+                totalScrolls: extensionData.scrollEvents?.length || 0,
+                totalNavigations: extensionData.navigationEvents?.length || 0,
+                sitesVisited: [...new Set([
+                  ...(extensionData.clickEvents?.map((c: any) => new URL(c.url).hostname) || []),
+                  ...(extensionData.inputEvents?.map((i: any) => new URL(i.url).hostname) || [])
+                ])],
+                detailedEvents: extensionData
+              }
+            };
+            
+            const jsonBlob = new Blob([JSON.stringify(trainingData, null, 2)], { 
+              type: 'application/json' 
+            });
+            
+            const dataFileName = `session-${Date.now()}-data.json`;
+            const dataUploadResponse = await apiService.getUploadUrl('data', dataFileName, workerId);
+            
+            if (dataUploadResponse.success && dataUploadResponse.data) {
+              await apiService.uploadFile(
+                dataUploadResponse.data.uploadUrl,
+                jsonBlob,
+                (progress) => setUploadProgress(80 + progress * 0.15) // 80-95% for JSON
+              );
+              dataFileKey = dataUploadResponse.data.fileKey;
+            }
+          }
         } catch (error) {
           console.warn('No extension data found for session:', sessionId);
         }
       }
+
+      setUploadProgress(95);
 
       // Create combined session record
       const sessionResponse = await apiService.createSession({
@@ -147,6 +190,7 @@ const SessionReview: React.FC = () => {
         extensionData: extensionData, // Include precise clicks
         videoFileKey,
         audioFileKey,
+        dataFileKey, // Include JSON data file
         sessionId
       });
 
