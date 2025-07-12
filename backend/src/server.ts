@@ -218,10 +218,9 @@ process.on('SIGINT', () => {
 
 // Create HTTP server and WebSocket server
 const server = createServer(app);
-let extensionWS: ExtensionWebSocketServer;
 
 try {
-  extensionWS = new ExtensionWebSocketServer(server);
+  new ExtensionWebSocketServer(server);
   console.log('✅ Extension WebSocket server initialized');
 } catch (error) {
   console.error('❌ Failed to initialize WebSocket server:', error);

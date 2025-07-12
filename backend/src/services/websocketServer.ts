@@ -14,7 +14,7 @@ interface ExtensionSession {
 export class ExtensionWebSocketServer {
   private wss: WebSocketServer;
   private sessions: Map<string, ExtensionSession> = new Map();
-  private heartbeatInterval: NodeJS.Timeout;
+  private heartbeatInterval: NodeJS.Timeout | undefined;
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ 

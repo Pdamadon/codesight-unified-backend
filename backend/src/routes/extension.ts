@@ -75,11 +75,11 @@ router.get('/sessions/:sessionId/data', asyncHandler(async (req, res) => {
         sessionTime: e.event_data.sessionTime
       })),
       statistics: {
-        totalClicks: events.filter(e => e.event_type === 'click').length,
-        totalInputs: events.filter(e => e.event_type === 'input').length,
-        totalScrolls: events.filter(e => e.event_type === 'scroll').length,
-        totalNavigations: events.filter(e => e.event_type === 'navigation').length,
-        pagesVisited: [...new Set(events.map(e => e.event_data.url).filter(Boolean))],
+        totalClicks: events.filter((e: any) => e.event_type === 'click').length,
+        totalInputs: events.filter((e: any) => e.event_type === 'input').length,
+        totalScrolls: events.filter((e: any) => e.event_type === 'scroll').length,
+        totalNavigations: events.filter((e: any) => e.event_type === 'navigation').length,
+        pagesVisited: [...new Set(events.map((e: any) => e.event_data.url).filter(Boolean))],
         sessionDuration: session.end_time ? 
           new Date(session.end_time).getTime() - new Date(session.start_time).getTime() : 
           null
@@ -90,6 +90,7 @@ router.get('/sessions/:sessionId/data', asyncHandler(async (req, res) => {
       success: true,
       data: organizedData
     });
+    return;
 
   } catch (error) {
     console.error('Error fetching extension data:', error);
@@ -97,6 +98,7 @@ router.get('/sessions/:sessionId/data', asyncHandler(async (req, res) => {
       success: false,
       error: 'Failed to fetch extension data'
     });
+    return;
   }
 }));
 
@@ -166,6 +168,7 @@ router.get('/sessions/:sessionId/training-data', asyncHandler(async (req, res) =
       success: true,
       data: trainingData
     });
+    return;
 
   } catch (error) {
     console.error('Error fetching training data:', error);
@@ -173,6 +176,7 @@ router.get('/sessions/:sessionId/training-data', asyncHandler(async (req, res) =
       success: false,
       error: 'Failed to fetch training data'
     });
+    return;
   }
 }));
 
