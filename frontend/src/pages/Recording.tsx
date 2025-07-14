@@ -78,9 +78,6 @@ const Recording: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Check extension connection on mount
-    checkExtensionConnection();
-    
     return () => {
       // Cleanup on unmount
       if (timerRef.current) {
@@ -96,37 +93,6 @@ const Recording: React.FC = () => {
     }
   };
 
-  const checkExtensionConnection = async () => {
-    // Check if extension is available and connected
-    if (window.chrome && window.chrome.runtime) {
-      try {
-        // Try to ping the extension
-        const response = await window.chrome.runtime.sendMessage({
-          type: 'GET_STATUS'
-        });
-        console.log('Extension status response:', response);
-        setRecordingState(prev => ({ 
-          ...prev, 
-          extensionConnected: true, 
-          extensionStatus: 'idle' 
-        }));
-      } catch (error) {
-        console.error('Extension ping failed:', error);
-        setRecordingState(prev => ({ 
-          ...prev, 
-          extensionConnected: false, 
-          extensionStatus: 'error' 
-        }));
-      }
-    } else {
-      console.warn('Chrome extension API not available');
-      setRecordingState(prev => ({ 
-        ...prev, 
-        extensionConnected: false, 
-        extensionStatus: 'error' 
-      }));
-    }
-  };
 
   const startRecording = async () => {
     try {
@@ -189,25 +155,8 @@ const Recording: React.FC = () => {
       console.log('Opening shopping website:', targetUrl);
       window.open(targetUrl, '_blank');
 
-      // Notify extension to start tracking with sessionId
-      if (window.chrome && window.chrome.runtime) {
-        try {
-          await window.chrome.runtime.sendMessage({
-            type: 'START_TRACKING',
-            sessionId: sessionId,
-            scenario: scenario,
-            targetUrl: targetUrl
-          });
-          setRecordingState(prev => ({ ...prev, extensionStatus: 'tracking' }));
-          console.log('Extension tracking started with sessionId:', sessionId);
-        } catch (error) {
-          console.error('Failed to start extension tracking:', error);
-          setRecordingState(prev => ({ ...prev, extensionStatus: 'error' }));
-        }
-      } else {
-        console.warn('Chrome extension not available');
-        setRecordingState(prev => ({ ...prev, extensionStatus: 'error' }));
-      }
+      // Extension tracking is now manual - user clicks extension icon
+      console.log('Shopping website opened. User should now click extension icon and start tracking.');
 
       setRecordingState(prev => ({ 
         ...prev, 
@@ -260,18 +209,8 @@ const Recording: React.FC = () => {
       window.clearInterval(timerRef.current);
     }
 
-    // Stop extension tracking
-    if (window.chrome && window.chrome.runtime) {
-      try {
-        window.chrome.runtime.sendMessage({
-          type: 'STOP_TRACKING',
-          sessionId: sessionId
-        });
-        setRecordingState(prev => ({ ...prev, extensionStatus: 'idle' }));
-      } catch (error) {
-        console.error('Failed to stop extension tracking:', error);
-      }
-    }
+    // Extension tracking is manual - user should stop it manually
+    console.log('Audio recording stopped. User should stop extension tracking manually.');
 
     setRecordingState(prev => ({ 
       ...prev, 
@@ -300,7 +239,7 @@ const Recording: React.FC = () => {
       
       console.log('📊 Preparing navigation data...');
       
-      // Get extension data
+      // Get extension data automatically
       let extensionData = null;
       if (window.chrome && window.chrome.runtime) {
         try {
@@ -308,6 +247,7 @@ const Recording: React.FC = () => {
             type: 'GET_SESSION_DATA',
             sessionId: sessionId
           });
+          console.log('Extension data retrieved:', extensionData);
         } catch (error) {
           console.error('Failed to get extension data:', error);
         }
@@ -371,58 +311,26 @@ const Recording: React.FC = () => {
             
             {/* Recording Status */}
             <div className="text-right">
-              <div className="space-y-2">
-                {/* Audio Status */}
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  recordingState.isRecording
-                    ? recordingState.isPaused
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {recordingState.isRecording ? (
-                    <>
-                      <div className={`w-2 h-2 rounded-full mr-2 ${
-                        recordingState.isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'
-                      }`} />
-                      {recordingState.isPaused ? 'AUDIO PAUSED' : 'AUDIO RECORDING'}
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-2 h-2 rounded-full bg-gray-400 mr-2" />
-                      READY
-                    </>
-                  )}
-                </div>
-                
-                {/* Extension Status */}
-                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  recordingState.extensionConnected
-                    ? recordingState.extensionStatus === 'tracking'
-                      ? 'bg-green-100 text-green-800'
-                      : recordingState.extensionStatus === 'error'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    recordingState.extensionConnected
-                      ? recordingState.extensionStatus === 'tracking'
-                        ? 'bg-green-500 animate-pulse'
-                        : recordingState.extensionStatus === 'error'
-                        ? 'bg-red-500'
-                        : 'bg-blue-500'
-                      : 'bg-gray-400'
-                  }`} />
-                  {recordingState.extensionConnected
-                    ? recordingState.extensionStatus === 'tracking'
-                      ? 'EXTENSION TRACKING'
-                      : recordingState.extensionStatus === 'error'
-                      ? 'EXTENSION ERROR'
-                      : 'EXTENSION READY'
-                    : 'EXTENSION DISCONNECTED'
-                  }
-                </div>
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                recordingState.isRecording
+                  ? recordingState.isPaused
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {recordingState.isRecording ? (
+                  <>
+                    <div className={`w-2 h-2 rounded-full mr-2 ${
+                      recordingState.isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'
+                    }`} />
+                    {recordingState.isPaused ? 'AUDIO PAUSED' : 'AUDIO RECORDING'}
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-gray-400 mr-2" />
+                    READY
+                  </>
+                )}
               </div>
               <div className="text-2xl font-mono font-bold text-gray-900 mt-2">
                 {formatTime(recordingState.recordingTime)}
@@ -457,28 +365,24 @@ const Recording: React.FC = () => {
               <ol className="space-y-2 text-green-800 text-sm">
                 <li><strong>1.</strong> Click "Start Recording" below</li>
                 <li><strong>2.</strong> Shopping site opens automatically</li>
-                <li><strong>3.</strong> Extension begins tracking clicks</li>
-                <li><strong>4.</strong> Speak your thoughts out loud</li>
-                <li><strong>5.</strong> Describe your decision process</li>
+                <li><strong>3.</strong> Click the extension icon (puzzle piece)</li>
+                <li><strong>4.</strong> Click "Connect to CodeSight" → then "Start Tracking"</li>
+                <li><strong>5.</strong> Speak your thoughts as you browse</li>
+                <li><strong>6.</strong> Shop normally - extension tracks everything</li>
               </ol>
             </div>
             
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-purple-900 mb-2">
-                🧩 Extension Status
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                🧩 Extension Setup
               </h4>
-              <div className="text-xs text-purple-700">
-                {recordingState.extensionConnected ? (
-                  <div className="flex items-center">
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                    Extension connected and ready
-                  </div>
-                ) : (
-                  <div className="flex items-center">
-                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
-                    Extension not detected - install and enable
-                  </div>
-                )}
+              <div className="text-xs text-blue-700">
+                <div className="space-y-1">
+                  <div>• Install CodeSight extension from Chrome Web Store</div>
+                  <div>• Or load from browser-extension/ folder (Developer mode)</div>
+                  <div>• Extension icon appears in Chrome toolbar</div>
+                  <div>• Click it to start tracking after recording begins</div>
+                </div>
               </div>
             </div>
           </div>
@@ -525,9 +429,9 @@ const Recording: React.FC = () => {
           {/* Instructions */}
           <div className="mt-6 text-center text-gray-600">
             {!recordingState.isRecording ? (
-              <p>Click "Start Recording" to begin audio recording and automatically open a shopping website. The extension will start tracking your clicks.</p>
+              <p>Click "Start Recording" to begin audio recording and automatically open a shopping website. Then click the extension icon to start tracking.</p>
             ) : (
-              <p>Your microphone is recording and the extension is tracking your clicks. A shopping website opened automatically - narrate your thoughts as you browse.</p>
+              <p>Your microphone is recording. A shopping website opened automatically. Now click the extension icon and start tracking to capture your clicks.</p>
             )}
           </div>
         </div>
@@ -546,23 +450,14 @@ const Recording: React.FC = () => {
               />
             </div>
             
-            {/* Extension Status */}
+            {/* Extension Reminder */}
             {recordingState.isRecording && (
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-2">
-                  Extension Status: 
-                  <span className={`ml-2 font-medium ${
-                    recordingState.extensionStatus === 'tracking' ? 'text-green-600' :
-                    recordingState.extensionStatus === 'error' ? 'text-red-600' :
-                    'text-blue-600'
-                  }`}>
-                    {recordingState.extensionStatus === 'tracking' ? 'Actively Tracking' :
-                     recordingState.extensionStatus === 'error' ? 'Connection Error' :
-                     'Ready'}
-                  </span>
+                  📌 <strong>Remember:</strong> Click the extension icon to start tracking
                 </div>
                 <div className="text-xs text-gray-500">
-                  The browser extension is capturing screenshots and click data automatically
+                  The browser extension captures screenshots and click data when active
                 </div>
               </div>
             )}
