@@ -1,17 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { InteractionTracker, InteractionEvent } from '../utils/interactionTracker';
-import { ClickOverlay, ClickCapture } from '../utils/clickOverlay';
 
 interface RecordingState {
   isRecording: boolean;
   isPaused: boolean;
   recordingTime: number;
-  videoBlob: Blob | null;
   audioBlob: Blob | null;
-  interactionEvents: InteractionEvent[];
-  clickCaptures: ClickCapture[];
+  extensionConnected: boolean;
+  extensionStatus: 'idle' | 'tracking' | 'error';
 }
 
 const Recording: React.FC = () => {
@@ -23,21 +20,15 @@ const Recording: React.FC = () => {
     isRecording: false,
     isPaused: false,
     recordingTime: 0,
-    videoBlob: null,
     audioBlob: null,
-    interactionEvents: [],
-    clickCaptures: [],
+    extensionConnected: false,
+    extensionStatus: 'idle',
   });
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRecorderRef = useRef<MediaRecorder | null>(null);
-  const screenStreamRef = useRef<MediaStream | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
-  const interactionTrackerRef = useRef<InteractionTracker | null>(null);
-  const clickOverlayRef = useRef<ClickOverlay | null>(null);
 
   const scenarioDetails: Record<string, any> = {
     electronics: {
@@ -87,8 +78,8 @@ const Recording: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Note: Interaction tracking now handled by browser extension
-    // Only webapp recording is handled here
+    // Check extension connection on mount
+    checkExtensionConnection();
     
     return () => {
       // Cleanup on unmount
@@ -100,27 +91,23 @@ const Recording: React.FC = () => {
   }, []);
 
   const stopAllStreams = () => {
-    if (screenStreamRef.current) {
-      screenStreamRef.current.getTracks().forEach(track => track.stop());
-    }
     if (audioStreamRef.current) {
       audioStreamRef.current.getTracks().forEach(track => track.stop());
     }
   };
 
+  const checkExtensionConnection = () => {
+    // Check if extension is available and connected
+    if (window.chrome && window.chrome.runtime) {
+      setRecordingState(prev => ({ ...prev, extensionConnected: true }));
+    } else {
+      setRecordingState(prev => ({ ...prev, extensionConnected: false }));
+    }
+  };
+
   const startRecording = async () => {
     try {
-      // Get screen recording permission with compression settings
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          width: { ideal: 1280, max: 1280 },    // 720p width
-          height: { ideal: 720, max: 720 },     // 720p height  
-          frameRate: { ideal: 15, max: 20 }     // Lower framerate for smaller files
-        },
-        audio: true // Include system audio if available
-      });
-
-      // Get microphone audio
+      // Get microphone audio only
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -129,28 +116,7 @@ const Recording: React.FC = () => {
         }
       });
 
-      screenStreamRef.current = screenStream;
       audioStreamRef.current = audioStream;
-
-      // Set up screen recording with compression and fallbacks
-      let mediaRecorderOptions;
-      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-        mediaRecorderOptions = {
-          mimeType: 'video/webm;codecs=vp8',
-          videoBitsPerSecond: 1000000,        // 1 Mbps 
-          audioBitsPerSecond: 128000          // 128 kbps
-        };
-      } else if (MediaRecorder.isTypeSupported('video/webm')) {
-        mediaRecorderOptions = {
-          mimeType: 'video/webm',
-          videoBitsPerSecond: 1000000
-        };
-      } else {
-        mediaRecorderOptions = { videoBitsPerSecond: 1000000 };
-      }
-      
-      const mediaRecorder = new MediaRecorder(screenStream, mediaRecorderOptions);
-      console.log('Video compression settings:', mediaRecorderOptions);
 
       // Set up audio recording with fallbacks
       let audioRecorderOptions;
@@ -171,14 +137,7 @@ const Recording: React.FC = () => {
       const audioRecorder = new MediaRecorder(audioStream, audioRecorderOptions);
       console.log('Audio compression settings:', audioRecorderOptions);
 
-      chunksRef.current = [];
       audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
 
       audioRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -186,37 +145,35 @@ const Recording: React.FC = () => {
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-        setRecordingState(prev => ({ ...prev, videoBlob }));
-      };
-
       audioRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         setRecordingState(prev => ({ ...prev, audioBlob }));
       };
 
-      // Handle screen share stopping
-      screenStream.getVideoTracks()[0].addEventListener('ended', () => {
-        stopRecording();
-      });
-
-      mediaRecorderRef.current = mediaRecorder;
       audioRecorderRef.current = audioRecorder;
 
-      // Start recording
-      mediaRecorder.start(1000); // Collect data every second
+      // Start audio recording
       audioRecorder.start(1000);
 
-      // Note: Extension tracking is handled separately by browser extension
-      // No automatic webapp click tracking needed
+      // Notify extension to start tracking
+      if (window.chrome && window.chrome.runtime) {
+        try {
+          await window.chrome.runtime.sendMessage({
+            type: 'START_TRACKING',
+            sessionId: sessionId
+          });
+          setRecordingState(prev => ({ ...prev, extensionStatus: 'tracking' }));
+        } catch (error) {
+          console.error('Failed to start extension tracking:', error);
+          setRecordingState(prev => ({ ...prev, extensionStatus: 'error' }));
+        }
+      }
 
       setRecordingState(prev => ({ 
         ...prev, 
         isRecording: true, 
         isPaused: false,
-        recordingTime: 0,
-        clickCaptures: [] // Reset click captures for new session
+        recordingTime: 0
       }));
 
       // Start timer
@@ -229,14 +186,13 @@ const Recording: React.FC = () => {
 
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Failed to start recording. Please make sure you grant screen sharing permissions.');
+      alert('Failed to start recording. Please make sure you grant microphone permissions.');
     }
   };
 
   const pauseRecording = () => {
-    if (mediaRecorderRef.current && audioRecorderRef.current) {
+    if (audioRecorderRef.current) {
       if (recordingState.isPaused) {
-        mediaRecorderRef.current.resume();
         audioRecorderRef.current.resume();
         timerRef.current = window.setInterval(() => {
           setRecordingState(prev => ({ 
@@ -245,7 +201,6 @@ const Recording: React.FC = () => {
           }));
         }, 1000);
       } else {
-        mediaRecorderRef.current.pause();
         audioRecorderRef.current.pause();
         if (timerRef.current) {
           window.clearInterval(timerRef.current);
@@ -257,9 +212,6 @@ const Recording: React.FC = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-    }
     if (audioRecorderRef.current) {
       audioRecorderRef.current.stop();
     }
@@ -268,24 +220,23 @@ const Recording: React.FC = () => {
       window.clearInterval(timerRef.current);
     }
 
-    // Stop interaction tracking and collect events
-    let interactionEvents: InteractionEvent[] = [];
-    if (interactionTrackerRef.current) {
-      interactionEvents = interactionTrackerRef.current.stop();
-    }
-
-    // Stop click overlay and collect clicks
-    let clickCaptures: ClickCapture[] = [];
-    if (clickOverlayRef.current) {
-      clickCaptures = clickOverlayRef.current.stop();
+    // Stop extension tracking
+    if (window.chrome && window.chrome.runtime) {
+      try {
+        window.chrome.runtime.sendMessage({
+          type: 'STOP_TRACKING',
+          sessionId: sessionId
+        });
+        setRecordingState(prev => ({ ...prev, extensionStatus: 'idle' }));
+      } catch (error) {
+        console.error('Failed to stop extension tracking:', error);
+      }
     }
 
     setRecordingState(prev => ({ 
       ...prev, 
       isRecording: false, 
-      isPaused: false,
-      interactionEvents,
-      clickCaptures 
+      isPaused: false
     }));
 
     stopAllStreams();
@@ -297,7 +248,7 @@ const Recording: React.FC = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleFinishSession = () => {
+  const handleFinishSession = async () => {
     try {
       console.log('🎬 Starting session finish process...');
       console.log('Recording state:', recordingState);
@@ -308,13 +259,25 @@ const Recording: React.FC = () => {
       }
       
       console.log('📊 Preparing navigation data...');
+      
+      // Get extension data
+      let extensionData = null;
+      if (window.chrome && window.chrome.runtime) {
+        try {
+          extensionData = await window.chrome.runtime.sendMessage({
+            type: 'GET_SESSION_DATA',
+            sessionId: sessionId
+          });
+        } catch (error) {
+          console.error('Failed to get extension data:', error);
+        }
+      }
+      
       const navigationData = {
         scenario,
-        videoBlob: recordingState.videoBlob,
         audioBlob: recordingState.audioBlob,
         duration: recordingState.recordingTime,
-        interactionEvents: recordingState.interactionEvents,
-        clickCaptures: recordingState.clickCaptures
+        extensionData: extensionData
       };
       
       console.log('Navigation data:', navigationData);
@@ -368,26 +331,58 @@ const Recording: React.FC = () => {
             
             {/* Recording Status */}
             <div className="text-right">
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                recordingState.isRecording
-                  ? recordingState.isPaused
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
-                {recordingState.isRecording ? (
-                  <>
-                    <div className={`w-2 h-2 rounded-full mr-2 ${
-                      recordingState.isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'
-                    }`} />
-                    {recordingState.isPaused ? 'PAUSED' : 'RECORDING'}
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-gray-400 mr-2" />
-                    READY
-                  </>
-                )}
+              <div className="space-y-2">
+                {/* Audio Status */}
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  recordingState.isRecording
+                    ? recordingState.isPaused
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {recordingState.isRecording ? (
+                    <>
+                      <div className={`w-2 h-2 rounded-full mr-2 ${
+                        recordingState.isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'
+                      }`} />
+                      {recordingState.isPaused ? 'AUDIO PAUSED' : 'AUDIO RECORDING'}
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 rounded-full bg-gray-400 mr-2" />
+                      READY
+                    </>
+                  )}
+                </div>
+                
+                {/* Extension Status */}
+                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                  recordingState.extensionConnected
+                    ? recordingState.extensionStatus === 'tracking'
+                      ? 'bg-green-100 text-green-800'
+                      : recordingState.extensionStatus === 'error'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    recordingState.extensionConnected
+                      ? recordingState.extensionStatus === 'tracking'
+                        ? 'bg-green-500 animate-pulse'
+                        : recordingState.extensionStatus === 'error'
+                        ? 'bg-red-500'
+                        : 'bg-blue-500'
+                      : 'bg-gray-400'
+                  }`} />
+                  {recordingState.extensionConnected
+                    ? recordingState.extensionStatus === 'tracking'
+                      ? 'EXTENSION TRACKING'
+                      : recordingState.extensionStatus === 'error'
+                      ? 'EXTENSION ERROR'
+                      : 'EXTENSION READY'
+                    : 'EXTENSION DISCONNECTED'
+                  }
+                </div>
               </div>
               <div className="text-2xl font-mono font-bold text-gray-900 mt-2">
                 {formatTime(recordingState.recordingTime)}
@@ -414,18 +409,37 @@ const Recording: React.FC = () => {
             </div>
           </div>
 
-          <div>
+          <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-green-900 mb-3">
-                🎤 Recording Tips
+                🎤 Recording Steps
               </h3>
-              <ul className="space-y-2 text-green-800 text-sm">
-                <li>• Speak your thoughts out loud</li>
-                <li>• Explain what you're looking for</li>
-                <li>• Share why you like/dislike options</li>
-                <li>• Mention price concerns</li>
-                <li>• Describe your decision process</li>
-              </ul>
+              <ol className="space-y-2 text-green-800 text-sm">
+                <li><strong>1.</strong> Start audio recording</li>
+                <li><strong>2.</strong> Ensure extension is tracking</li>
+                <li><strong>3.</strong> Navigate to shopping sites</li>
+                <li><strong>4.</strong> Speak your thoughts out loud</li>
+                <li><strong>5.</strong> Describe your decision process</li>
+              </ol>
+            </div>
+            
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-purple-900 mb-2">
+                🧩 Extension Status
+              </h4>
+              <div className="text-xs text-purple-700">
+                {recordingState.extensionConnected ? (
+                  <div className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                    Extension connected and ready
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                    Extension not detected - install and enable
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -471,9 +485,9 @@ const Recording: React.FC = () => {
           {/* Instructions */}
           <div className="mt-6 text-center text-gray-600">
             {!recordingState.isRecording ? (
-              <p>Click "Start Recording" to begin screen capture and audio recording. You'll need to grant screen sharing permissions.</p>
+              <p>Click "Start Recording" to begin audio recording. Make sure the browser extension is installed and ready for tracking.</p>
             ) : (
-              <p>Your screen and microphone are being recorded. Navigate to shopping websites and narrate your thoughts as you browse.</p>
+              <p>Your microphone is recording and the extension is tracking your clicks. Navigate to shopping websites and narrate your thoughts as you browse.</p>
             )}
           </div>
         </div>
@@ -492,38 +506,23 @@ const Recording: React.FC = () => {
               />
             </div>
             
-            {/* Interaction Tracking Status */}
+            {/* Extension Status */}
             {recordingState.isRecording && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="font-semibold text-red-600">
-                    {recordingState.clickCaptures.length}
-                  </div>
-                  <div className="text-gray-600">Screen Clicks</div>
+              <div className="text-center">
+                <div className="text-sm text-gray-600 mb-2">
+                  Extension Status: 
+                  <span className={`ml-2 font-medium ${
+                    recordingState.extensionStatus === 'tracking' ? 'text-green-600' :
+                    recordingState.extensionStatus === 'error' ? 'text-red-600' :
+                    'text-blue-600'
+                  }`}>
+                    {recordingState.extensionStatus === 'tracking' ? 'Actively Tracking' :
+                     recordingState.extensionStatus === 'error' ? 'Connection Error' :
+                     'Ready'}
+                  </span>
                 </div>
-                <div className="text-center">
-                  <div className="font-semibold text-blue-600">
-                    {interactionTrackerRef.current?.getEventsSummary().clicks || 0}
-                  </div>
-                  <div className="text-gray-600">App Clicks</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-green-600">
-                    {interactionTrackerRef.current?.getEventsSummary().scrolls || 0}
-                  </div>
-                  <div className="text-gray-600">Scrolls</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-purple-600">
-                    {interactionTrackerRef.current?.getEventsSummary().inputs || 0}
-                  </div>
-                  <div className="text-gray-600">Inputs</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-semibold text-orange-600">
-                    {recordingState.clickCaptures.length + (interactionTrackerRef.current?.getEventsSummary().totalEvents || 0)}
-                  </div>
-                  <div className="text-gray-600">Total Events</div>
+                <div className="text-xs text-gray-500">
+                  The browser extension is capturing screenshots and click data automatically
                 </div>
               </div>
             )}
@@ -533,5 +532,16 @@ const Recording: React.FC = () => {
     </Layout>
   );
 };
+
+// Add Chrome extension types to window object
+declare global {
+  interface Window {
+    chrome?: {
+      runtime?: {
+        sendMessage: (message: any) => Promise<any>;
+      };
+    };
+  }
+}
 
 export default Recording;
