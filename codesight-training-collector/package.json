@@ -1,0 +1,58 @@
+{
+  "name": "codesight-training-collector",
+  "version": "1.0.0",
+  "description": "Specialized training data collector for CodeSight web scraping models",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "collect:target": "tsx src/cli/collect.ts target",
+    "collect:amazon": "tsx src/cli/collect.ts amazon",
+    "collect:bestbuy": "tsx src/cli/collect.ts bestbuy",
+    "collect:walmart": "tsx src/cli/collect.ts walmart",
+    "collect:all": "tsx src/cli/collect.ts all",
+    "train:target": "tsx src/cli/train.ts target",
+    "train:amazon": "tsx src/cli/train.ts amazon",
+    "train:bestbuy": "tsx src/cli/train.ts bestbuy",
+    "train:walmart": "tsx src/cli/train.ts walmart",
+    "train:all": "tsx src/cli/train.ts all",
+    "test:target": "tsx src/cli/test.ts target",
+    "test:amazon": "tsx src/cli/test.ts amazon",
+    "test:bestbuy": "tsx src/cli/test.ts bestbuy",
+    "test:walmart": "tsx src/cli/test.ts walmart",
+    "validate:data": "tsx src/cli/validate.ts",
+    "export:models": "tsx src/cli/export.ts",
+    "hybrid:collect:target": "tsx src/cli/hybrid.ts collect target",
+    "hybrid:collect:amazon": "tsx src/cli/hybrid.ts collect amazon",
+    "hybrid:collect:bestbuy": "tsx src/cli/hybrid.ts collect bestbuy",
+    "hybrid:collect:walmart": "tsx src/cli/hybrid.ts collect walmart",
+    "hybrid:train:target": "tsx src/cli/hybrid.ts train target",
+    "hybrid:train:amazon": "tsx src/cli/hybrid.ts train amazon",
+    "hybrid:train:bestbuy": "tsx src/cli/hybrid.ts train bestbuy",
+    "hybrid:train:walmart": "tsx src/cli/hybrid.ts train walmart",
+    "hybrid:test": "tsx src/cli/hybrid.ts test",
+    "hybrid:selectors": "tsx src/cli/hybrid.ts test-selectors"
+  },
+  "keywords": ["codesight", "web-scraping", "training-data", "openai", "fine-tuning"],
+  "author": "CodeSight Team",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.20.1",
+    "playwright": "^1.40.0",
+    "commander": "^11.1.0",
+    "chalk": "^4.1.2",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0",
+    "fs-extra": "^11.1.1",
+    "joi": "^17.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/fs-extra": "^11.0.4",
+    "tsx": "^4.0.0",
+    "typescript": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
