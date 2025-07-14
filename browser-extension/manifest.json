@@ -11,7 +11,8 @@
     "webNavigation",
     "notifications",
     "tabs",
-    "tabCapture"
+    "tabCapture",
+    "desktopCapture"
   ],
   
   "host_permissions": [
