@@ -28,6 +28,11 @@
       "matches": ["<all_urls>"],
       "js": ["enhanced-content-script.js"],
       "run_at": "document_end"
+    },
+    {
+      "matches": ["*://*.vercel.app/*", "*://localhost:*/*", "*://codesight*"],
+      "js": ["wakeup-script.js"],
+      "run_at": "document_start"
     }
   ],
   

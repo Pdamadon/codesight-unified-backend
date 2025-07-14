@@ -6,7 +6,9 @@ class CodeSightBackground {
     this.sessionId = null;
     this.eventQueue = [];
     this.screenshots = new Map();
-    this.codesightUrl = 'wss://codesight-crowdsource-collector-production.up.railway.app/extension-ws'; // Production URL
+    // Try to get URL from storage, fallback to Railway production
+    this.codesightUrl = 'wss://codesight-crowdsource-collector-production.up.railway.app/extension-ws';
+    this.loadWebSocketUrl();
     
     this.initializeBackground();
   }
@@ -98,6 +100,30 @@ class CodeSightBackground {
         const sessionData = this.getCompleteSessionData(message.sessionId);
         console.log('Background: Session data prepared:', sessionData);
         sendResponse(sessionData);
+        break;
+
+      case 'WAKE_UP':
+        console.log('Background: Service worker awakened by frontend');
+        // Ensure we're connected to WebSocket
+        if (!this.isConnected) {
+          await this.connectWebSocket(this.codesightUrl);
+        }
+        sendResponse({ 
+          awake: true, 
+          connected: this.isConnected,
+          sessionId: this.sessionId 
+        });
+        break;
+
+      case 'RELOAD_CONFIG':
+        console.log('Background: Reloading configuration');
+        await this.loadWebSocketUrl();
+        // Reconnect with new URL
+        if (this.isConnected) {
+          this.websocket.close();
+          await this.connectWebSocket(this.codesightUrl);
+        }
+        sendResponse({ success: true });
         break;
     }
   }
@@ -246,6 +272,18 @@ class CodeSightBackground {
       'etsy.com'
     ];
     return shoppingSites.some(site => url.includes(site));
+  }
+
+  async loadWebSocketUrl() {
+    try {
+      const result = await chrome.storage.sync.get(['websocketUrl']);
+      if (result.websocketUrl) {
+        this.codesightUrl = result.websocketUrl;
+        console.log('Loaded WebSocket URL from storage:', this.codesightUrl);
+      }
+    } catch (error) {
+      console.log('Using default WebSocket URL:', this.codesightUrl);
+    }
   }
 
   async stopSession() {

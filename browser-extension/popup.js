@@ -16,8 +16,35 @@ class PopupController {
 
   async initializePopup() {
     this.bindEvents();
+    await this.loadSavedUrl();
     await this.updateStatus();
     this.startStatusPolling();
+  }
+
+  async loadSavedUrl() {
+    try {
+      const result = await chrome.storage.sync.get(['websocketUrl']);
+      if (result.websocketUrl) {
+        document.getElementById('websocketUrl').value = result.websocketUrl;
+      }
+    } catch (error) {
+      console.error('Failed to load saved URL:', error);
+    }
+  }
+
+  async saveUrl() {
+    try {
+      const websocketUrl = document.getElementById('websocketUrl').value;
+      await chrome.storage.sync.set({ websocketUrl });
+      console.log('WebSocket URL saved:', websocketUrl);
+      
+      // Notify background script to reload URL
+      chrome.runtime.sendMessage({
+        action: 'RELOAD_CONFIG'
+      });
+    } catch (error) {
+      console.error('Failed to save URL:', error);
+    }
   }
 
   bindEvents() {
@@ -40,6 +67,15 @@ class PopupController {
       if (!e.target.value) {
         e.target.value = this.generateSessionId();
       }
+    });
+
+    // Save URL when typing (debounced)
+    let saveTimeout;
+    document.getElementById('websocketUrl').addEventListener('input', () => {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        this.saveUrl();
+      }, 1000);
     });
   }
 
