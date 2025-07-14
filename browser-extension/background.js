@@ -6,7 +6,7 @@ class CodeSightBackground {
     this.sessionId = null;
     this.eventQueue = [];
     this.screenshots = new Map();
-    this.codesightUrl = 'ws://localhost:3001/extension-ws'; // Will be configurable
+    this.codesightUrl = 'wss://codesight-crowdsource-collector-production.up.railway.app/extension-ws'; // Production URL
     
     this.initializeBackground();
   }
@@ -21,6 +21,14 @@ class CodeSightBackground {
     // Handle extension installation
     chrome.runtime.onInstalled.addListener(() => {
       console.log('CodeSight Shopping Tracker installed');
+      // Auto-connect to WebSocket on installation
+      this.connectWebSocket(this.codesightUrl);
+    });
+
+    // Auto-connect on startup
+    chrome.runtime.onStartup.addListener(() => {
+      console.log('CodeSight Shopping Tracker starting up');
+      this.connectWebSocket(this.codesightUrl);
     });
 
     // Handle tab navigation
@@ -29,6 +37,9 @@ class CodeSightBackground {
         this.sendNavigationEvent(details);
       }
     });
+
+    // Auto-connect when service worker starts
+    this.connectWebSocket(this.codesightUrl);
   }
 
   async handleMessage(message, sender, sendResponse) {
@@ -185,27 +196,56 @@ class CodeSightBackground {
 
     this.sendWebSocketMessage(message);
 
-    // Notify all content scripts to start tracking
-    const tabs = await chrome.tabs.query({ active: true });
-    for (const tab of tabs) {
-      // Skip chrome:// and other restricted URLs
-      if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://'))) {
-        console.log('CodeSight: Skipping restricted URL:', tab.url);
-        continue;
+    // Wait for shopping tab to open, then start tracking
+    setTimeout(async () => {
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        // Skip chrome:// and other restricted URLs
+        if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://'))) {
+          console.log('CodeSight: Skipping restricted URL:', tab.url);
+          continue;
+        }
+        
+        // Focus on shopping sites
+        if (this.isShoppingSite(tab.url)) {
+          console.log('CodeSight: Starting tracking on shopping tab:', tab.url);
+          
+          try {
+            // Make sure content script is injected
+            await chrome.scripting.executeScript({
+              target: { tabId: tab.id },
+              files: ['enhanced-content-script.js']
+            });
+            
+            // Send start tracking message
+            await chrome.tabs.sendMessage(tab.id, {
+              action: 'START_TRACKING',
+              sessionId: sessionId
+            });
+            
+            console.log('CodeSight: Started tracking on tab', tab.id);
+          } catch (error) {
+            console.error('CodeSight: Failed to start tracking on tab:', error);
+          }
+        }
       }
-      
-      // Send the start message directly - content scripts should already be injected via manifest
-      try {
-        await chrome.tabs.sendMessage(tab.id, {
-          action: 'START_TRACKING',
-          sessionId: sessionId
-        });
-        console.log('CodeSight: Started tracking on tab', tab.id);
-      } catch (error) {
-        console.error('CodeSight: Failed to send START_TRACKING message:', error);
-        // Don't fail the whole operation if one tab fails
-      }
-    }
+    }, 2000); // Wait 2 seconds for tab to fully load
+  }
+
+  isShoppingSite(url) {
+    if (!url) return false;
+    const shoppingSites = [
+      'amazon.com',
+      'ebay.com', 
+      'walmart.com',
+      'target.com',
+      'bestbuy.com',
+      'newegg.com',
+      'nordstrom.com',
+      'macys.com',
+      'etsy.com'
+    ];
+    return shoppingSites.some(site => url.includes(site));
   }
 
   async stopSession() {

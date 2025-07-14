@@ -96,12 +96,35 @@ const Recording: React.FC = () => {
     }
   };
 
-  const checkExtensionConnection = () => {
+  const checkExtensionConnection = async () => {
     // Check if extension is available and connected
     if (window.chrome && window.chrome.runtime) {
-      setRecordingState(prev => ({ ...prev, extensionConnected: true }));
+      try {
+        // Try to ping the extension
+        const response = await window.chrome.runtime.sendMessage({
+          type: 'GET_STATUS'
+        });
+        console.log('Extension status response:', response);
+        setRecordingState(prev => ({ 
+          ...prev, 
+          extensionConnected: true, 
+          extensionStatus: 'idle' 
+        }));
+      } catch (error) {
+        console.error('Extension ping failed:', error);
+        setRecordingState(prev => ({ 
+          ...prev, 
+          extensionConnected: false, 
+          extensionStatus: 'error' 
+        }));
+      }
     } else {
-      setRecordingState(prev => ({ ...prev, extensionConnected: false }));
+      console.warn('Chrome extension API not available');
+      setRecordingState(prev => ({ 
+        ...prev, 
+        extensionConnected: false, 
+        extensionStatus: 'error' 
+      }));
     }
   };
 
