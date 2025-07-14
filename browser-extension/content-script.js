@@ -1,4 +1,16 @@
 // CodeSight Shopping Behavior Tracker - Content Script
+(function() {
+  'use strict';
+  
+  // Prevent redeclaration and multiple injections
+  if (window.ShoppingTracker || window.BASIC_SCRIPT_LOADED) {
+    console.log('Basic tracker already loaded, skipping redefinition');
+    return;
+  }
+  
+  // Mark script as loaded
+  window.BASIC_SCRIPT_LOADED = true;
+
 class ShoppingTracker {
   constructor() {
     this.isTracking = false;
@@ -50,6 +62,9 @@ class ShoppingTracker {
   }
 
   initializeTracker() {
+    // Basic tracker should always initialize its message listeners
+    // The activeTracker check happens in the main initialization below
+    
     // Listen for messages from popup/background
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       switch (message.action) {
@@ -694,7 +709,36 @@ class ShoppingTracker {
   }
 }
 
-// Initialize tracker
+// Initialize trackers
 console.log('CodeSight: Content script loaded');
-const shoppingTracker = new ShoppingTracker();
-console.log('CodeSight: ShoppingTracker initialized');
+
+// Wait a bit for enhanced tracker to load, then initialize
+setTimeout(() => {
+  // Try enhanced tracker first - check for both class and instance
+  let activeTracker;
+  if (window.enhancedTracker && window.EnhancedShoppingTracker) {
+    activeTracker = window.enhancedTracker;
+    console.log('CodeSight: Using existing enhanced tracker instance');
+  } else if (window.EnhancedShoppingTracker) {
+    activeTracker = new EnhancedShoppingTracker();
+    window.enhancedTracker = activeTracker;
+    console.log('CodeSight: Enhanced tracker initialized');
+  } else {
+    // Only create basic tracker if no enhanced tracker exists
+    if (!window.activeTracker) {
+      activeTracker = new ShoppingTracker();
+      console.log('CodeSight: Basic tracker initialized (enhanced not available)');
+    } else {
+      activeTracker = window.activeTracker;
+      console.log('CodeSight: Using existing active tracker');
+    }
+  }
+
+  // Only set if not already set
+  if (!window.activeTracker) {
+    window.activeTracker = activeTracker;
+  }
+  window.ShoppingTracker = ShoppingTracker;
+}, 100);
+
+})(); // End of IIFE

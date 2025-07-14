@@ -5,6 +5,7 @@ class CodeSightBackground {
     this.isConnected = false;
     this.sessionId = null;
     this.eventQueue = [];
+    this.screenshots = new Map();
     this.codesightUrl = 'ws://localhost:3001/extension-ws'; // Will be configurable
     
     this.initializeBackground();
@@ -58,12 +59,24 @@ class CodeSightBackground {
         sendResponse({ success: true });
         break;
 
+      case 'CAPTURE_SCREENSHOT':
+        this.captureScreenshot(sender.tab, message.data, sendResponse);
+        return true; // Keep message channel open for async response
+
       case 'GET_STATUS':
         sendResponse({
           isConnected: this.isConnected,
           sessionId: this.sessionId,
           queueLength: this.eventQueue.length
         });
+        break;
+
+      case 'GET_SESSION_SCREENSHOTS':
+        console.log('Background: GET_SESSION_SCREENSHOTS request for session:', message.sessionId);
+        console.log('Background: Total screenshots stored:', this.screenshots.size);
+        const screenshots = this.getSessionScreenshots(message.sessionId);
+        console.log('Background: Found screenshots for session:', screenshots.length);
+        sendResponse({ screenshots });
         break;
     }
   }
@@ -165,26 +178,23 @@ class CodeSightBackground {
     // Notify all content scripts to start tracking
     const tabs = await chrome.tabs.query({ active: true });
     for (const tab of tabs) {
-      try {
-        // First try to inject content script if not already there
-        await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['content-script.js']
-        });
-        console.log('CodeSight: Content script injected into tab', tab.id);
-      } catch (error) {
-        console.log('CodeSight: Content script already exists or injection failed:', error.message);
+      // Skip chrome:// and other restricted URLs
+      if (tab.url && (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://'))) {
+        console.log('CodeSight: Skipping restricted URL:', tab.url);
+        continue;
       }
       
-      // Then send the start message
-      setTimeout(() => {
-        chrome.tabs.sendMessage(tab.id, {
+      // Send the start message directly - content scripts should already be injected via manifest
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
           action: 'START_TRACKING',
           sessionId: sessionId
-        }).catch((error) => {
-          console.error('CodeSight: Failed to send START_TRACKING message:', error);
         });
-      }, 500);
+        console.log('CodeSight: Started tracking on tab', tab.id);
+      } catch (error) {
+        console.error('CodeSight: Failed to send START_TRACKING message:', error);
+        // Don't fail the whole operation if one tab fails
+      }
     }
   }
 
@@ -284,6 +294,87 @@ class CodeSightBackground {
         break;
       }
     }
+  }
+
+  async captureScreenshot(tab, data, sendResponse) {
+    try {
+      console.log('Capturing screenshot for event:', data.eventType);
+      
+      // Capture visible tab
+      const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+        format: 'png',
+        quality: 90
+      });
+
+      const screenshotId = `screenshot_${data.timestamp}_${data.eventType}`;
+      
+      // Store screenshot with metadata
+      console.log('Background: Storing screenshot with sessionId:', this.sessionId);
+      this.screenshots.set(screenshotId, {
+        dataUrl: screenshotDataUrl,
+        metadata: {
+          timestamp: data.timestamp,
+          eventType: data.eventType,
+          viewport: data.viewport,
+          tabId: tab.id,
+          url: tab.url,
+          sessionId: this.sessionId
+        }
+      });
+      console.log('Background: Screenshot stored. Total screenshots:', this.screenshots.size);
+
+      // Clean up old screenshots (keep last 100)
+      if (this.screenshots.size > 100) {
+        const oldestKey = this.screenshots.keys().next().value;
+        this.screenshots.delete(oldestKey);
+      }
+
+      // Send screenshot data with event
+      const screenshotEvent = {
+        type: 'screenshot',
+        data: {
+          screenshotId,
+          timestamp: data.timestamp,
+          eventType: data.eventType,
+          viewport: data.viewport,
+          sessionId: this.sessionId
+        }
+      };
+      
+      this.sendEvent(screenshotEvent);
+
+      sendResponse({
+        screenshotId,
+        success: true
+      });
+
+    } catch (error) {
+      console.error('Screenshot capture failed:', error);
+      sendResponse({
+        screenshotId: null,
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  getSessionScreenshots(sessionId) {
+    const sessionScreenshots = [];
+    
+    console.log('Background: Searching for screenshots with sessionId:', sessionId);
+    this.screenshots.forEach((screenshot, id) => {
+      console.log('Background: Checking screenshot:', id, 'sessionId:', screenshot.metadata.sessionId);
+      if (screenshot.metadata.sessionId === sessionId) {
+        sessionScreenshots.push({
+          id,
+          dataUrl: screenshot.dataUrl,
+          metadata: screenshot.metadata
+        });
+      }
+    });
+
+    console.log('Background: Returning screenshots:', sessionScreenshots.length);
+    return sessionScreenshots;
   }
 
   summarizeEvents(events) {

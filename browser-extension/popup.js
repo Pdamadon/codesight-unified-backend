@@ -251,6 +251,7 @@ class PopupController {
       try {
         chrome.notifications.create({
           type: 'basic',
+          iconUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
           title: 'CodeSight Tracker',
           message: message
         });
