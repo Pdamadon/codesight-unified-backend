@@ -155,18 +155,35 @@ const Recording: React.FC = () => {
       // Start audio recording
       audioRecorder.start(1000);
 
-      // Notify extension to start tracking
+      // Open relevant shopping website in new tab
+      const shoppingUrls = {
+        electronics: 'https://www.amazon.com/s?k=laptops&ref=nb_sb_noss',
+        clothing: 'https://www.amazon.com/s?k=clothing&ref=nb_sb_noss',
+        home: 'https://www.amazon.com/s?k=home+garden&ref=nb_sb_noss'
+      };
+      
+      const targetUrl = shoppingUrls[scenario as keyof typeof shoppingUrls] || shoppingUrls.electronics;
+      console.log('Opening shopping website:', targetUrl);
+      window.open(targetUrl, '_blank');
+
+      // Notify extension to start tracking with sessionId
       if (window.chrome && window.chrome.runtime) {
         try {
           await window.chrome.runtime.sendMessage({
             type: 'START_TRACKING',
-            sessionId: sessionId
+            sessionId: sessionId,
+            scenario: scenario,
+            targetUrl: targetUrl
           });
           setRecordingState(prev => ({ ...prev, extensionStatus: 'tracking' }));
+          console.log('Extension tracking started with sessionId:', sessionId);
         } catch (error) {
           console.error('Failed to start extension tracking:', error);
           setRecordingState(prev => ({ ...prev, extensionStatus: 'error' }));
         }
+      } else {
+        console.warn('Chrome extension not available');
+        setRecordingState(prev => ({ ...prev, extensionStatus: 'error' }));
       }
 
       setRecordingState(prev => ({ 
@@ -415,9 +432,9 @@ const Recording: React.FC = () => {
                 🎤 Recording Steps
               </h3>
               <ol className="space-y-2 text-green-800 text-sm">
-                <li><strong>1.</strong> Start audio recording</li>
-                <li><strong>2.</strong> Ensure extension is tracking</li>
-                <li><strong>3.</strong> Navigate to shopping sites</li>
+                <li><strong>1.</strong> Click "Start Recording" below</li>
+                <li><strong>2.</strong> Shopping site opens automatically</li>
+                <li><strong>3.</strong> Extension begins tracking clicks</li>
                 <li><strong>4.</strong> Speak your thoughts out loud</li>
                 <li><strong>5.</strong> Describe your decision process</li>
               </ol>
@@ -485,9 +502,9 @@ const Recording: React.FC = () => {
           {/* Instructions */}
           <div className="mt-6 text-center text-gray-600">
             {!recordingState.isRecording ? (
-              <p>Click "Start Recording" to begin audio recording. Make sure the browser extension is installed and ready for tracking.</p>
+              <p>Click "Start Recording" to begin audio recording and automatically open a shopping website. The extension will start tracking your clicks.</p>
             ) : (
-              <p>Your microphone is recording and the extension is tracking your clicks. Navigate to shopping websites and narrate your thoughts as you browse.</p>
+              <p>Your microphone is recording and the extension is tracking your clicks. A shopping website opened automatically - narrate your thoughts as you browse.</p>
             )}
           </div>
         </div>

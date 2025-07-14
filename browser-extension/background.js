@@ -32,18 +32,21 @@ class CodeSightBackground {
   }
 
   async handleMessage(message, sender, sendResponse) {
-    switch (message.action) {
+    switch (message.action || message.type) {
       case 'CONNECT_WEBSOCKET':
         await this.connectWebSocket(message.url || this.codesightUrl);
         sendResponse({ success: this.isConnected });
         break;
 
+      case 'START_TRACKING':
       case 'START_SESSION':
         this.sessionId = message.sessionId;
         await this.startSession(message.sessionId);
+        console.log('Extension tracking started for session:', this.sessionId);
         sendResponse({ success: true, sessionId: this.sessionId });
         break;
 
+      case 'STOP_TRACKING':
       case 'STOP_SESSION':
         await this.stopSession();
         sendResponse({ success: true });
@@ -77,6 +80,13 @@ class CodeSightBackground {
         const screenshots = this.getSessionScreenshots(message.sessionId);
         console.log('Background: Found screenshots for session:', screenshots.length);
         sendResponse({ screenshots });
+        break;
+
+      case 'GET_SESSION_DATA':
+        console.log('Background: GET_SESSION_DATA request for session:', message.sessionId);
+        const sessionData = this.getCompleteSessionData(message.sessionId);
+        console.log('Background: Session data prepared:', sessionData);
+        sendResponse(sessionData);
         break;
     }
   }
@@ -375,6 +385,29 @@ class CodeSightBackground {
 
     console.log('Background: Returning screenshots:', sessionScreenshots.length);
     return sessionScreenshots;
+  }
+
+  getCompleteSessionData(sessionId) {
+    const screenshots = this.getSessionScreenshots(sessionId);
+    const events = this.eventQueue.filter(event => event.sessionId === sessionId);
+    
+    const sessionData = {
+      sessionId: sessionId,
+      screenshots: screenshots,
+      events: events,
+      summary: {
+        totalEvents: events.length,
+        screenshotCount: screenshots.length,
+        eventTypes: this.summarizeEvents(events),
+        duration: events.length > 0 ? 
+          Math.max(...events.map(e => e.timestamp || 0)) - 
+          Math.min(...events.map(e => e.timestamp || 0)) : 0
+      },
+      timestamp: Date.now()
+    };
+    
+    console.log('Background: Complete session data prepared:', sessionData);
+    return sessionData;
   }
 
   summarizeEvents(events) {
