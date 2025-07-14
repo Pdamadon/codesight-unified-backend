@@ -6,10 +6,6 @@ class CodeSightBackground {
     this.sessionId = null;
     this.eventQueue = [];
     this.screenshots = new Map();
-    this.screenshotQueue = [];
-    this.isProcessingScreenshots = false;
-    this.lastScreenshotTime = 0;
-    this.screenshotInterval = 500; // 500ms minimum between screenshots to stay under quota
     // Try to get URL from storage, fallback to Railway production
     this.codesightUrl = 'wss://codesight-crowdsource-collector-production.up.railway.app/extension-ws';
     this.loadWebSocketUrl();
@@ -389,102 +385,65 @@ class CodeSightBackground {
   }
 
   async captureScreenshot(tab, data, sendResponse) {
-    // Add to queue instead of capturing immediately
-    this.screenshotQueue.push({
-      tab,
-      data,
-      sendResponse,
-      timestamp: Date.now()
-    });
-    
-    // Start processing queue if not already processing
-    if (!this.isProcessingScreenshots) {
-      this.processScreenshotQueue();
-    }
-  }
-
-  async processScreenshotQueue() {
-    if (this.isProcessingScreenshots || this.screenshotQueue.length === 0) {
-      return;
-    }
-
-    this.isProcessingScreenshots = true;
-    
-    while (this.screenshotQueue.length > 0) {
-      const now = Date.now();
+    try {
+      console.log('Capturing screenshot for event:', data.eventType);
       
-      // Check if enough time has passed since last screenshot
-      if (now - this.lastScreenshotTime < this.screenshotInterval) {
-        // Wait for the remaining time
-        await new Promise(resolve => setTimeout(resolve, this.screenshotInterval - (now - this.lastScreenshotTime)));
-      }
-      
-      const { tab, data, sendResponse } = this.screenshotQueue.shift();
-      
-      try {
-        console.log('Processing queued screenshot for:', data.eventType);
-        
-        // Use lower quality to reduce quota usage
-        const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
-          format: 'jpeg', // JPEG is smaller than PNG
-          quality: 60     // Lower quality = smaller file = less quota usage
-        });
+      // Capture visible tab
+      const screenshotDataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, {
+        format: 'png',
+        quality: 90
+      });
 
-        const screenshotId = `screenshot_${data.timestamp}_${data.eventType}`;
-        
-        // Store screenshot with metadata
-        this.screenshots.set(screenshotId, {
-          dataUrl: screenshotDataUrl,
-          metadata: {
-            timestamp: data.timestamp,
-            eventType: data.eventType,
-            viewport: data.viewport,
-            tabId: tab.id,
-            url: tab.url,
-            sessionId: this.sessionId
-          }
-        });
-        
-        console.log('Background: Screenshot processed. Queue length:', this.screenshotQueue.length);
-
-        // Clean up old screenshots (keep last 100)
-        if (this.screenshots.size > 100) {
-          const oldestKey = this.screenshots.keys().next().value;
-          this.screenshots.delete(oldestKey);
+      const screenshotId = `screenshot_${data.timestamp}_${data.eventType}`;
+      
+      // Store screenshot with metadata
+      console.log('Background: Storing screenshot with sessionId:', this.sessionId);
+      this.screenshots.set(screenshotId, {
+        dataUrl: screenshotDataUrl,
+        metadata: {
+          timestamp: data.timestamp,
+          eventType: data.eventType,
+          viewport: data.viewport,
+          tabId: tab.id,
+          url: tab.url,
+          sessionId: this.sessionId
         }
+      });
+      console.log('Background: Screenshot stored. Total screenshots:', this.screenshots.size);
 
-        // Send screenshot event
-        const screenshotEvent = {
-          type: 'screenshot',
-          data: {
-            screenshotId,
-            timestamp: data.timestamp,
-            eventType: data.eventType,
-            viewport: data.viewport,
-            sessionId: this.sessionId
-          }
-        };
-        
-        this.sendEvent(screenshotEvent);
-        this.lastScreenshotTime = Date.now();
-
-        sendResponse({
-          screenshotId,
-          success: true,
-          queued: false
-        });
-
-      } catch (error) {
-        console.error('Screenshot capture failed:', error);
-        sendResponse({
-          screenshotId: null,
-          success: false,
-          error: error.message
-        });
+      // Clean up old screenshots (keep last 100)
+      if (this.screenshots.size > 100) {
+        const oldestKey = this.screenshots.keys().next().value;
+        this.screenshots.delete(oldestKey);
       }
+
+      // Send screenshot data with event
+      const screenshotEvent = {
+        type: 'screenshot',
+        data: {
+          screenshotId,
+          timestamp: data.timestamp,
+          eventType: data.eventType,
+          viewport: data.viewport,
+          sessionId: this.sessionId
+        }
+      };
+      
+      this.sendEvent(screenshotEvent);
+
+      sendResponse({
+        screenshotId,
+        success: true
+      });
+
+    } catch (error) {
+      console.error('Screenshot capture failed:', error);
+      sendResponse({
+        screenshotId: null,
+        success: false,
+        error: error.message
+      });
     }
-    
-    this.isProcessingScreenshots = false;
   }
 
   getSessionScreenshots(sessionId) {
