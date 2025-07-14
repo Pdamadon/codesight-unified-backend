@@ -23,14 +23,6 @@ class CodeSightBackground {
     // Handle extension installation
     chrome.runtime.onInstalled.addListener(() => {
       console.log('CodeSight Shopping Tracker installed');
-      // Auto-connect to WebSocket on installation
-      this.connectWebSocket(this.codesightUrl);
-    });
-
-    // Auto-connect on startup
-    chrome.runtime.onStartup.addListener(() => {
-      console.log('CodeSight Shopping Tracker starting up');
-      this.connectWebSocket(this.codesightUrl);
     });
 
     // Handle tab navigation
@@ -40,8 +32,7 @@ class CodeSightBackground {
       }
     });
 
-    // Auto-connect when service worker starts
-    this.connectWebSocket(this.codesightUrl);
+    // Note: WebSocket connection will be made manually via popup or when needed
   }
 
   async handleMessage(message, sender, sendResponse) {
