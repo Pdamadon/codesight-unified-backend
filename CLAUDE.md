@@ -151,3 +151,75 @@ npm run db:generate   # Regenerate client after schema changes
 - **Never include "Generated with Claude Code" or similar AI attribution lines in commit messages**
 - Keep commit messages concise and focused on the actual changes made
 - Use conventional commit format when possible (feat:, fix:, docs:, etc.)
+
+## Recent Development Session Log (July 14, 2025)
+
+### Session Overview
+Implemented extension-only data collection strategy and fixed critical extension functionality issues.
+
+### Major Changes Made
+
+#### 1. Extension-Only Data Collection Strategy
+- **Created `plan.md`** - Comprehensive plan for removing video recording and using extension-only data collection
+- **Reduced storage costs** by ~95% (5MB vs 100MB per session)
+- **Better training data** with screenshots precisely timed with actions
+- **Simpler pipeline** with no video frame extraction needed
+
+#### 2. Frontend Modifications (Recording.tsx)
+- **Removed video recording** - All MediaRecorder screen recording code removed
+- **Audio-only recording** - Kept microphone recording functionality
+- **Automatic website opening** - Shopping sites open automatically when recording starts
+- **Manual extension workflow** - Clear 6-step instructions for users
+- **Updated UI** - Shows audio status and extension setup instructions
+- **Session coordination** - Passes sessionId to extension automatically
+
+#### 3. Browser Extension Enhancements
+- **Enhanced tracking system** - Added `enhanced-content-script.js` with advanced capture
+- **Nearby elements detection** - Captures interactive elements within 200px radius
+- **Multiple selector generation** - Creates robust selectors for clicked elements
+- **Screenshot capture** - Direct PNG screenshots with metadata
+- **WebSocket communication** - Real-time data streaming to backend
+- **Manual activation** - Users manually start/stop tracking via popup
+
+#### 4. Backend Improvements  
+- **Added /health endpoint** - Required for Railway deployment health checks
+- **WebSocket server** - Handles real-time extension communication at `/extension-ws`
+- **Database migration** - Added screenshots table (`004_add_screenshots_table.sql`)
+- **Extension data processing** - Handles session data from extension
+
+#### 5. Critical Bug Fixes
+- **Reverted screenshot queue system** - Removed complex queuing that was breaking extension
+- **Removed auto-connect WebSocket** - Eliminated automatic connections causing failures
+- **Fixed manifest.json** - Corrected invalid content_scripts match patterns
+- **Cleaned up content script** - Removed conflicting screenshot queue logic
+- **Fixed extension communication** - Restored working message passing
+
+### Architecture Changes
+
+#### Before (Video-based)
+```
+User → Frontend → MediaRecorder → Video File → S3 → Training Data
+```
+
+#### After (Extension-based)  
+```
+User → Frontend (audio) + Extension (screenshots/clicks) → Backend → S3 → Training Data
+```
+
+### Current State
+- **Frontend**: `https://codesight-crowdsource-collector.vercel.app/`
+- **Backend**: `https://codesight-crowdsource-collector-production.up.railway.app/`
+- **Extension WebSocket**: `wss://codesight-crowdsource-collector-production.up.railway.app/extension-ws`
+- **Manual workflow**: Users click extension icon to start/stop tracking
+- **Data collection**: Extension captures nearby elements, screenshots, and click data
+
+### Outstanding Issues (End of Session)
+1. **SessionReview blank page** - Navigation to session review shows blank white page
+2. **Extension tracking continues** - Not automatically stopping when "Finish Session" clicked
+3. **Manual extension stop required** - Users must manually stop tracking in extension popup
+
+### Next Steps
+1. Debug SessionReview page rendering issues
+2. Fix automatic extension tracking stop on session finish
+3. Prepare extension for Chrome Web Store submission
+4. Add proper icons and privacy policy for store listing
