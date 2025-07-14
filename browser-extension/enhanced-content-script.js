@@ -17,7 +17,6 @@ class EnhancedShoppingTracker {
     this.sessionId = null;
     this.events = [];
     this.startTime = 0;
-    this.screenshotQueue = [];
     this.domSnapshots = new Map();
     this.mutationObserver = null;
     this.currentUrl = window.location.href;
@@ -369,11 +368,6 @@ class EnhancedShoppingTracker {
         }
       }, (response) => {
         if (response && response.screenshotId) {
-          this.screenshotQueue.push({
-            id: response.screenshotId,
-            timestamp,
-            eventType
-          });
           resolve({
             id: response.screenshotId,
             dataUrl: response.dataUrl
