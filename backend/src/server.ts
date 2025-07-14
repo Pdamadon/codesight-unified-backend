@@ -126,6 +126,10 @@ try {
 console.log('📦 Route import phase completed');
 
 // API Routes
+app.get('/health', (_req, res) => {
+  res.json({ status: 'healthy', timestamp: new Date().toISOString(), uptime: process.uptime(), environment: process.env.NODE_ENV || 'development' });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'API healthy - v2.3 [EXTENSION ROUTES]' });
 });
