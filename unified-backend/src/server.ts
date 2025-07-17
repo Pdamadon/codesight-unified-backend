@@ -42,6 +42,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const logger = new Logger("UnifiedServer");
 
+// Trust proxy for Railway deployment
+app.set('trust proxy', 1);
+
 // Initialize database
 const prisma = new PrismaClient();
 
