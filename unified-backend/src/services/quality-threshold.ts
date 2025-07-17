@@ -644,13 +644,7 @@ export class QualityThresholdService {
           status: status as any,
           qualityScore: assessment.overallScore,
           completeness: assessment.categoryScores.completeness || 0,
-          reliability: assessment.categoryScores.reliability || 0,
-          qualityAssessment: JSON.stringify({
-            finalAction: assessment.finalAction,
-            actionReason: assessment.actionReason,
-            recommendations: assessment.recommendations,
-            thresholdResults: assessment.thresholdResults
-          })
+          reliability: assessment.categoryScores.reliability || 0
         }
       });
 
