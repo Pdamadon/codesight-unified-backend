@@ -52,6 +52,9 @@ class UnifiedBackgroundService {
     // Load settings and auto-connect to WebSocket on startup
     this.loadSettingsAndConnect();
     
+    // Clear storage to fix quota issues
+    this.clearStorageQuota();
+    
     console.log('Unified Background Service initialized v2.0');
   }
 
@@ -388,19 +391,7 @@ class UnifiedBackgroundService {
     this.websocketConnection.send(JSON.stringify(authMessage));
   }
 
-  async sendConnectionInfo() {
-    if (!this.websocketConnection) return;
-
-    const info = {
-      type: 'connection_info',
-      extensionVersion: '2.0.0',
-      browser: this.getBrowserInfo(),
-      activeSessions: Array.from(this.activeSessions.keys()),
-      timestamp: Date.now()
-    };
-
-    this.websocketConnection.send(JSON.stringify(info));
-  }
+  // Removed sendConnectionInfo - authentication provides this info
 
   async sendScreenshotToBackend(screenshot) {
     if (!this.websocketConnection || this.websocketConnection.readyState !== WebSocket.OPEN) {
@@ -408,23 +399,23 @@ class UnifiedBackgroundService {
     }
 
     try {
-      // Send screenshot metadata first
-      const metadata = {
-        type: 'screenshot_metadata',
-        screenshot: {
-          ...screenshot,
-          dataUrl: null // Don't send the actual image data in metadata
-        }
-      };
+      // Send screenshot data directly (backend expects 'screenshot_data' type)
 
-      this.websocketConnection.send(JSON.stringify(metadata));
-
-      // Send image data separately if needed
+      // Send screenshot data with proper backend format
       if (screenshot.compressedSize < this.config.maxScreenshotSize) {
         const imageData = {
           type: 'screenshot_data',
-          id: screenshot.id,
-          dataUrl: screenshot.dataUrl
+          sessionId: this.currentSessionId || 'unknown',
+          data: {
+            id: screenshot.id,
+            dataUrl: screenshot.dataUrl,
+            timestamp: screenshot.timestamp,
+            metadata: {
+              ...screenshot,
+              dataUrl: null // Metadata without image data
+            }
+          },
+          timestamp: Date.now()
         };
 
         this.websocketConnection.send(JSON.stringify(imageData));
@@ -442,7 +433,6 @@ class UnifiedBackgroundService {
       switch (message.type) {
         case 'authentication_success':
           console.log('Background: Authentication successful');
-          this.sendConnectionInfo();
           this.processQueuedData(); // Send any queued data
           break;
 
@@ -645,23 +635,11 @@ class UnifiedBackgroundService {
   // Storage management
   async storeScreenshot(screenshot) {
     try {
-      const key = `screenshot_${screenshot.id}`;
-      await chrome.storage.local.set({
-        [key]: {
-          ...screenshot,
-          dataUrl: screenshot.dataUrl.substring(0, 1000) + '...' // Store truncated version
-        }
-      });
-
-      // Store full image data separately if needed
-      if (screenshot.compressedSize < this.config.maxScreenshotSize) {
-        await chrome.storage.local.set({
-          [`${key}_data`]: screenshot.dataUrl
-        });
-      }
-
+      // Skip local storage to avoid quota issues - send directly to backend
+      console.log('Background: Screenshot captured, sending to backend immediately');
+      await this.sendScreenshotToBackend(screenshot);
     } catch (error) {
-      console.error('Background: Screenshot storage failed:', error);
+      console.error('Background: Screenshot processing failed:', error);
     }
   }
 
@@ -873,6 +851,27 @@ class UnifiedBackgroundService {
       this.websocketConnection.send(JSON.stringify(message));
     } catch (error) {
       console.error('Background: Failed to stop backend session:', error);
+    }
+  }
+
+  async clearStorageQuota() {
+    try {
+      // Clear all screenshot data to fix quota exceeded error
+      const storage = await chrome.storage.local.get();
+      const keysToRemove = [];
+      
+      for (const key of Object.keys(storage)) {
+        if (key.startsWith('screenshot_')) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      if (keysToRemove.length > 0) {
+        await chrome.storage.local.remove(keysToRemove);
+        console.log(`Background: Cleared ${keysToRemove.length} screenshot entries from storage`);
+      }
+    } catch (error) {
+      console.error('Background: Failed to clear storage:', error);
     }
   }
 }

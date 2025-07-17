@@ -16,16 +16,7 @@
   ],
   
   "host_permissions": [
-    "https://*.amazon.com/*",
-    "https://*.ebay.com/*",
-    "https://*.shopify.com/*",
-    "https://*.walmart.com/*",
-    "https://*.target.com/*",
-    "https://*.bestbuy.com/*",
-    "https://*.etsy.com/*",
-    "https://*.alibaba.com/*",
-    "https://*.aliexpress.com/*",
-    "https://*.mercadolibre.com/*"
+    "<all_urls>"
   ],
   
   "background": {
