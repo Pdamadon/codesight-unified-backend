@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "CodeSight unified platform with backend API and browser extension",
   "scripts": {
-    "build": "cd unified-backend && npm ci && npm run build",
+    "build": "cd unified-backend && npm install && npm run build",
     "start": "cd unified-backend && npm start",
     "dev": "cd unified-backend && npm run dev",
     "db:migrate": "cd unified-backend && npm run db:migrate",
@@ -14,5 +14,7 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "dependencies": {},
+  "devDependencies": {}
 }

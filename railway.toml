@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "cd unified-backend && npm ci && npm run build"
+buildCommand = "cd unified-backend && npm install && npm run build"
 watchPatterns = ["unified-backend/**"]
 
 [deploy]
