@@ -137,9 +137,17 @@ app.use(
   })
 );
 
-// Enhanced validation middleware
+// Enhanced validation middleware  
 app.use(validateRequestSize(50 * 1024 * 1024)); // 50MB limit
-app.use(validateContentType());
+
+// Apply content type validation to all routes except WebSocket endpoint
+app.use((req, res, next) => {
+  if (req.path === '/ws') {
+    return next(); // Skip validation for WebSocket endpoint
+  }
+  validateContentType()(req, res, next);
+});
+
 app.use(sanitizeInput);
 
 // Health check endpoints

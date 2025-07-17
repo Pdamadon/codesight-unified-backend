@@ -119,6 +119,16 @@ export class DataProcessingPipeline extends EventEmitter {
 
   async stopSession(sessionId: string): Promise<void> {
     try {
+      // Check if session exists first
+      const existingSession = await this.prisma.unifiedSession.findUnique({
+        where: { id: sessionId }
+      });
+
+      if (!existingSession) {
+        this.logger.warn('Cannot stop session - session not found in database', { sessionId });
+        return; // Don't throw error for missing sessions
+      }
+
       await this.prisma.unifiedSession.update({
         where: { id: sessionId },
         data: {
@@ -127,9 +137,13 @@ export class DataProcessingPipeline extends EventEmitter {
         }
       });
 
-      this.logger.info('Session stopped', { sessionId });
+      this.logger.info('Session stopped successfully', { sessionId });
     } catch (error) {
-      this.logger.error('Failed to stop session', error, { sessionId });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error('Failed to stop session', { 
+        sessionId, 
+        error: errorMessage 
+      });
       throw error;
     }
   }
