@@ -957,7 +957,19 @@ export class DataProcessingPipeline extends EventEmitter {
     
     if (!this.parallelProcessing) {
       this.logger.warn('Parallel processing disabled, falling back to traditional processing');
-      return this.addJobToQueue({ type: 'session_complete', sessionId, data: { sessionId }, priority: 1, maxRetries: 3 });
+      const job: ProcessingJob = {
+        id: `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId,
+        type: 'session_complete',
+        status: 'pending',
+        data: { sessionId },
+        priority: 1,
+        createdAt: new Date(),
+        retryCount: 0,
+        maxRetries: 3
+      };
+      this.queueJob(job);
+      return job.id;
     }
     
     const jobId = await this.parallelProcessing.processSession(sessionId, 1); // Highest priority
