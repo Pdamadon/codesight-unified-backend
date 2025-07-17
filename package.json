@@ -9,12 +9,18 @@
     "db:migrate": "cd unified-backend && npm run db:migrate",
     "db:generate": "cd unified-backend && npm run db:generate"
   },
-  "keywords": ["codesight", "data-collection", "ai-training", "browser-extension"],
+  "keywords": [
+    "codesight",
+    "data-collection",
+    "ai-training",
+    "browser-extension"
+  ],
   "author": "CodeSight Team",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
 }

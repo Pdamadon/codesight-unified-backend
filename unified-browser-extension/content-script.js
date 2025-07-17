@@ -100,6 +100,10 @@
             const sessionData = await this.getSessionData();
             sendResponse({ success: true, data: sessionData });
             break;
+
+          case 'ping':
+            sendResponse({ success: true, message: 'Content script is working', tracker: !!window.UnifiedCodeSightTracker });
+            break;
             
           default:
             sendResponse({ success: false, error: 'Unknown action' });
@@ -144,6 +148,9 @@
       // Start periodic validation
       this.startPeriodicValidation();
       
+      // Notify background script to start session on backend
+      this.startBackendSession();
+      
       console.log('Unified: Tracking started for session:', sessionId);
     }
 
@@ -176,6 +183,9 @@
       
       // Prepare session data
       const sessionData = await this.prepareSessionData();
+      
+      // Stop backend session
+      await this.stopBackendSession();
       
       // Clear state
       this.clearState();
@@ -472,7 +482,7 @@
       };
 
       // Priority 1: ID selector
-      if (element.id && element.id.trim()) {
+      if (element.id && typeof element.id === 'string' && element.id.trim()) {
         const idSelector = `#${element.id}`;
         selectors.primary = idSelector;
         selectors.alternatives.push(idSelector);
@@ -1037,12 +1047,54 @@
 
     async sendEventToBackground(eventData) {
       try {
-        await chrome.runtime.sendMessage({
+        console.log('Unified: Sending event to background:', eventData.type);
+        const response = await chrome.runtime.sendMessage({
           action: 'SEND_DATA',
           data: eventData
         });
+        console.log('Unified: Background response:', response);
       } catch (error) {
         console.error('Unified: Failed to send event to background:', error);
+        
+        // If background script is not ready, try to wake it up
+        if (error.message.includes('Could not establish connection')) {
+          console.log('Unified: Background script disconnected, attempting to reconnect...');
+          setTimeout(() => {
+            this.sendEventToBackground(eventData);
+          }, 1000);
+        }
+      }
+    }
+
+    async startBackendSession() {
+      try {
+        console.log('Unified: Starting backend session:', this.sessionId);
+        const response = await chrome.runtime.sendMessage({
+          action: 'START_BACKEND_SESSION',
+          sessionId: this.sessionId,
+          config: {
+            type: 'AUTOMATED',
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            timestamp: Date.now()
+          }
+        });
+        console.log('Unified: Backend session started:', response);
+      } catch (error) {
+        console.error('Unified: Failed to start backend session:', error);
+      }
+    }
+
+    async stopBackendSession() {
+      try {
+        console.log('Unified: Stopping backend session:', this.sessionId);
+        const response = await chrome.runtime.sendMessage({
+          action: 'STOP_BACKEND_SESSION',
+          sessionId: this.sessionId
+        });
+        console.log('Unified: Backend session stopped:', response);
+      } catch (error) {
+        console.error('Unified: Failed to stop backend session:', error);
       }
     }
 

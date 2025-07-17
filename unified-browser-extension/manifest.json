@@ -69,6 +69,6 @@
   "options_page": "options.html",
   
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://localhost:* https://127.0.0.1:*; font-src 'self';"
+    "extension_pages": "script-src 'self'; object-src 'self'; default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://localhost:* https://127.0.0.1:* https://gentle-vision-production.up.railway.app wss://gentle-vision-production.up.railway.app; font-src 'self';"
   }
 }

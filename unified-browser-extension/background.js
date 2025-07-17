@@ -5,10 +5,13 @@ class UnifiedBackgroundService {
   constructor() {
     this.activeSessions = new Map();
     this.screenshotQueue = [];
+    this.dataQueue = [];
     this.isProcessingQueue = false;
     this.websocketConnection = null;
+    this.reconnectAttempts = 0;
     this.config = {
-      backendUrl: 'wss://localhost:3001',
+      backendUrl: 'wss://gentle-vision-production.up.railway.app/ws',
+      apiKey: 'test-key-dev', // Development API key
       maxScreenshotSize: 2 * 1024 * 1024, // 2MB
       compressionQuality: 0.8,
       burstModeDelay: 300,
@@ -45,6 +48,9 @@ class UnifiedBackgroundService {
     
     // Start periodic cleanup
     this.startPeriodicCleanup();
+    
+    // Load settings and auto-connect to WebSocket on startup
+    this.loadSettingsAndConnect();
     
     console.log('Unified Background Service initialized v2.0');
   }
@@ -85,6 +91,20 @@ class UnifiedBackgroundService {
         case 'GET_SESSION_STATUS':
           const status = this.getSessionStatus(sender.tab.id);
           sendResponse({ success: true, status });
+          break;
+
+        case 'START_BACKEND_SESSION':
+          await this.startBackendSession(message.sessionId, message.config);
+          sendResponse({ success: true });
+          break;
+
+        case 'STOP_BACKEND_SESSION':
+          await this.stopBackendSession(message.sessionId);
+          sendResponse({ success: true });
+          break;
+
+        case 'ping':
+          sendResponse({ success: true, message: 'Background script is working', connected: !!this.websocketConnection });
           break;
 
         default:
@@ -148,27 +168,15 @@ class UnifiedBackgroundService {
 
   // Convert PNG to WebP for better compression
   async convertToWebP(pngDataUrl, quality = 0.8) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = new OffscreenCanvas(img.width, img.height);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        
-        canvas.convertToBlob({
-          type: 'image/webp',
-          quality: quality
-        }).then(blob => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(blob);
-        }).catch(() => {
-          // Fallback to original if WebP conversion fails
-          resolve(pngDataUrl);
-        });
-      };
-      img.src = pngDataUrl;
-    });
+    try {
+      // For service workers, we'll skip WebP conversion and return original
+      // as Image and OffscreenCanvas are not available in service worker context
+      console.log('Background: WebP conversion skipped in service worker, using original PNG');
+      return pngDataUrl;
+    } catch (error) {
+      console.log('Background: WebP conversion failed, using original PNG');
+      return pngDataUrl;
+    }
   }
 
   // Burst mode screenshot capture
@@ -331,21 +339,27 @@ class UnifiedBackgroundService {
 
       this.websocketConnection.onopen = () => {
         console.log('Background: WebSocket connected');
-        this.sendConnectionInfo();
+        this.reconnectAttempts = 0; // Reset reconnection counter
+        this.authenticateConnection();
       };
 
       this.websocketConnection.onmessage = (event) => {
         this.handleWebSocketMessage(event);
       };
 
-      this.websocketConnection.onclose = () => {
-        console.log('Background: WebSocket disconnected');
+      this.websocketConnection.onclose = (event) => {
+        console.log('Background: WebSocket disconnected', event.code, event.reason);
         this.websocketConnection = null;
         
-        // Attempt reconnection after delay
+        // Attempt reconnection after delay (exponential backoff)
+        const delay = Math.min(5000 * Math.pow(2, this.reconnectAttempts || 0), 30000);
+        this.reconnectAttempts = (this.reconnectAttempts || 0) + 1;
+        
+        console.log(`Background: Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+        
         setTimeout(() => {
           this.connectWebSocket(url);
-        }, 5000);
+        }, delay);
       };
 
       this.websocketConnection.onerror = (error) => {
@@ -355,6 +369,23 @@ class UnifiedBackgroundService {
     } catch (error) {
       console.error('Background: WebSocket connection failed:', error);
     }
+  }
+
+  async authenticateConnection() {
+    if (!this.websocketConnection) return;
+
+    const authMessage = {
+      type: 'authenticate',
+      data: {
+        apiKey: this.config.apiKey,
+        clientType: 'extension',
+        extensionVersion: '2.0.0',
+        browser: this.getBrowserInfo()
+      },
+      timestamp: Date.now()
+    };
+
+    this.websocketConnection.send(JSON.stringify(authMessage));
   }
 
   async sendConnectionInfo() {
@@ -409,6 +440,16 @@ class UnifiedBackgroundService {
       const message = JSON.parse(event.data);
       
       switch (message.type) {
+        case 'authentication_success':
+          console.log('Background: Authentication successful');
+          this.sendConnectionInfo();
+          this.processQueuedData(); // Send any queued data
+          break;
+
+        case 'authentication_failed':
+          console.error('Background: Authentication failed:', message.data);
+          break;
+
         case 'capture_request':
           this.handleCaptureRequest(message);
           break;
@@ -720,20 +761,118 @@ class UnifiedBackgroundService {
     };
   }
 
+  async loadSettingsAndConnect() {
+    try {
+      // Load settings from storage
+      const settings = await chrome.storage.sync.get({
+        backendUrl: this.config.backendUrl,
+        apiKey: this.config.apiKey
+      });
+      
+      // Update config with loaded settings
+      this.config.backendUrl = settings.backendUrl;
+      if (settings.apiKey) {
+        this.config.apiKey = settings.apiKey;
+      }
+      
+      console.log('Background: Loaded settings, connecting to:', this.config.backendUrl);
+      
+      // Connect to WebSocket
+      this.connectWebSocket();
+      
+    } catch (error) {
+      console.error('Background: Failed to load settings:', error);
+      // Use default settings and connect anyway
+      this.connectWebSocket();
+    }
+  }
+
   async sendDataToBackend(data) {
     if (!this.websocketConnection || this.websocketConnection.readyState !== WebSocket.OPEN) {
       console.warn('Background: WebSocket not connected, queuing data');
+      // Queue the data for later sending
+      if (!this.dataQueue) this.dataQueue = [];
+      this.dataQueue.push(data);
+      
+      // Try to reconnect if not already trying
+      if (!this.websocketConnection) {
+        this.connectWebSocket();
+      }
+      return false;
+    }
+
+    try {
+      const message = {
+        type: 'interaction_event',
+        data,
+        timestamp: Date.now(),
+        sessionId: data.sessionId || 'unknown'
+      };
+      
+      console.log('Background: Sending interaction data to backend:', data.type);
+      this.websocketConnection.send(JSON.stringify(message));
+      
+      // Process any queued data
+      this.processQueuedData();
+      
+      return true;
+    } catch (error) {
+      console.error('Background: Failed to send data to backend:', error);
+      return false;
+    }
+  }
+
+  processQueuedData() {
+    if (!this.dataQueue || this.dataQueue.length === 0) return;
+    
+    console.log(`Background: Processing ${this.dataQueue.length} queued items`);
+    
+    const queue = [...this.dataQueue];
+    this.dataQueue = [];
+    
+    queue.forEach(data => {
+      this.sendDataToBackend(data);
+    });
+  }
+
+  async startBackendSession(sessionId, config) {
+    if (!this.websocketConnection || this.websocketConnection.readyState !== WebSocket.OPEN) {
+      console.warn('Background: Cannot start backend session - WebSocket not connected');
       return;
     }
 
     try {
-      this.websocketConnection.send(JSON.stringify({
-        type: 'interaction_data',
-        data,
+      const message = {
+        type: 'session_start',
+        sessionId,
+        data: config,
         timestamp: Date.now()
-      }));
+      };
+
+      console.log('Background: Starting backend session:', sessionId);
+      this.websocketConnection.send(JSON.stringify(message));
     } catch (error) {
-      console.error('Background: Failed to send data to backend:', error);
+      console.error('Background: Failed to start backend session:', error);
+    }
+  }
+
+  async stopBackendSession(sessionId) {
+    if (!this.websocketConnection || this.websocketConnection.readyState !== WebSocket.OPEN) {
+      console.warn('Background: Cannot stop backend session - WebSocket not connected');
+      return;
+    }
+
+    try {
+      const message = {
+        type: 'session_stop',
+        sessionId,
+        timestamp: Date.now()
+      };
+
+      console.log('Background: Stopping backend session:', sessionId);
+      this.websocketConnection.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('Background: Failed to stop backend session:', error);
     }
   }
 }

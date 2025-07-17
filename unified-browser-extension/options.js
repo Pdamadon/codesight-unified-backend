@@ -2,7 +2,7 @@
 
 // Default settings
 const defaultSettings = {
-  backendUrl: 'wss://localhost:3001',
+  backendUrl: 'wss://gentle-vision-production.up.railway.app/ws',
   autoStart: false,
   sessionTimeout: 30,
   privacyMode: true,

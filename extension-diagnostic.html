@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 CodeSight Extension Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #444;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 8px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #4CAF50; }
+        .status-warning { background-color: #ff9800; }
+        .status-error { background-color: #f44336; }
+        .status-pending { background-color: #9e9e9e; }
+        
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a8b;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .log-container {
+            background: #1e1e1e;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-success { color: #4CAF50; }
+        .log-warning { color: #ff9800; }
+        .log-error { color: #f44336; }
+        .log-info { color: #2196F3; }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007cba;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .test-result.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .test-result.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .test-result.info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        
+        .json-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        
+        .diagnostic-summary {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .summary-score {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .summary-score.good { color: #28a745; }
+        .summary-score.warning { color: #ffc107; }
+        .summary-score.error { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 CodeSight Extension Diagnostic Tool</h1>
+        
+        <div class="diagnostic-summary" id="diagnosticSummary">
+            <div class="summary-score" id="overallScore">Initializing...</div>
+            <div id="overallStatus">Running diagnostic tests...</div>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="runFullDiagnostic()">🔍 Run Full Diagnostic</button>
+            <button onclick="testWebSocketOnly()">🔗 Test WebSocket Only</button>
+            <button onclick="testExtensionOnly()">🧩 Test Extension Only</button>
+            <button onclick="testBackendOnly()">🖥️ Test Backend Only</button>
+            <button onclick="clearAllLogs()">🧹 Clear Logs</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Real-time Metrics</h2>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-value" id="testsRun">0</div>
+                    <div class="metric-label">Tests Run</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="testsPassedt">0</div>
+                    <div class="metric-label">Tests Passed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="connectionStatus">Unknown</div>
+                    <div class="metric-label">Connection Status</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value" id="dataUploadStatus">Unknown</div>
+                    <div class="metric-label">Data Upload</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Test Results</h2>
+            <div id="testResults"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📝 Real-time Log</h2>
+            <div class="log-container" id="logContainer"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔗 WebSocket Connection Test</h2>
+            <div>
+                <span class="status-indicator" id="wsStatusIndicator"></span>
+                <span id="wsStatusText">Not tested</span>
+            </div>
+            <button onclick="testWebSocket()">Test WebSocket Connection</button>
+            <div id="wsTestResults"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧩 Extension Integration Test</h2>
+            <div>
+                <span class="status-indicator" id="extStatusIndicator"></span>
+                <span id="extStatusText">Not tested</span>
+            </div>
+            <button onclick="testExtension()">Test Extension Integration</button>
+            <div id="extTestResults"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🖥️ Backend Status Test</h2>
+            <div>
+                <span class="status-indicator" id="backendStatusIndicator"></span>
+                <span id="backendStatusText">Not tested</span>
+            </div>
+            <button onclick="testBackend()">Test Backend Status</button>
+            <div id="backendTestResults"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔄 Data Flow Test</h2>
+            <div>
+                <span class="status-indicator" id="dataFlowStatusIndicator"></span>
+                <span id="dataFlowStatusText">Not tested</span>
+            </div>
+            <button onclick="testDataFlow()">Test End-to-End Data Flow</button>
+            <div id="dataFlowTestResults"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Backend Data Check</h2>
+            <button onclick="checkBackendData()">Check Current Backend Data</button>
+            <div id="backendDataResults"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔧 Extension Debug Info</h2>
+            <button onclick="getExtensionDebugInfo()">Get Extension Debug Info</button>
+            <div id="debugInfoResults"></div>
+        </div>
+    </div>
+    
+    <script>
+        // Global state
+        let diagnosticState = {
+            testsRun: 0,
+            testsPassed: 0,
+            webSocketStatus: 'unknown',
+            extensionStatus: 'unknown',
+            backendStatus: 'unknown',
+            dataFlowStatus: 'unknown'
+        };
+        
+        // Configuration
+        const config = {
+            backendUrl: 'wss://gentle-vision-production.up.railway.app/ws',
+            apiUrl: 'https://gentle-vision-production.up.railway.app/api',
+            apiKey: 'test-key-dev'
+        };
+        
+        // Logging functions
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong> ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function clearAllLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            document.getElementById('testResults').innerHTML = '';
+            document.getElementById('wsTestResults').innerHTML = '';
+            document.getElementById('extTestResults').innerHTML = '';
+            document.getElementById('backendTestResults').innerHTML = '';
+            document.getElementById('dataFlowTestResults').innerHTML = '';
+            document.getElementById('backendDataResults').innerHTML = '';
+            document.getElementById('debugInfoResults').innerHTML = '';
+        }
+        
+        function addTestResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const result = document.createElement('div');
+            result.className = `test-result ${type}`;
+            result.innerHTML = message;
+            container.appendChild(result);
+        }
+        
+        function updateMetrics() {
+            document.getElementById('testsRun').textContent = diagnosticState.testsRun;
+            document.getElementById('testsPassedt').textContent = diagnosticState.testsPassed;
+            document.getElementById('connectionStatus').textContent = diagnosticState.webSocketStatus;
+            document.getElementById('dataUploadStatus').textContent = diagnosticState.dataFlowStatus;
+        }
+        
+        function updateStatusIndicator(indicatorId, status) {
+            const indicator = document.getElementById(indicatorId);
+            indicator.className = `status-indicator status-${status}`;
+        }
+        
+        function updateOverallStatus() {
+            const totalTests = 4; // WS, Extension, Backend, DataFlow
+            const passedTests = [
+                diagnosticState.webSocketStatus === 'success',
+                diagnosticState.extensionStatus === 'success',
+                diagnosticState.backendStatus === 'success',
+                diagnosticState.dataFlowStatus === 'success'
+            ].filter(Boolean).length;
+            
+            const score = Math.round((passedTests / totalTests) * 100);
+            const scoreElement = document.getElementById('overallScore');
+            const statusElement = document.getElementById('overallStatus');
+            
+            scoreElement.textContent = `${score}%`;
+            
+            if (score >= 80) {
+                scoreElement.className = 'summary-score good';
+                statusElement.textContent = '✅ Extension is working properly';
+            } else if (score >= 50) {
+                scoreElement.className = 'summary-score warning';
+                statusElement.textContent = '⚠️ Extension has some issues';
+            } else {
+                scoreElement.className = 'summary-score error';
+                statusElement.textContent = '❌ Extension has significant problems';
+            }
+        }
+        
+        // WebSocket Test
+        async function testWebSocket() {
+            log('🔗 Testing WebSocket connection...', 'info');
+            diagnosticState.testsRun++;
+            
+            try {
+                const ws = new WebSocket(config.backendUrl);
+                let authSuccess = false;
+                
+                ws.onopen = function() {
+                    log('✅ WebSocket connection opened', 'success');
+                    addTestResult('wsTestResults', '✅ WebSocket connection established', 'success');
+                    
+                    // Send authentication
+                    const authMessage = {
+                        type: 'authenticate',
+                        data: {
+                            apiKey: config.apiKey,
+                            clientType: 'diagnostic',
+                            extensionVersion: '2.0.0'
+                        },
+                        timestamp: Date.now()
+                    };
+                    
+                    ws.send(JSON.stringify(authMessage));
+                    log('🔑 Authentication message sent', 'info');
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    log(`📨 Received: ${data.type}`, 'info');
+                    
+                    if (data.type === 'welcome') {
+                        addTestResult('wsTestResults', '👋 Welcome message received', 'success');
+                    } else if (data.type === 'authentication_success') {
+                        authSuccess = true;
+                        addTestResult('wsTestResults', '🔐 Authentication successful', 'success');
+                        diagnosticState.webSocketStatus = 'success';
+                        diagnosticState.testsPassed++;
+                        updateStatusIndicator('wsStatusIndicator', 'success');
+                        document.getElementById('wsStatusText').textContent = 'Connected and authenticated';
+                        ws.close();
+                    } else if (data.type === 'authentication_failed') {
+                        addTestResult('wsTestResults', '❌ Authentication failed', 'error');
+                        diagnosticState.webSocketStatus = 'error';
+                        updateStatusIndicator('wsStatusIndicator', 'error');
+                        document.getElementById('wsStatusText').textContent = 'Authentication failed';
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    log(`❌ WebSocket error: ${error}`, 'error');
+                    addTestResult('wsTestResults', '❌ WebSocket connection error', 'error');
+                    diagnosticState.webSocketStatus = 'error';
+                    updateStatusIndicator('wsStatusIndicator', 'error');
+                    document.getElementById('wsStatusText').textContent = 'Connection failed';
+                };
+                
+                ws.onclose = function() {
+                    log('🔌 WebSocket connection closed', 'info');
+                    if (!authSuccess) {
+                        addTestResult('wsTestResults', '⚠️ Connection closed without authentication', 'warning');
+                        diagnosticState.webSocketStatus = 'warning';
+                        updateStatusIndicator('wsStatusIndicator', 'warning');
+                        document.getElementById('wsStatusText').textContent = 'Connection closed';
+                    }
+                };
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    if (ws.readyState === WebSocket.CONNECTING) {
+                        ws.close();
+                        addTestResult('wsTestResults', '⏱️ Connection timeout', 'error');
+                        diagnosticState.webSocketStatus = 'error';
+                        updateStatusIndicator('wsStatusIndicator', 'error');
+                        document.getElementById('wsStatusText').textContent = 'Connection timeout';
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                log(`❌ WebSocket test failed: ${error.message}`, 'error');
+                addTestResult('wsTestResults', `❌ WebSocket test failed: ${error.message}`, 'error');
+                diagnosticState.webSocketStatus = 'error';
+                updateStatusIndicator('wsStatusIndicator', 'error');
+                document.getElementById('wsStatusText').textContent = 'Test failed';
+            }
+            
+            updateMetrics();
+            updateOverallStatus();
+        }
+        
+        // Extension Test
+        async function testExtension() {
+            log('🧩 Testing extension integration...', 'info');
+            diagnosticState.testsRun++;
+            
+            try {
+                // Check if extension is available
+                if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+                    addTestResult('extTestResults', '❌ Extension not detected', 'error');
+                    diagnosticState.extensionStatus = 'error';
+                    updateStatusIndicator('extStatusIndicator', 'error');
+                    document.getElementById('extStatusText').textContent = 'Extension not found';
+                    updateMetrics();
+                    updateOverallStatus();
+                    return;
+                }
+                
+                addTestResult('extTestResults', '✅ Extension detected', 'success');
+                log('✅ Extension detected', 'success');
+                
+                // Test extension message
+                chrome.runtime.sendMessage({
+                    action: 'GET_SESSION_STATUS'
+                }, function(response) {
+                    if (chrome.runtime.lastError) {
+                        addTestResult('extTestResults', `❌ Extension communication error: ${chrome.runtime.lastError.message}`, 'error');
+                        diagnosticState.extensionStatus = 'error';
+                        updateStatusIndicator('extStatusIndicator', 'error');
+                        document.getElementById('extStatusText').textContent = 'Communication error';
+                    } else if (response) {
+                        addTestResult('extTestResults', '✅ Extension communication successful', 'success');
+                        addTestResult('extTestResults', `📊 Status: ${JSON.stringify(response)}`, 'info');
+                        diagnosticState.extensionStatus = 'success';
+                        diagnosticState.testsPassed++;
+                        updateStatusIndicator('extStatusIndicator', 'success');
+                        document.getElementById('extStatusText').textContent = 'Working properly';
+                        log('✅ Extension communication successful', 'success');
+                    } else {
+                        addTestResult('extTestResults', '⚠️ Extension responded but no data', 'warning');
+                        diagnosticState.extensionStatus = 'warning';
+                        updateStatusIndicator('extStatusIndicator', 'warning');
+                        document.getElementById('extStatusText').textContent = 'No response data';
+                    }
+                    updateMetrics();
+                    updateOverallStatus();
+                });
+                
+                // Test WebSocket connection through extension
+                chrome.runtime.sendMessage({
+                    action: 'CONNECT_WEBSOCKET',
+                    url: config.backendUrl
+                }, function(response) {
+                    if (response && response.success) {
+                        addTestResult('extTestResults', '✅ Extension WebSocket test successful', 'success');
+                        log('✅ Extension WebSocket connection successful', 'success');
+                    } else {
+                        addTestResult('extTestResults', '❌ Extension WebSocket test failed', 'error');
+                        log('❌ Extension WebSocket connection failed', 'error');
+                    }
+                });
+                
+            } catch (error) {
+                log(`❌ Extension test failed: ${error.message}`, 'error');
+                addTestResult('extTestResults', `❌ Extension test failed: ${error.message}`, 'error');
+                diagnosticState.extensionStatus = 'error';
+                updateStatusIndicator('extStatusIndicator', 'error');
+                document.getElementById('extStatusText').textContent = 'Test failed';
+                updateMetrics();
+                updateOverallStatus();
+            }
+        }
+        
+        // Backend Test
+        async function testBackend() {
+            log('🖥️ Testing backend status...', 'info');
+            diagnosticState.testsRun++;
+            
+            try {
+                const response = await fetch(`${config.apiUrl}/status`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addTestResult('backendTestResults', '✅ Backend is responding', 'success');
+                    addTestResult('backendTestResults', `📊 Backend data: ${JSON.stringify(data.data.counts)}`, 'info');
+                    
+                    diagnosticState.backendStatus = 'success';
+                    diagnosticState.testsPassed++;
+                    updateStatusIndicator('backendStatusIndicator', 'success');
+                    document.getElementById('backendStatusText').textContent = 'Online and responding';
+                    log('✅ Backend status check successful', 'success');
+                    
+                    // Check health endpoint
+                    const healthResponse = await fetch(`${config.apiUrl.replace('/api', '')}/health`);
+                    if (healthResponse.ok) {
+                        addTestResult('backendTestResults', '✅ Health check passed', 'success');
+                    } else {
+                        addTestResult('backendTestResults', '⚠️ Health check failed', 'warning');
+                    }
+                } else {
+                    addTestResult('backendTestResults', `❌ Backend error: ${response.status}`, 'error');
+                    diagnosticState.backendStatus = 'error';
+                    updateStatusIndicator('backendStatusIndicator', 'error');
+                    document.getElementById('backendStatusText').textContent = `Error ${response.status}`;
+                }
+            } catch (error) {
+                log(`❌ Backend test failed: ${error.message}`, 'error');
+                addTestResult('backendTestResults', `❌ Backend test failed: ${error.message}`, 'error');
+                diagnosticState.backendStatus = 'error';
+                updateStatusIndicator('backendStatusIndicator', 'error');
+                document.getElementById('backendStatusText').textContent = 'Connection failed';
+            }
+            
+            updateMetrics();
+            updateOverallStatus();
+        }
+        
+        // Data Flow Test
+        async function testDataFlow() {
+            log('🔄 Testing end-to-end data flow...', 'info');
+            diagnosticState.testsRun++;
+            
+            try {
+                // Get initial backend data count
+                const initialResponse = await fetch(`${config.apiUrl}/status`);
+                const initialData = await initialResponse.json();
+                const initialCount = initialData.data.counts.sessions;
+                
+                addTestResult('dataFlowTestResults', `📊 Initial session count: ${initialCount}`, 'info');
+                
+                // Test WebSocket data flow
+                const ws = new WebSocket(config.backendUrl);
+                
+                ws.onopen = function() {
+                    log('🔗 Data flow WebSocket connected', 'success');
+                    
+                    // Authenticate
+                    ws.send(JSON.stringify({
+                        type: 'authenticate',
+                        data: {
+                            apiKey: config.apiKey,
+                            clientType: 'diagnostic',
+                            extensionVersion: '2.0.0'
+                        },
+                        timestamp: Date.now()
+                    }));
+                };
+                
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'authentication_success') {
+                        log('🔐 Data flow authentication successful', 'success');
+                        
+                        // Send test session
+                        const sessionId = 'diagnostic-session-' + Date.now();
+                        ws.send(JSON.stringify({
+                            type: 'session_start',
+                            data: {
+                                sessionId: sessionId,
+                                config: {
+                                    type: 'HUMAN',
+                                    captureScreenshots: true,
+                                    captureInteractions: true,
+                                    workerId: 'diagnostic-worker'
+                                }
+                            },
+                            timestamp: Date.now()
+                        }));
+                        
+                        addTestResult('dataFlowTestResults', '📤 Test session sent', 'info');
+                        
+                    } else if (data.type === 'session_started') {
+                        log('✅ Test session started successfully', 'success');
+                        addTestResult('dataFlowTestResults', '✅ Session created successfully', 'success');
+                        
+                        // Send test interaction
+                        ws.send(JSON.stringify({
+                            type: 'interaction_event',
+                            sessionId: data.sessionId,
+                            data: {
+                                type: 'click',
+                                element: 'button',
+                                selector: '#diagnostic-test-button',
+                                timestamp: Date.now(),
+                                x: 100,
+                                y: 200
+                            },
+                            timestamp: Date.now()
+                        }));
+                        
+                        addTestResult('dataFlowTestResults', '📤 Test interaction sent', 'info');
+                        
+                    } else if (data.type === 'interaction_processed') {
+                        log('✅ Test interaction processed', 'success');
+                        addTestResult('dataFlowTestResults', '✅ Interaction processed successfully', 'success');
+                        
+                        // Check if data count increased
+                        setTimeout(async () => {
+                            const finalResponse = await fetch(`${config.apiUrl}/status`);
+                            const finalData = await finalResponse.json();
+                            const finalCount = finalData.data.counts.sessions;
+                            
+                            if (finalCount > initialCount) {
+                                addTestResult('dataFlowTestResults', `✅ Data flow successful! Sessions: ${initialCount} → ${finalCount}`, 'success');
+                                diagnosticState.dataFlowStatus = 'success';
+                                diagnosticState.testsPassed++;
+                                updateStatusIndicator('dataFlowStatusIndicator', 'success');
+                                document.getElementById('dataFlowStatusText').textContent = 'Working properly';
+                                log('✅ End-to-end data flow successful', 'success');
+                            } else {
+                                addTestResult('dataFlowTestResults', '⚠️ Data sent but not persisted', 'warning');
+                                diagnosticState.dataFlowStatus = 'warning';
+                                updateStatusIndicator('dataFlowStatusIndicator', 'warning');
+                                document.getElementById('dataFlowStatusText').textContent = 'Data not persisted';
+                            }
+                            
+                            ws.close();
+                            updateMetrics();
+                            updateOverallStatus();
+                        }, 2000);
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    log(`❌ Data flow WebSocket error: ${error}`, 'error');
+                    addTestResult('dataFlowTestResults', '❌ Data flow WebSocket error', 'error');
+                    diagnosticState.dataFlowStatus = 'error';
+                    updateStatusIndicator('dataFlowStatusIndicator', 'error');
+                    document.getElementById('dataFlowStatusText').textContent = 'Connection failed';
+                    updateMetrics();
+                    updateOverallStatus();
+                };
+                
+            } catch (error) {
+                log(`❌ Data flow test failed: ${error.message}`, 'error');
+                addTestResult('dataFlowTestResults', `❌ Data flow test failed: ${error.message}`, 'error');
+                diagnosticState.dataFlowStatus = 'error';
+                updateStatusIndicator('dataFlowStatusIndicator', 'error');
+                document.getElementById('dataFlowStatusText').textContent = 'Test failed';
+                updateMetrics();
+                updateOverallStatus();
+            }
+        }
+        
+        // Backend Data Check
+        async function checkBackendData() {
+            log('📊 Checking current backend data...', 'info');
+            
+            try {
+                const response = await fetch(`${config.apiUrl}/status`);
+                const data = await response.json();
+                
+                const jsonDisplay = document.createElement('div');
+                jsonDisplay.className = 'json-display';
+                jsonDisplay.textContent = JSON.stringify(data, null, 2);
+                
+                const container = document.getElementById('backendDataResults');
+                container.innerHTML = '<h3>Current Backend Data:</h3>';
+                container.appendChild(jsonDisplay);
+                
+                log('📊 Backend data retrieved successfully', 'success');
+                
+            } catch (error) {
+                addTestResult('backendDataResults', `❌ Failed to get backend data: ${error.message}`, 'error');
+                log(`❌ Failed to get backend data: ${error.message}`, 'error');
+            }
+        }
+        
+        // Extension Debug Info
+        async function getExtensionDebugInfo() {
+            log('🔧 Getting extension debug info...', 'info');
+            
+            if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+                addTestResult('debugInfoResults', '❌ Extension not available', 'error');
+                return;
+            }
+            
+            try {
+                // Get extension status
+                chrome.runtime.sendMessage({
+                    action: 'GET_SESSION_STATUS'
+                }, function(response) {
+                    const container = document.getElementById('debugInfoResults');
+                    container.innerHTML = '<h3>Extension Debug Info:</h3>';
+                    
+                    if (response) {
+                        const jsonDisplay = document.createElement('div');
+                        jsonDisplay.className = 'json-display';
+                        jsonDisplay.textContent = JSON.stringify(response, null, 2);
+                        container.appendChild(jsonDisplay);
+                        
+                        log('🔧 Extension debug info retrieved', 'success');
+                    } else {
+                        addTestResult('debugInfoResults', '⚠️ No debug info available', 'warning');
+                    }
+                });
+                
+                // Test extension methods
+                const methods = ['START_TRACKING', 'STOP_TRACKING', 'CAPTURE_SCREENSHOT'];
+                methods.forEach(method => {
+                    chrome.runtime.sendMessage({
+                        action: method,
+                        sessionId: 'diagnostic-test'
+                    }, function(response) {
+                        if (response) {
+                            addTestResult('debugInfoResults', `✅ ${method}: ${JSON.stringify(response)}`, 'success');
+                        } else {
+                            addTestResult('debugInfoResults', `❌ ${method}: No response`, 'error');
+                        }
+                    });
+                });
+                
+            } catch (error) {
+                addTestResult('debugInfoResults', `❌ Debug info failed: ${error.message}`, 'error');
+                log(`❌ Debug info failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test functions
+        async function testWebSocketOnly() {
+            clearAllLogs();
+            await testWebSocket();
+        }
+        
+        async function testExtensionOnly() {
+            clearAllLogs();
+            await testExtension();
+        }
+        
+        async function testBackendOnly() {
+            clearAllLogs();
+            await testBackend();
+        }
+        
+        async function runFullDiagnostic() {
+            clearAllLogs();
+            log('🚀 Starting full diagnostic...', 'info');
+            
+            // Reset state
+            diagnosticState = {
+                testsRun: 0,
+                testsPassed: 0,
+                webSocketStatus: 'unknown',
+                extensionStatus: 'unknown',
+                backendStatus: 'unknown',
+                dataFlowStatus: 'unknown'
+            };
+            
+            updateMetrics();
+            
+            // Run tests in sequence
+            await testWebSocket();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testExtension();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testBackend();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testDataFlow();
+            
+            log('🎉 Full diagnostic complete!', 'success');
+        }
+        
+        // Initialize
+        window.addEventListener('load', function() {
+            log('🔧 Diagnostic tool loaded and ready', 'info');
+            updateMetrics();
+            updateOverallStatus();
+        });
+    </script>
+</body>
+</html>
