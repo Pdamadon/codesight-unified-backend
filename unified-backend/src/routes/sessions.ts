@@ -571,7 +571,7 @@ router.post('/:id/screenshots', [
     const responseData = {
       ...screenshot,
       timestamp: Number(screenshot.timestamp),
-      viewport: JSON.parse(screenshot.viewport)
+      viewport: screenshot.viewport ? JSON.parse(screenshot.viewport) : {}
     };
 
     logger.info('Screenshot created', {
