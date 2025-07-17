@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 import * as os from 'os';
 import * as process from 'process';
@@ -79,7 +79,7 @@ export class MonitoringAnalyticsService {
   private metricsInterval: NodeJS.Timeout | null;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.logger = new Logger("MonitoringAnalytics");
     this.metricsBuffer = [];
     this.alertConfigs = new Map();

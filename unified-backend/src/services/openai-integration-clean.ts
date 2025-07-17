@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { Logger } from '../utils/logger';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/database';
 
 // Core interfaces for OpenAI integration
 export interface VisionAnalysisResult {
@@ -60,7 +60,7 @@ export class OpenAIIntegrationService {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
   }
 
   // Vision API Integration - Core functionality

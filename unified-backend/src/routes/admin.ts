@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { query, validationResult } from 'express-validator';
 import { Logger } from '../utils/logger';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/database';
 import { QualityControlService } from '../services/quality-control-clean';
 import { StorageManager } from '../services/storage-manager-clean';
 import { requireAdmin } from '../middleware/auth';
@@ -9,7 +9,7 @@ import { getErrorMessage, AuthenticatedRequest } from '../utils/type-helpers';
 
 const router = Router();
 const logger = new Logger('AdminRoutes');
-const prisma = new PrismaClient();
+// Using shared prisma instance from lib/database
 
 // Apply admin authentication to all routes
 router.use(requireAdmin as any);

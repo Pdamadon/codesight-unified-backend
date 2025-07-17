@@ -1,11 +1,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/database';
 import { body, param, query, validationResult } from 'express-validator';
 import { Logger } from '../utils/logger';
 import { getErrorMessage } from '../utils/type-helpers';
 
 const router = Router();
-const prisma = new PrismaClient();
+// Using shared prisma instance from lib/database
 const logger = new Logger('InteractionRoutes');
 
 // Validation middleware

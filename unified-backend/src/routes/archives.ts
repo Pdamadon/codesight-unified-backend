@@ -2,12 +2,12 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { param, query, validationResult } from 'express-validator';
 import { Logger } from '../utils/logger';
 import { StorageManager } from '../services/storage-manager-clean';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/database';
 import { getErrorMessage } from '../utils/type-helpers';
 
 const router = Router();
 const logger = new Logger('ArchiveRoutes');
-const prisma = new PrismaClient();
+// Using shared prisma instance from lib/database
 
 // Validation middleware
 const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {

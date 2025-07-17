@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 
 interface QualityMetrics {
@@ -49,7 +49,7 @@ export class QualityControlService {
   private thresholds: QualityThresholds;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.logger = new Logger("QualityControl");
     
     // Default quality thresholds

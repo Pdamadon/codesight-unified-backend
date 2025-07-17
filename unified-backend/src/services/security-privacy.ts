@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
@@ -44,7 +44,7 @@ export class SecurityPrivacyService {
   private encryptionKey: Buffer;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.logger = new Logger("SecurityPrivacy");
     
     this.encryptionConfig = {

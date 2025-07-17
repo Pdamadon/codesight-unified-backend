@@ -6,7 +6,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { config } from "dotenv";
 import { createServer } from "http";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "./lib/database";
 
 import { UnifiedWebSocketServer } from "./services/websocket-server";
 import { DataProcessingPipeline } from "./services/data-processing-pipeline";
@@ -46,7 +46,7 @@ const logger = new Logger("UnifiedServer");
 app.set('trust proxy', 1);
 
 // Initialize database
-const prisma = new PrismaClient();
+// Using shared prisma instance from lib/database
 
 // Initialize services
 const storageManager = new StorageManager(prisma);

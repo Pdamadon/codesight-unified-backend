@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 
 export class QualityReportingService {
@@ -6,7 +6,7 @@ export class QualityReportingService {
   private logger: Logger;
 
   constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = prisma;
     this.logger = new Logger("QualityReporting");
   }
 
