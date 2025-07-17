@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Extension WebSocket Test</h1>
+    
+    <button onclick="testWebSocket()">Test WebSocket Connection</button>
+    <button onclick="testExtensionMessage()">Test Extension Message</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <div id="log"></div>
+    
+    <script>
+        function log(message, type = 'log') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log ${type}`;
+            entry.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function testWebSocket() {
+            log('Testing WebSocket connection...');
+            
+            const ws = new WebSocket('wss://gentle-vision-production.up.railway.app/ws');
+            
+            ws.onopen = function() {
+                log('✅ WebSocket connected!', 'success');
+                
+                // Send authentication
+                ws.send(JSON.stringify({
+                    type: 'authenticate',
+                    data: {
+                        apiKey: 'test-key-dev',
+                        clientType: 'test',
+                        extensionVersion: '2.0.0'
+                    },
+                    timestamp: Date.now()
+                }));
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                log(`📨 Received: ${data.type}`, 'success');
+                
+                if (data.type === 'authentication_success') {
+                    log('✅ Authentication successful!', 'success');
+                    ws.close();
+                }
+            };
+            
+            ws.onerror = function(error) {
+                log(`❌ WebSocket error: ${error}`, 'error');
+            };
+            
+            ws.onclose = function() {
+                log('🔌 WebSocket connection closed');
+            };
+        }
+        
+        function testExtensionMessage() {
+            log('Testing extension message...');
+            
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                log('✅ Extension detected', 'success');
+                
+                // Test sending message to background script
+                chrome.runtime.sendMessage({
+                    action: 'GET_SESSION_STATUS'
+                }, function(response) {
+                    if (response) {
+                        log(`📋 Extension response: ${JSON.stringify(response)}`, 'success');
+                    } else {
+                        log('❌ No response from extension', 'error');
+                    }
+                });
+                
+                // Test WebSocket connection through extension
+                chrome.runtime.sendMessage({
+                    action: 'CONNECT_WEBSOCKET',
+                    url: 'wss://gentle-vision-production.up.railway.app/ws'
+                }, function(response) {
+                    if (response && response.success) {
+                        log('✅ Extension WebSocket connected!', 'success');
+                    } else {
+                        log('❌ Extension WebSocket failed', 'error');
+                    }
+                });
+            } else {
+                log('❌ Extension not detected', 'error');
+            }
+        }
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', function() {
+            log('🚀 Page loaded - ready for testing');
+            
+            // Test extension detection
+            if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+                log('✅ Extension detected on page load', 'success');
+            } else {
+                log('⚠️ Extension not detected on page load', 'error');
+            }
+        });
+    </script>
+</body>
+</html>

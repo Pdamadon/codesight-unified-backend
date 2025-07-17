@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Extension Test</title>
+</head>
+<body>
+    <h1>Extension Test</h1>
+    <button id="test-btn">Click me</button>
+    
+    <script>
+        // Simple test to see if extension is working
+        setTimeout(() => {
+            if (window.UnifiedCodeSightTracker) {
+                console.log('✅ Extension detected!');
+                document.body.innerHTML += '<p style="color: green;">✅ Extension detected!</p>';
+            } else {
+                console.log('❌ Extension not found');
+                document.body.innerHTML += '<p style="color: red;">❌ Extension not found</p>';
+            }
+            
+            // Test chrome runtime
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                console.log('✅ Chrome runtime available');
+                document.body.innerHTML += '<p style="color: green;">✅ Chrome runtime available</p>';
+            } else {
+                console.log('❌ Chrome runtime not available');
+                document.body.innerHTML += '<p style="color: red;">❌ Chrome runtime not available</p>';
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

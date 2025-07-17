@@ -15,10 +15,8 @@ class DatabaseConnection {
         }
       });
 
-      // Handle connection errors gracefully
-      DatabaseConnection.instance.$on('error' as any, (error) => {
-        console.error('Database connection error:', error);
-      });
+      // Connection error handling is built into Prisma
+      // No need for manual error listeners
     }
     return DatabaseConnection.instance;
   }

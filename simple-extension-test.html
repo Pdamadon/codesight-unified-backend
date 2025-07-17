@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Extension Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>🧩 Simple Extension Test</h1>
+    
+    <button onclick="testExtension()">Test Extension</button>
+    <button onclick="testMessages()">Test Messages</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        function testExtension() {
+            document.getElementById('results').innerHTML = '';
+            
+            // Test 1: Basic chrome object
+            if (typeof chrome === 'undefined') {
+                addResult('❌ Chrome object not available', 'error');
+                return;
+            } else {
+                addResult('✅ Chrome object available', 'success');
+            }
+            
+            // Test 2: Chrome runtime
+            if (!chrome.runtime) {
+                addResult('❌ Chrome runtime not available', 'error');
+                return;
+            } else {
+                addResult('✅ Chrome runtime available', 'success');
+            }
+            
+            // Test 3: Extension ID
+            if (!chrome.runtime.id) {
+                addResult('❌ No extension ID (extension not loaded)', 'error');
+                return;
+            } else {
+                addResult(`✅ Extension ID: ${chrome.runtime.id}`, 'success');
+            }
+            
+            // Test 4: Check for our specific extension
+            const manifest = chrome.runtime.getManifest();
+            if (manifest) {
+                addResult(`✅ Extension name: ${manifest.name}`, 'success');
+                addResult(`✅ Extension version: ${manifest.version}`, 'success');
+                
+                if (manifest.name.includes('CodeSight')) {
+                    addResult('🎯 CodeSight extension detected!', 'success');
+                } else {
+                    addResult('⚠️ This might not be the CodeSight extension', 'info');
+                }
+            }
+        }
+        
+        function testMessages() {
+            if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+                addResult('❌ Extension not available for messaging', 'error');
+                return;
+            }
+            
+            addResult('📤 Sending message to extension...', 'info');
+            
+            // Test extension messages
+            chrome.runtime.sendMessage({
+                action: 'GET_SESSION_STATUS'
+            }, function(response) {
+                if (chrome.runtime.lastError) {
+                    addResult(`❌ Message error: ${chrome.runtime.lastError.message}`, 'error');
+                } else if (response) {
+                    addResult(`✅ Extension responded: ${JSON.stringify(response)}`, 'success');
+                } else {
+                    addResult('⚠️ Extension responded but no data', 'info');
+                }
+            });
+            
+            // Test another message
+            chrome.runtime.sendMessage({
+                action: 'CONNECT_WEBSOCKET'
+            }, function(response) {
+                if (chrome.runtime.lastError) {
+                    addResult(`❌ WebSocket test error: ${chrome.runtime.lastError.message}`, 'error');
+                } else if (response) {
+                    addResult(`✅ WebSocket test: ${JSON.stringify(response)}`, 'success');
+                }
+            });
+        }
+        
+        // Auto-run on page load
+        window.addEventListener('load', function() {
+            addResult('🚀 Page loaded - click buttons to test', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { Logger } from '../utils/logger';
+import { PrismaClient } from '@prisma/client';
 import { prisma } from '../lib/database';
 
 // Core interfaces for OpenAI integration

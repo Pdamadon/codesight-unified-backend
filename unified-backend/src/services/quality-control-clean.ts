@@ -1,3 +1,4 @@
+import { PrismaClient } from "@prisma/client";
 import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 
@@ -588,7 +589,7 @@ export class QualityControlService {
       poor: 0
     };
 
-    scoreDistribution.forEach(item => {
+    scoreDistribution.forEach((item: any) => {
       const score = item.overallScore;
       if (score >= this.thresholds.excellent) gradeDistribution.excellent += item._count;
       else if (score >= this.thresholds.good) gradeDistribution.good += item._count;

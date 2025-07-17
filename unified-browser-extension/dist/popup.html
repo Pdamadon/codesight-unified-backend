@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CodeSight Tracker</title>
+  <style>
+    body {
+      width: 350px;
+      min-height: 400px;
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      color: #333;
+      margin: 0 0 10px 0;
+    }
+    
+    .status {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    
+    .status-label {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .status-value {
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .status-active {
+      color: #4CAF50;
+    }
+    
+    .status-inactive {
+      color: #999;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    #startBtn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    #startBtn:hover {
+      background-color: #45a049;
+    }
+    
+    #startBtn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    #stopBtn {
+      background-color: #f44336;
+      color: white;
+    }
+    
+    #stopBtn:hover {
+      background-color: #da190b;
+    }
+    
+    #stopBtn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .settings-link {
+      text-align: center;
+      margin-top: 20px;
+    }
+    
+    .settings-link a {
+      color: #2196F3;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    
+    .settings-link a:hover {
+      text-decoration: underline;
+    }
+    
+    .error {
+      background-color: #ffebee;
+      color: #c62828;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 50px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔍 CodeSight Tracker</h1>
+    <p style="color: #666; margin: 0; font-size: 14px;">AI Training Data Collector</p>
+  </div>
+  
+  <div id="loading" class="loading">Loading...</div>
+  
+  <div id="content" style="display: none;">
+    <div id="error" class="error" style="display: none;"></div>
+    
+    <div class="status">
+      <div class="status-item">
+        <span class="status-label">Status:</span>
+        <span id="trackingStatus" class="status-value status-inactive">Inactive</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Session ID:</span>
+        <span id="sessionId" class="status-value">-</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Events Captured:</span>
+        <span id="eventCount" class="status-value">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Screenshots:</span>
+        <span id="screenshotCount" class="status-value">0</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Duration:</span>
+        <span id="duration" class="status-value">0s</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Quality Score:</span>
+        <span id="qualityScore" class="status-value">0%</span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <button id="startBtn">Start Tracking</button>
+      <button id="stopBtn" disabled>Stop Tracking</button>
+    </div>
+    
+    <div class="settings-link">
+      <a href="#" id="settingsLink">Settings</a>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

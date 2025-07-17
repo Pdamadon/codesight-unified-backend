@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Test</title>
+</head>
+<body>
+    <h1>Testing CORS workaround</h1>
+    <button onclick="testWithProxy()">Test with Proxy</button>
+    <div id="results"></div>
+    
+    <script>
+        async function testWithProxy() {
+            const results = document.getElementById('results');
+            
+            try {
+                // Try different methods to access the API
+                const methods = [
+                    {
+                        name: 'Direct fetch',
+                        url: 'https://gentle-vision-production.up.railway.app/api/status'
+                    },
+                    {
+                        name: 'With no-cors mode',
+                        url: 'https://gentle-vision-production.up.railway.app/api/status',
+                        options: { mode: 'no-cors' }
+                    },
+                    {
+                        name: 'Health endpoint',
+                        url: 'https://gentle-vision-production.up.railway.app/health'
+                    }
+                ];
+                
+                for (const method of methods) {
+                    try {
+                        const response = await fetch(method.url, method.options || {});
+                        results.innerHTML += `<p>✅ ${method.name}: ${response.status}</p>`;
+                        if (response.ok) {
+                            const data = await response.text();
+                            results.innerHTML += `<pre>${data.substring(0, 200)}...</pre>`;
+                        }
+                    } catch (error) {
+                        results.innerHTML += `<p>❌ ${method.name}: ${error.message}</p>`;
+                    }
+                }
+                
+            } catch (error) {
+                results.innerHTML += `<p>Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Auto-run test
+        window.addEventListener('load', testWithProxy);
+    </script>
+</body>
+</html>

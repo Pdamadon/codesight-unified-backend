@@ -1,3 +1,4 @@
+import { PrismaClient } from "@prisma/client";
 import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 import * as crypto from 'crypto';
@@ -449,14 +450,14 @@ export class SecurityPrivacyService {
       const exportData = {
         userId,
         exportDate: new Date(),
-        sessions: sessions.map(session => ({
+        sessions: sessions.map((session: any) => ({
           id: session.id,
           type: session.type,
           startTime: session.startTime,
           endTime: session.endTime,
           duration: session.duration,
           qualityScore: session.qualityScore,
-          interactions: session.interactions.map(interaction => ({
+          interactions: session.interactions.map((interaction: any) => ({
             id: interaction.id,
             type: interaction.type,
             timestamp: interaction.timestamp,
@@ -543,14 +544,14 @@ export class SecurityPrivacyService {
       });
 
       // Analyze security events
-      const securityEvents = securityLogs.map(log => log.value as any);
-      const authFailures = securityEvents.filter(e => e.event === 'auth_failed').length;
-      const apiKeyGenerations = securityEvents.filter(e => e.event === 'api_key_generated').length;
+      const securityEvents = securityLogs.map((log: any) => log.value as any);
+      const authFailures = securityEvents.filter((e: any) => e.event === 'auth_failed').length;
+      const apiKeyGenerations = securityEvents.filter((e: any) => e.event === 'api_key_generated').length;
 
       // Analyze privacy events
-      const privacyEvents = privacyLogs.map(log => log.value as any);
-      const dataDeletions = privacyEvents.filter(e => e.event === 'data_deletion').length;
-      const dataExports = privacyEvents.filter(e => e.event === 'data_export').length;
+      const privacyEvents = privacyLogs.map((log: any) => log.value as any);
+      const dataDeletions = privacyEvents.filter((e: any) => e.event === 'data_deletion').length;
+      const dataExports = privacyEvents.filter((e: any) => e.event === 'data_export').length;
 
       return {
         period: '30 days',

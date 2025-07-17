@@ -1,3 +1,4 @@
+import { PrismaClient } from "@prisma/client";
 import { prisma } from "../lib/database";
 import { Logger } from "../utils/logger";
 import * as os from 'os';
@@ -347,7 +348,7 @@ export class MonitoringAnalyticsService {
 
       // Aggregate performance metrics
       const allMetrics: PerformanceMetrics[] = [];
-      performanceData.forEach(record => {
+      performanceData.forEach((record: any) => {
         const metrics = record.value as unknown as PerformanceMetrics[];
         allMetrics.push(...metrics);
       });
@@ -383,13 +384,13 @@ export class MonitoringAnalyticsService {
         orderBy: { createdAt: 'desc' }
       });
 
-      const metrics = systemData.map(record => record.value as unknown as SystemMetrics);
+      const metrics = systemData.map((record: any) => record.value as unknown as SystemMetrics);
 
       return {
-        averageCpuUsage: this.calculateAverage(metrics.map(m => m.cpu.usage)),
-        averageMemoryUsage: this.calculateAverage(metrics.map(m => m.memory.usage)),
-        peakCpuUsage: Math.max(...metrics.map(m => m.cpu.usage)),
-        peakMemoryUsage: Math.max(...metrics.map(m => m.memory.usage)),
+        averageCpuUsage: this.calculateAverage(metrics.map((m: any) => m.cpu.usage)),
+        averageMemoryUsage: this.calculateAverage(metrics.map((m: any) => m.memory.usage)),
+        peakCpuUsage: Math.max(...metrics.map((m: any) => m.cpu.usage)),
+        peakMemoryUsage: Math.max(...metrics.map((m: any) => m.memory.usage)),
         systemHealth: this.calculateSystemHealth(metrics),
         trends: this.calculateTrends(metrics)
       };

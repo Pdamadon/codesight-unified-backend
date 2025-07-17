@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "Unified CodeSight Tracker",
+  "version": "2.0.0",
+  "description": "Advanced shopping behavior capture for AI training - Unified System",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "webNavigation",
+    "notifications",
+    "tabs",
+    "tabCapture",
+    "background"
+  ],
+  
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.js"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Unified CodeSight Tracker",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["injected-script.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
+  "options_page": "options.html",
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://localhost:* https://127.0.0.1:* https://gentle-vision-production.up.railway.app wss://gentle-vision-production.up.railway.app; font-src 'self';"
+  }
+}
