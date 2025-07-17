@@ -1,0 +1,18 @@
+{
+  "name": "codesight",
+  "version": "1.0.0",
+  "description": "CodeSight unified platform with backend API and browser extension",
+  "scripts": {
+    "build": "cd unified-backend && npm ci && npm run build",
+    "start": "cd unified-backend && npm start",
+    "dev": "cd unified-backend && npm run dev",
+    "db:migrate": "cd unified-backend && npm run db:migrate",
+    "db:generate": "cd unified-backend && npm run db:generate"
+  },
+  "keywords": ["codesight", "data-collection", "ai-training", "browser-extension"],
+  "author": "CodeSight Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
