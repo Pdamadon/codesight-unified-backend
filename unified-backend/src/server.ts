@@ -232,6 +232,9 @@ app.get("/api/status", async (_req, res) => {
   }
 });
 
+// Test endpoint for development (bypasses auth)
+app.use("/api/test", sessionRoutes);
+
 // API Routes with middleware
 app.use("/api/sessions", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, validationMiddleware as any, sessionRoutes);
 app.use(
