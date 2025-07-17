@@ -121,6 +121,23 @@ export class UnifiedWebSocketServer {
       totalClients: this.clients.size
     });
 
+    // Send welcome message
+    this.sendToClient(clientId, {
+      type: 'welcome',
+      data: {
+        clientId,
+        serverVersion: '2.0.0',
+        supportedFeatures: [
+          'real-time-processing',
+          'quality-scoring',
+          'vision-analysis',
+          'psychology-insights',
+          'training-pipeline'
+        ]
+      },
+      timestamp: Date.now()
+    });
+
     // Set up socket event handlers
     socket.on('message', (data) => {
       this.handleMessage(clientId, data);
@@ -171,7 +188,7 @@ export class UnifiedWebSocketServer {
     try {
       const message: WebSocketMessage = JSON.parse(data.toString());
       
-      this.logger.debug('Received WebSocket message', {
+      this.logger.info('Received WebSocket message', {
         clientId,
         type: message.type,
         sessionId: message.sessionId
@@ -225,7 +242,8 @@ export class UnifiedWebSocketServer {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error('Error handling WebSocket message', {
         clientId,
-        error: errorMessage
+        error: errorMessage,
+        rawData: data.toString().substring(0, 200) // First 200 chars for debugging
       });
       this.sendError(clientId, 'Invalid message format', errorMessage);
     }
