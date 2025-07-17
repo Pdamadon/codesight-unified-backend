@@ -1,0 +1,80 @@
+import { PrismaClient } from '@prisma/client';
+import { EventEmitter } from 'events';
+import { StorageManager } from './storage-manager-clean';
+import { OpenAIIntegrationService } from './openai-integration-clean';
+import { QualityControlService } from './quality-control-clean';
+interface ProcessingResult {
+    id: string;
+    status: 'success' | 'error';
+    data?: any;
+    error?: string;
+    qualityScore?: number;
+    processingTime?: number;
+}
+interface SessionCreationData {
+    id: string;
+    type: 'HUMAN' | 'AUTOMATED' | 'HYBRID';
+    config: any;
+    workerId?: string;
+    userAgent?: string;
+    ipAddress?: string;
+}
+export declare class DataProcessingPipeline extends EventEmitter {
+    private prisma;
+    private storageManager;
+    private openaiService;
+    private qualityControl;
+    private dataValidation;
+    private contextEnhancement;
+    private psychologyInsights;
+    private navigationStrategy;
+    private parallelProcessing;
+    private logger;
+    private jobQueue;
+    private activeJobs;
+    private processingUpdateCallbacks;
+    private isProcessing;
+    private maxConcurrentJobs;
+    private processingInterval;
+    constructor(prisma: PrismaClient, storageManager: StorageManager, openaiService: OpenAIIntegrationService, qualityControl: QualityControlService);
+    createSession(data: SessionCreationData): Promise<any>;
+    stopSession(sessionId: string): Promise<void>;
+    validateStreamData(data: any, dataType: 'interaction' | 'screenshot' | 'session_metadata'): Promise<any>;
+    processInteraction(interactionData: any): Promise<ProcessingResult>;
+    processScreenshot(screenshotData: any): Promise<ProcessingResult>;
+    completeSession(sessionId: string, completionData: any): Promise<any>;
+    private queueJob;
+    private startProcessing;
+    private processJobs;
+    private processJob;
+    private enhanceInteraction;
+    private analyzeScreenshot;
+    private processCompleteSession;
+    private performQualityCheck;
+    private generateTrainingData;
+    private enhanceSessionContext;
+    private extractPsychologyInsights;
+    private updateProcessingStatus;
+    onProcessingUpdate(processingId: string, callback: (update: any) => void): void;
+    private notifyProcessingUpdate;
+    getStatus(): any;
+    getQueueSize(): number;
+    getActiveJobs(): number;
+    getCompletedToday(): Promise<number>;
+    private setupParallelProcessingEvents;
+    processSessionsInParallel(sessionIds: string[], priority?: number): Promise<string[]>;
+    batchQualityScoring(sessionIds: string[], priority?: number): Promise<string>;
+    batchContextEnhancement(sessionIds: string[], priority?: number): Promise<string>;
+    waitForParallelJobs(jobIds: string[], timeout?: number): Promise<any[]>;
+    getParallelProcessingStats(): any;
+    processSessionHighPriority(sessionId: string): Promise<string>;
+    batchProcessOperations(operations: Array<{
+        type: 'validation' | 'quality_scoring' | 'context_enhancement';
+        sessionIds: string[];
+        priority?: number;
+    }>): Promise<string[]>;
+    getEnhancedStatus(): any;
+    private parallelProcessingStats;
+    stop(): Promise<void>;
+}
+export {};
