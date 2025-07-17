@@ -95,6 +95,8 @@ model Interaction {
   type              InteractionType
   timestamp         BigInt   // Unix timestamp in milliseconds
   sessionTime       Int      // Time since session start (ms)
+  sequence          Int?     // Interaction sequence number
+  modifiers         Json     @default("{}") // Keyboard modifiers (ctrl, shift, alt, meta)
   
   // Element identification with multiple selectors
   primarySelector   String
@@ -113,11 +115,14 @@ model Interaction {
   clientY           Int?
   pageX             Int?
   pageY             Int?
+  offsetX           Int?        // Element-relative coordinates
+  offsetY           Int?        // Element-relative coordinates
   
   // Visual context
   boundingBox       Json     // Element bounding box
   viewport          Json     // Viewport dimensions and scroll
   isInViewport      Boolean  @default(false)
+  isVisible         Boolean  @default(false)  // Element visibility
   percentVisible    Float    @default(0)
   
   // Page context
@@ -143,6 +148,13 @@ model Interaction {
   userIntent        String?
   userReasoning     String?
   visualCues        Json     @default("[]")
+  
+  // Extension-specific data
+  screenshotId      String?  // Reference to related screenshot
+  context           Json     @default("{}")  // DOM context from extension
+  elementAnalysis   Json     @default("{}")  // Rich element analysis data
+  burstId           String?  // Burst capture identifier
+  burstIndex        Int?     // Index within burst sequence
   
   // Relationships
   session           UnifiedSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -174,6 +186,13 @@ model Screenshot {
   // Visual metadata
   viewport          Json     // Viewport dimensions and scroll position
   quality           Float    @default(0) // Quality score 0-100
+  
+  // Burst capture metadata
+  burstId           String?  // Burst capture identifier
+  burstIndex        Int?     // Index within burst sequence
+  burstTotal        Int?     // Total screenshots in burst
+  trigger           String?  // What triggered this screenshot
+  compressionRatio  Float?   // Compression ratio achieved
   
   // Vision analysis results
   visionAnalysis    Json?    // OpenAI Vision API results
