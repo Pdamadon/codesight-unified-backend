@@ -489,4 +489,112 @@ router.get('/stats/overview', async (req, res) => {
   }
 });
 
+// POST /api/sessions/:id/screenshots - Add screenshot to session
+router.post('/:id/screenshots', [
+  param('id').isUUID(),
+  body('timestamp').isInt(),
+  body('eventType').isString().notEmpty(),
+  body('dataUrl').optional().isString(),
+  body('s3Key').optional().isString(),
+  body('viewport').isObject(),
+  body('quality').optional().isFloat({ min: 0, max: 100 }),
+  body('trigger').optional().isString(),
+  body('burstId').optional().isString(),
+  body('burstIndex').optional().isInt(),
+  body('burstTotal').optional().isInt(),
+  body('compressionRatio').optional().isFloat({ min: 0, max: 1 }),
+  body('format').optional().isIn(['png', 'webp', 'jpg']),
+  body('interactionId').optional().isUUID()
+], handleValidationErrors, async (req: Request, res: Response) => {
+  try {
+    const { id: sessionId } = req.params;
+    const {
+      timestamp,
+      eventType,
+      dataUrl,
+      s3Key,
+      viewport,
+      quality = 0,
+      trigger,
+      burstId,
+      burstIndex,
+      burstTotal,
+      compressionRatio,
+      format = 'png',
+      interactionId
+    } = req.body;
+
+    // Verify session exists
+    const session = await prisma.unifiedSession.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Session not found'
+      });
+    }
+
+    // Calculate file size from dataUrl if provided
+    let fileSize: number | undefined;
+    if (dataUrl) {
+      const base64Data = dataUrl.split(',')[1];
+      if (base64Data) {
+        fileSize = Math.floor(base64Data.length * 0.75); // Base64 to bytes approximation
+      }
+    }
+
+    // Create screenshot
+    const screenshot = await prisma.screenshot.create({
+      data: {
+        sessionId,
+        interactionId,
+        timestamp: BigInt(timestamp),
+        eventType,
+        dataUrl,
+        s3Key,
+        viewport: JSON.stringify(viewport),
+        quality,
+        trigger,
+        burstId,
+        burstIndex,
+        burstTotal,
+        compressionRatio,
+        format,
+        fileSize,
+        compressed: !!s3Key, // If s3Key exists, assume it's compressed
+      }
+    });
+
+    // Convert BigInt to number for JSON response
+    const responseData = {
+      ...screenshot,
+      timestamp: Number(screenshot.timestamp),
+      viewport: JSON.parse(screenshot.viewport)
+    };
+
+    logger.info('Screenshot created', {
+      screenshotId: screenshot.id,
+      sessionId,
+      eventType,
+      burstId,
+      burstIndex
+    });
+
+    res.status(201).json({
+      success: true,
+      data: responseData
+    });
+
+  } catch (error) {
+    logger.error('Failed to create screenshot', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create screenshot',
+      details: getErrorMessage(error)
+    });
+  }
+});
+
 export { router as sessionRoutes };
