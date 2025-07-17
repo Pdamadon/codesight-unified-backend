@@ -54,7 +54,7 @@ export class DataProcessingPipeline extends EventEmitter {
   private contextEnhancement: ContextEnhancementService;
   private psychologyInsights: PsychologyInsightsService;
   private navigationStrategy: NavigationStrategyService;
-  private parallelProcessing: ParallelProcessingManager;
+  private parallelProcessing: ParallelProcessingManager | null = null;
   private logger: Logger;
   
   private jobQueue: ProcessingJob[] = [];
@@ -81,11 +81,12 @@ export class DataProcessingPipeline extends EventEmitter {
     this.contextEnhancement = new ContextEnhancementService(prisma, openaiService);
     this.psychologyInsights = new PsychologyInsightsService(prisma, openaiService);
     this.navigationStrategy = new NavigationStrategyService(prisma, openaiService);
-    this.parallelProcessing = new ParallelProcessingManager(prisma);
+    // Disable parallel processing for now to avoid worker thread issues in deployment
+    // this.parallelProcessing = new ParallelProcessingManager(prisma);
     this.logger = new Logger('DataProcessingPipeline');
     
     this.startProcessing();
-    this.setupParallelProcessingEvents();
+    // this.setupParallelProcessingEvents();
   }
 
   // Session Management
@@ -793,6 +794,8 @@ export class DataProcessingPipeline extends EventEmitter {
 
   // Parallel Processing Methods
   private setupParallelProcessingEvents(): void {
+    if (!this.parallelProcessing) return;
+    
     // Listen for parallel processing events
     this.parallelProcessing.on('jobCompleted', (result) => {
       this.logger.info('Parallel job completed', {
@@ -830,6 +833,11 @@ export class DataProcessingPipeline extends EventEmitter {
       priority
     });
 
+    if (!this.parallelProcessing) {
+      this.logger.warn('Parallel processing disabled, falling back to sequential processing');
+      return [];
+    }
+
     const jobIds = await this.parallelProcessing.processSessions(sessionIds, priority);
     
     this.emit('parallelProcessingStarted', {
@@ -847,6 +855,11 @@ export class DataProcessingPipeline extends EventEmitter {
       sessionCount: sessionIds.length
     });
 
+    if (!this.parallelProcessing) {
+      this.logger.warn('Parallel processing disabled, skipping batch quality scoring');
+      return '';
+    }
+
     const jobId = await this.parallelProcessing.batchQualityScoring(sessionIds, priority);
     
     this.emit('batchQualityScoringStarted', {
@@ -862,6 +875,11 @@ export class DataProcessingPipeline extends EventEmitter {
     this.logger.info('Starting batch context enhancement', {
       sessionCount: sessionIds.length
     });
+
+    if (!this.parallelProcessing) {
+      this.logger.warn('Parallel processing disabled, skipping batch context enhancement');
+      return '';
+    }
 
     const jobId = await this.parallelProcessing.batchContextEnhancement(sessionIds, priority);
     
@@ -879,6 +897,11 @@ export class DataProcessingPipeline extends EventEmitter {
       jobCount: jobIds.length,
       timeout
     });
+
+    if (!this.parallelProcessing) {
+      this.logger.warn('Parallel processing disabled, returning empty results');
+      return [];
+    }
 
     try {
       const results = await this.parallelProcessing.waitForJobs(jobIds, timeout);
@@ -898,6 +921,24 @@ export class DataProcessingPipeline extends EventEmitter {
 
   // Get parallel processing statistics
   getParallelProcessingStats(): any {
+    if (!this.parallelProcessing) {
+      return {
+        totalWorkers: 0,
+        availableWorkers: 0,
+        busyWorkers: 0,
+        queueSize: 0,
+        completedJobs: 0,
+        failedJobs: 0,
+        averageProcessingTime: 0,
+        systemLoad: { cpu: 0, memory: 0 },
+        traditionalQueue: {
+          size: this.jobQueue.length,
+          activeJobs: this.activeJobs.size,
+          maxConcurrentJobs: this.maxConcurrentJobs
+        }
+      };
+    }
+    
     const stats = this.parallelProcessing.getStats();
     
     return {
@@ -913,6 +954,11 @@ export class DataProcessingPipeline extends EventEmitter {
   // Process high-priority session immediately with parallel processing
   async processSessionHighPriority(sessionId: string): Promise<string> {
     this.logger.info('Processing high-priority session', { sessionId });
+    
+    if (!this.parallelProcessing) {
+      this.logger.warn('Parallel processing disabled, falling back to traditional processing');
+      return this.addJobToQueue({ type: 'session_complete', sessionId, data: { sessionId }, priority: 1, maxRetries: 3 });
+    }
     
     const jobId = await this.parallelProcessing.processSession(sessionId, 1); // Highest priority
     
@@ -931,6 +977,11 @@ export class DataProcessingPipeline extends EventEmitter {
     priority?: number;
   }>): Promise<string[]> {
     const jobIds: string[] = [];
+
+    if (!this.parallelProcessing) {
+      this.logger.warn('Parallel processing disabled, skipping batch operations');
+      return jobIds;
+    }
 
     for (const operation of operations) {
       let jobId: string;
@@ -974,7 +1025,7 @@ export class DataProcessingPipeline extends EventEmitter {
   // Enhanced status method that includes parallel processing info
   getEnhancedStatus(): any {
     const traditionalStatus = this.getStatus();
-    const parallelStats = this.parallelProcessingStats();
+    const parallelStats = this.getParallelProcessingStats();
     
     return {
       traditional: traditionalStatus,
@@ -992,7 +1043,7 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private parallelProcessingStats(): any {
-    return this.parallelProcessing.getStats();
+    return this.getParallelProcessingStats();
   }
 
   // Shutdown
