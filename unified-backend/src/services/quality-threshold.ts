@@ -645,7 +645,6 @@ export class QualityThresholdService {
           qualityScore: assessment.overallScore,
           completeness: assessment.categoryScores.completeness || 0,
           reliability: assessment.categoryScores.reliability || 0,
-          trainingEligible: assessment.trainingEligible,
           qualityAssessment: JSON.stringify({
             finalAction: assessment.finalAction,
             actionReason: assessment.actionReason,
