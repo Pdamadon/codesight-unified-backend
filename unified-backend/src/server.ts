@@ -162,7 +162,7 @@ app.get("/health", async (_req, res) => {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || "development",
-      version: "2.0.0",
+      version: "2.0.1",
       services: {
         database: "connected",
         storage: await storageManager.healthCheck(),
