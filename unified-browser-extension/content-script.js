@@ -279,9 +279,50 @@
         sessionTime: timestamp - this.startTime,
         sequence: ++this.interactionSequence,
         
-        // Element identification
+        // Element identification (legacy)
         selectors,
         element: elementAnalysis,
+        
+        // Enhanced data per ChatGPT spec (stored as JSON strings for DB compatibility)
+        metadata: JSON.stringify({
+          session_id: this.sessionId,
+          user_id: "anon-user",
+          timestamp: new Date(timestamp).toISOString(),
+          page_url: window.location.href,
+          page_title: document.title,
+          viewport: { width: window.innerWidth, height: window.innerHeight }
+        }),
+        
+        pageContext: JSON.stringify({
+          dom_snapshot: this.getPrunedDOMSnapshot(element),
+          html_hash: this.generatePageHash(),
+          network_requests: this.getRecentNetworkRequests()
+        }),
+        
+        elementDetails: JSON.stringify({
+          tag: element.tagName.toLowerCase(),
+          text: this.getElementText(element),
+          attributes: this.getElementAttributes(element),
+          css_selector: this.generateCSSSelector(element),
+          xpath: this.generateXPath(element),
+          bounding_box: this.getElementBoundingBox(element),
+          computed_style: this.getRelevantComputedStyle(element)
+        }),
+        
+        context: JSON.stringify({
+          parent: this.getParentElementInfo(element),
+          ancestors: this.getAncestorChain(element),
+          siblings: this.getSiblingElements(element),
+          nearest_clickable: this.findNearbyClickableElements(element, 100)
+        }),
+        
+        overlays: JSON.stringify(this.detectActiveOverlays()),
+        
+        action: JSON.stringify({
+          type: 'click',
+          selector: this.generateCSSSelector(element),
+          timestamp: new Date(timestamp).toISOString()
+        }),
         
         // Interaction details
         coordinates: {
@@ -301,10 +342,7 @@
           metaKey: event.metaKey
         },
         
-        // Context
-        context: domContext,
-        
-        // State
+        // State (legacy)
         stateBefore,
         
         // Page info
@@ -403,6 +441,9 @@
 
     handleScroll(event) {
       if (!this.isTracking) return;
+      
+      // Skip scroll events to reduce noise (can be re-enabled if needed)
+      return;
       
       const timestamp = Date.now();
       
@@ -1986,6 +2027,290 @@
         clearInterval(this.statePreservationInterval);
         this.statePreservationInterval = null;
       }
+    }
+
+    // Enhanced data collection methods per ChatGPT specification
+    
+    getPrunedDOMSnapshot(targetElement) {
+      // Get a focused DOM snapshot around the target element (5 levels up/down)
+      let container = targetElement;
+      for (let i = 0; i < 5 && container.parentElement; i++) {
+        container = container.parentElement;
+      }
+      
+      return this.serializeElementTree(container, 5);
+    }
+    
+    serializeElementTree(element, maxDepth) {
+      if (maxDepth <= 0) return null;
+      
+      const result = {
+        tag: element.tagName.toLowerCase(),
+        attributes: {},
+        children: []
+      };
+      
+      // Copy important attributes
+      for (const attr of element.attributes) {
+        if (['id', 'class', 'data-testid', 'role', 'type'].includes(attr.name)) {
+          result.attributes[attr.name] = attr.value;
+        }
+      }
+      
+      // Add text content for text nodes
+      if (element.childNodes.length === 1 && element.childNodes[0].nodeType === Node.TEXT_NODE) {
+        result.text = element.textContent.trim().substring(0, 100);
+      }
+      
+      // Recursively serialize children (but limit to avoid huge payloads)
+      for (let i = 0; i < Math.min(element.children.length, 10); i++) {
+        const child = this.serializeElementTree(element.children[i], maxDepth - 1);
+        if (child) result.children.push(child);
+      }
+      
+      return result;
+    }
+    
+    generatePageHash() {
+      // Simple hash of page structure for duplicate detection
+      const content = document.title + window.location.pathname + document.body.innerHTML.substring(0, 1000);
+      let hash = 0;
+      for (let i = 0; i < content.length; i++) {
+        const char = content.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      return `sha256-${Math.abs(hash).toString(16)}`;
+    }
+    
+    getRecentNetworkRequests() {
+      // This would require additional setup to capture network requests
+      // For now, return placeholder
+      return [];
+    }
+    
+    getElementAttributes(element) {
+      const attrs = {};
+      for (const attr of element.attributes) {
+        attrs[attr.name] = attr.value;
+      }
+      return attrs;
+    }
+    
+    generateCSSSelector(element) {
+      const path = [];
+      let current = element;
+      
+      while (current && current !== document.body) {
+        let selector = current.tagName.toLowerCase();
+        
+        if (current.id) {
+          selector += `#${current.id}`;
+          path.unshift(selector);
+          break;
+        }
+        
+        if (current.className) {
+          const classes = current.className.split(' ').filter(c => c.trim());
+          if (classes.length > 0) {
+            selector += `.${classes.join('.')}`;
+          }
+        }
+        
+        // Add nth-child if needed for uniqueness
+        const parent = current.parentElement;
+        if (parent) {
+          const siblings = Array.from(parent.children).filter(s => s.tagName === current.tagName);
+          if (siblings.length > 1) {
+            const index = siblings.indexOf(current) + 1;
+            selector += `:nth-child(${index})`;
+          }
+        }
+        
+        path.unshift(selector);
+        current = current.parentElement;
+      }
+      
+      return path.join(' > ');
+    }
+    
+    generateXPath(element) {
+      const path = [];
+      let current = element;
+      
+      while (current && current !== document.documentElement) {
+        let selector = current.tagName.toLowerCase();
+        
+        if (current.id) {
+          selector = `${selector}[@id='${current.id}']`;
+          path.unshift(selector);
+          break;
+        }
+        
+        // Add position among siblings
+        const parent = current.parentElement;
+        if (parent) {
+          const siblings = Array.from(parent.children).filter(s => s.tagName === current.tagName);
+          if (siblings.length > 1) {
+            const index = siblings.indexOf(current) + 1;
+            selector += `[${index}]`;
+          }
+        }
+        
+        path.unshift(selector);
+        current = current.parentElement;
+      }
+      
+      return '//' + path.join('/');
+    }
+    
+    getElementBoundingBox(element) {
+      const rect = element.getBoundingClientRect();
+      return {
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
+      };
+    }
+    
+    getRelevantComputedStyle(element) {
+      const computed = window.getComputedStyle(element);
+      return {
+        visibility: computed.visibility,
+        display: computed.display,
+        cursor: computed.cursor,
+        z_index: computed.zIndex,
+        position: computed.position
+      };
+    }
+    
+    getParentElementInfo(element) {
+      const parent = element.parentElement;
+      if (!parent) return null;
+      
+      return {
+        tag: parent.tagName.toLowerCase(),
+        classes: parent.className.split(' ').filter(c => c.trim()),
+        id: parent.id || null,
+        css_selector: this.generateCSSSelector(parent)
+      };
+    }
+    
+    getAncestorChain(element) {
+      const ancestors = [];
+      let current = element.parentElement;
+      
+      while (current && current !== document.body && ancestors.length < 10) {
+        ancestors.push({
+          tag: current.tagName.toLowerCase(),
+          classes: current.className.split(' ').filter(c => c.trim()),
+          id: current.id || null,
+          css_selector: this.generateCSSSelector(current)
+        });
+        current = current.parentElement;
+      }
+      
+      return ancestors;
+    }
+    
+    getSiblingElements(element) {
+      const parent = element.parentElement;
+      if (!parent) return [];
+      
+      const siblings = [];
+      const children = Array.from(parent.children);
+      const elementIndex = children.indexOf(element);
+      
+      // Get 2 siblings on each side
+      for (let i = Math.max(0, elementIndex - 2); i <= Math.min(children.length - 1, elementIndex + 2); i++) {
+        if (i !== elementIndex) {
+          const sibling = children[i];
+          siblings.push({
+            position: i < elementIndex ? 'before' : 'after',
+            tag: sibling.tagName.toLowerCase(),
+            text: this.getElementText(sibling).substring(0, 50),
+            css_selector: this.generateCSSSelector(sibling)
+          });
+        }
+      }
+      
+      return siblings;
+    }
+    
+    findNearbyClickableElements(targetElement, radius = 100) {
+      const nearby = [];
+      const targetRect = targetElement.getBoundingClientRect();
+      const targetCenter = {
+        x: targetRect.left + targetRect.width / 2,
+        y: targetRect.top + targetRect.height / 2
+      };
+      
+      const clickableSelectors = 'a, button, input, select, textarea, [role="button"], [onclick], [tabindex]';
+      const candidates = document.querySelectorAll(clickableSelectors);
+      
+      candidates.forEach(element => {
+        if (element === targetElement) return;
+        
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        
+        const center = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+        
+        const distance = Math.sqrt(
+          Math.pow(center.x - targetCenter.x, 2) + 
+          Math.pow(center.y - targetCenter.y, 2)
+        );
+        
+        if (distance <= radius) {
+          nearby.push({
+            tag: element.tagName.toLowerCase(),
+            text: this.getElementText(element).substring(0, 50),
+            css_selector: this.generateCSSSelector(element),
+            distance: Math.round(distance)
+          });
+        }
+      });
+      
+      return nearby.sort((a, b) => a.distance - b.distance).slice(0, 5);
+    }
+    
+    detectActiveOverlays() {
+      const overlays = [];
+      
+      // Common modal/overlay selectors
+      const overlaySelectors = [
+        '.modal:not([style*="display: none"])',
+        '.overlay:not([style*="display: none"])',
+        '.popup:not([style*="display: none"])',
+        '.dialog:not([style*="display: none"])',
+        '[role="dialog"]:not([style*="display: none"])',
+        '.cookie-banner:not([style*="display: none"])',
+        '.cookie-consent:not([style*="display: none"])'
+      ];
+      
+      overlaySelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          const computed = window.getComputedStyle(element);
+          if (computed.display !== 'none' && computed.visibility !== 'hidden') {
+            const closeButton = element.querySelector('button[class*="close"], .close, [aria-label*="close"]');
+            overlays.push({
+              id: element.id || `overlay-${overlays.length}`,
+              css_selector: this.generateCSSSelector(element),
+              bounding_box: this.getElementBoundingBox(element),
+              close_button: closeButton ? {
+                css_selector: this.generateCSSSelector(closeButton)
+              } : null
+            });
+          }
+        });
+      });
+      
+      return overlays;
     }
   }
 
