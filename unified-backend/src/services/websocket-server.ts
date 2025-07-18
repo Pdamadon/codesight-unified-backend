@@ -300,15 +300,19 @@ export class UnifiedWebSocketServer {
     }
 
     try {
-      // Create or update session in database
-      await this.dataProcessingPipeline.createSession({
+      const sessionData = {
         id: sessionId,
-        type: config?.type || 'HUMAN',
+        type: (config?.type as 'HUMAN' | 'AUTOMATED' | 'HYBRID') || 'HUMAN',
         config: config || {},
         workerId: config?.workerId,
         userAgent: client.metadata.userAgent,
         ipAddress: client.metadata.ipAddress
-      });
+      };
+      
+      this.logger.info('Creating session in database', { sessionData });
+      
+      // Create or update session in database
+      await this.dataProcessingPipeline.createSession(sessionData);
 
       // Associate client with session
       client.sessionId = sessionId;
