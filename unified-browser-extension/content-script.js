@@ -278,53 +278,67 @@
         timestamp,
         sessionTime: timestamp - this.startTime,
         sequence: ++this.interactionSequence,
-        
-        // Element identification (legacy)
-        selectors,
-        element: elementAnalysis,
-        
-        // Enhanced data per ChatGPT spec (stored as JSON strings for DB compatibility)
-        metadata: JSON.stringify({
-          session_id: this.sessionId,
-          user_id: "anon-user",
+
+        // 1) Flattened selectors → top‑level fields
+        primarySelector: selectors.primary,
+        selectorAlternatives: selectors.alternatives,
+        xpath: selectors.xpath,
+        cssPath: selectors.cssPath,
+        selectorReliability: selectors.reliability,
+
+        // 2) Element details as real objects
+        elementTag: element.tagName.toLowerCase(),
+        elementText: this.getElementText(element),
+        elementValue: element.value || null,
+        elementAttributes: this.getElementAttributes(element),
+        boundingBox: this.getElementBoundingBox(element),
+        isInViewport: this.isElementInViewport(element),
+        percentVisible: this.testSelectorReliability(selectors.primary),
+
+        // 3) Surrounding context as arrays
+        parentElements: domContext.parents,
+        siblingElements: domContext.siblings,
+        nearbyElements: domContext.nearbyElements,
+
+        // 4) Metadata & pageContext as objects
+        metadata: {
+          sessionId: this.sessionId,
+          userId: 'anon-user',
           timestamp: new Date(timestamp).toISOString(),
-          page_url: window.location.href,
-          page_title: document.title,
-          viewport: { width: window.innerWidth, height: window.innerHeight }
-        }),
-        
-        pageContext: JSON.stringify({
-          dom_snapshot: this.getPrunedDOMSnapshot(element),
-          html_hash: this.generatePageHash(),
-          network_requests: this.getRecentNetworkRequests()
-        }),
-        
-        elementDetails: JSON.stringify({
+          pageUrl: window.location.href,
+          pageTitle: document.title,
+          viewport: this.getViewportInfo()
+        },
+        pageContext: {
+          domSnapshot: this.getPrunedDOMSnapshot(element),
+          htmlHash: this.generatePageHash(),
+          networkRequests: this.getRecentNetworkRequests()
+        },
+
+        // 5) Detailed elementDetails & overlays & action
+        elementDetails: {
           tag: element.tagName.toLowerCase(),
           text: this.getElementText(element),
           attributes: this.getElementAttributes(element),
-          css_selector: this.generateCSSSelector(element),
+          cssSelector: this.generateCSSSelector(element),
           xpath: this.generateXPath(element),
-          bounding_box: this.getElementBoundingBox(element),
-          computed_style: this.getRelevantComputedStyle(element)
-        }),
-        
-        context: JSON.stringify({
+          boundingBox: this.getElementBoundingBox(element),
+          computedStyle: this.getRelevantComputedStyle(element)
+        },
+        contextData: {
           parent: this.getParentElementInfo(element),
           ancestors: this.getAncestorChain(element),
           siblings: this.getSiblingElements(element),
-          nearest_clickable: this.findNearbyClickableElements(element, 100)
-        }),
-        
-        overlays: JSON.stringify(this.detectActiveOverlays()),
-        
-        action: JSON.stringify({
+          nearestClickable: this.findNearbyClickableElements(element, 100)
+        },
+        overlays: this.detectActiveOverlays(),
+        action: {
           type: 'click',
-          selector: this.generateCSSSelector(element),
+          selector: selectors.primary,
           timestamp: new Date(timestamp).toISOString()
-        }),
+        },
         
-        // Interaction details
+        // 6) Coordinates & modifiers
         coordinates: {
           clientX: event.clientX,
           clientY: event.clientY,
@@ -333,19 +347,15 @@
           offsetX: event.offsetX,
           offsetY: event.offsetY
         },
-        
-        // Modifiers
         modifiers: {
           ctrlKey: event.ctrlKey,
           shiftKey: event.shiftKey,
           altKey: event.altKey,
           metaKey: event.metaKey
         },
-        
-        // State (legacy)
+
+        // 7) Legacy fields (for pipeline)
         stateBefore,
-        
-        // Page info
         url: window.location.href,
         pageTitle: document.title,
         viewport: this.getViewportInfo()
@@ -2311,6 +2321,52 @@
       });
       
       return overlays;
+    }
+
+    // Check if element is in viewport
+    isElementInViewport(element) {
+      const rect = element.getBoundingClientRect();
+      return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= window.innerHeight &&
+        rect.right <= window.innerWidth
+      );
+    }
+
+    // Test selector reliability (simplified)
+    testSelectorReliability(selector) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        return elements.length === 1 ? 1.0 : Math.max(0.1, 1.0 / elements.length);
+      } catch (e) {
+        return 0.1;
+      }
+    }
+
+    // Get viewport information
+    getViewportInfo() {
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+        devicePixelRatio: window.devicePixelRatio || 1
+      };
+    }
+
+    // Update existing event and send to background
+    updateEvent(eventData) {
+      const idx = this.events.findIndex(e => e.id === eventData.id);
+      if (idx !== -1) {
+        this.events[idx] = { ...this.events[idx], ...eventData };
+        this.saveState();
+        // **New**: push updated event to background
+        chrome.runtime.sendMessage({
+          action: 'SEND_DATA',
+          data: this.events[idx]
+        });
+      }
     }
   }
 
