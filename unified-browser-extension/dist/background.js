@@ -840,6 +840,9 @@ class UnifiedBackgroundService {
     }
 
     try {
+      // Store current session ID for screenshot messages
+      this.currentSessionId = sessionId;
+      
       const message = {
         type: 'session_start',
         sessionId,
