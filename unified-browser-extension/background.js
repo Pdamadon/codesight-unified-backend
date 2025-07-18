@@ -343,7 +343,13 @@ class UnifiedBackgroundService {
       this.websocketConnection.onopen = () => {
         console.log('Background: WebSocket connected');
         this.reconnectAttempts = 0; // Reset reconnection counter
-        this.authenticateConnection();
+        
+        // Wait for connection to be fully ready before authenticating
+        setTimeout(() => {
+          if (this.websocketConnection && this.websocketConnection.readyState === WebSocket.OPEN) {
+            this.authenticateConnection();
+          }
+        }, 100);
       };
 
       this.websocketConnection.onmessage = (event) => {
@@ -375,20 +381,33 @@ class UnifiedBackgroundService {
   }
 
   async authenticateConnection() {
-    if (!this.websocketConnection) return;
+    if (!this.websocketConnection) {
+      console.log('Background: No WebSocket connection available for authentication');
+      return;
+    }
 
-    const authMessage = {
-      type: 'authenticate',
-      data: {
-        apiKey: this.config.apiKey,
-        clientType: 'extension',
-        extensionVersion: '2.0.0',
-        browser: this.getBrowserInfo()
-      },
-      timestamp: Date.now()
-    };
+    if (this.websocketConnection.readyState !== WebSocket.OPEN) {
+      console.log('Background: WebSocket not ready for authentication, state:', this.websocketConnection.readyState);
+      return;
+    }
 
-    this.websocketConnection.send(JSON.stringify(authMessage));
+    try {
+      const authMessage = {
+        type: 'authenticate',
+        data: {
+          apiKey: this.config.apiKey,
+          clientType: 'extension',
+          extensionVersion: '2.0.0',
+          browser: this.getBrowserInfo()
+        },
+        timestamp: Date.now()
+      };
+
+      console.log('Background: Sending authentication message');
+      this.websocketConnection.send(JSON.stringify(authMessage));
+    } catch (error) {
+      console.error('Background: Failed to send authentication message:', error);
+    }
   }
 
   // Removed sendConnectionInfo - authentication provides this info
