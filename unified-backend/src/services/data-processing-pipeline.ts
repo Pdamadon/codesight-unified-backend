@@ -363,7 +363,7 @@ export class DataProcessingPipeline extends EventEmitter {
             type: interactionData.type,
             timestamp: BigInt(interactionData.timestamp),
             sessionTime: interactionData.sessionTime || 0,
-            primarySelector: interactionData.primarySelector || interactionData.selector,
+            primarySelector: interactionData.primarySelector || interactionData.selector || 'unknown',
             selectorAlternatives: JSON.stringify(interactionData.selectorAlternatives || []),
             xpath: interactionData.xpath,
             cssPath: interactionData.cssPath,
