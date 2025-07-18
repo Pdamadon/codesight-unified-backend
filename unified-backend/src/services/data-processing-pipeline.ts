@@ -66,8 +66,8 @@ export class DataProcessingPipeline extends EventEmitter {
   private maxConcurrentJobs = 5;
   private processingInterval: NodeJS.Timeout | null = null;
 
-  // Database connection pool throttling
-  private readonly MAX_CONCURRENT_DB_OPERATIONS = 15; // Stay under pool limit of 20
+  // Database connection pool throttling - align with actual pool size
+  private readonly MAX_CONCURRENT_DB_OPERATIONS = 18; // Stay under pool limit of 20
   private activeDatabaseOperations = 0;
   private databaseQueue: Array<() => Promise<void>> = [];
 
@@ -196,9 +196,9 @@ export class DataProcessingPipeline extends EventEmitter {
       queueSize: this.databaseQueue.length
     });
 
-    // Execute all operations in the batch concurrently
-    await this.executeWithThrottling(async () => {
-      const promises = currentBatch.map(async (batchItem) => {
+    // Execute each operation with individual throttling to prevent concurrency spikes
+    const promises = currentBatch.map(async (batchItem) => {
+      return this.executeWithThrottling(async () => {
         try {
           const result = await batchItem.operation();
           batchItem.resolve(result);
@@ -206,9 +206,9 @@ export class DataProcessingPipeline extends EventEmitter {
           batchItem.reject(error);
         }
       });
-
-      await Promise.all(promises);
     });
+
+    await Promise.all(promises);
   }
 
   // Session Management

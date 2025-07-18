@@ -30,6 +30,17 @@ class DatabaseConnection {
         url: enhancedDatabaseUrl?.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') // Hide credentials
       });
 
+      // Keep-alive ping to prevent idle timeout on hosted Postgres
+      setInterval(async () => {
+        try {
+          if (DatabaseConnection.instance) {
+            await DatabaseConnection.instance.$executeRaw`SELECT 1`;
+          }
+        } catch (error) {
+          console.warn('Database keep-alive ping failed:', error);
+        }
+      }, 5 * 60 * 1000); // Every 5 minutes
+
       // Connection error handling is built into Prisma
       // No need for manual error listeners
     }

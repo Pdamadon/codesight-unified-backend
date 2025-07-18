@@ -211,7 +211,7 @@ export class UnifiedWebSocketServer {
         queueSize: this.messageQueue.length
       });
 
-      // Handle immediate response messages (ping, authenticate) without queuing
+      // Handle immediate response messages (ping, authenticate, session_start) without queuing
       if (message.type === 'ping') {
         this.sendToClient(clientId, {
           type: 'pong',
@@ -222,6 +222,11 @@ export class UnifiedWebSocketServer {
 
       if (message.type === 'authenticate') {
         await this.handleAuthentication(clientId, message);
+        return;
+      }
+
+      if (message.type === 'session_start') {
+        await this.handleSessionStart(clientId, message);
         return;
       }
 
@@ -247,7 +252,6 @@ export class UnifiedWebSocketServer {
   // Determine if a message type should be queued
   private shouldQueueMessage(messageType: string): boolean {
     const queuedTypes = [
-      'session_start',
       'session_stop', 
       'interaction_event',
       'screenshot_data',
@@ -417,7 +421,9 @@ export class UnifiedWebSocketServer {
       return;
     }
 
-    const { sessionId, config } = message.data || {};
+    // Fix payload schema - sessionId should be at top level
+    const sessionId = message.sessionId || message.data?.sessionId;
+    const config = message.data || {};
     
     if (!sessionId) {
       this.sendError(clientId, 'Session ID required');
@@ -799,7 +805,11 @@ export class UnifiedWebSocketServer {
         
         if (timeSinceActivity > staleThreshold) {
           if (client.socket.readyState === WebSocket.OPEN) {
-            client.socket.ping();
+            // Use application-level ping for browser clients instead of TCP ping
+            this.sendToClient(clientId, {
+              type: 'ping',
+              timestamp: Date.now()
+            });
           } else {
             this.handleDisconnection(clientId, 1001, Buffer.from('Stale connection'));
           }
