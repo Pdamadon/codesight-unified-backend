@@ -1,394 +1,125 @@
-// Unified CodeSight Content Script v2.0
-// Enhanced data capture with privacy protection and quality control
-
+// Enhanced Content Script with Advanced Capture Capabilities
 (function() {
   'use strict';
   
-  // Prevent multiple injections
-  if (window.UnifiedCodeSightTracker || window.UNIFIED_CODESIGHT_LOADED) {
-    console.log('Unified CodeSight already loaded, skipping');
+  // Skip CodeSight frontend pages - they have their own communication bridge
+  if (window.location.origin.includes('codesight') || window.location.origin.includes('vercel') || window.location.origin.includes('localhost')) {
+    console.log('Enhanced tracker: Skipping CodeSight frontend page');
     return;
   }
   
-  window.UNIFIED_CODESIGHT_LOADED = true;
+  // Prevent redeclaration and multiple injections
+  if (window.EnhancedShoppingTracker || window.ENHANCED_SCRIPT_LOADED) {
+    console.log('Enhanced tracker already loaded, skipping redefinition');
+    return;
+  }
+  
+  // Mark script as loaded
+  window.ENHANCED_SCRIPT_LOADED = true;
 
-  class UnifiedCodeSightTracker {
-    constructor() {
-      this.isTracking = false;
-      this.sessionId = null;
-      this.startTime = 0;
-      this.events = [];
-      this.screenshots = [];
-      this.currentUrl = window.location.href;
-      
-      // Configuration
-      this.config = {
-        screenshotQuality: 0.8,
-        maxScreenshots: 200,
-        maxEvents: 1000,
-        privacyMode: true,
-        compressionEnabled: true,
-        burstModeEnabled: true
-      };
-      
-      // State tracking
-      this.pageStructure = null;
-      this.lastInteractionTime = 0;
-      this.interactionSequence = 0;
-      
-      // Privacy filters
-      this.sensitiveSelectors = [
-        'input[type="password"]',
-        'input[name*="password"]',
-        'input[name*="ssn"]',
-        'input[name*="social"]',
-        'input[name*="credit"]',
-        'input[name*="card"]',
-        'input[name*="cvv"]',
-        'input[name*="pin"]',
-        '[data-sensitive]',
-        '.sensitive-data'
-      ];
-      
-      this.initializeTracker();
+class EnhancedShoppingTracker {
+  constructor() {
+    this.isTracking = false;
+    this.sessionId = null;
+    this.events = [];
+    this.startTime = 0;
+    this.domSnapshots = new Map();
+    this.mutationObserver = null;
+    this.currentUrl = window.location.href;
+    this.lastScreenshotTime = 0;
+    this.screenshotCooldown = 2000; // 2 seconds between screenshots
+    
+    this.initializeTracker();
+  }
+
+  // Enhanced click capture with full context
+  async handleClick(event) {
+    if (!this.isTracking) return;
+    
+    const element = event.target;
+    const timestamp = Date.now();
+    
+    // Skip invisible or very small elements (likely tracking pixels)
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 5 && rect.height < 5) {
+      console.log('Enhanced: Skipping tiny element (likely tracking pixel)');
+      return;
     }
-
-    initializeTracker() {
-      // Listen for messages from background script
-      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        this.handleMessage(message, sender, sendResponse);
-        return true; // Keep message channel open for async responses
-      });
-
-      // Set up navigation handling
-      this.setupNavigationHandling();
+    
+    // Capture screenshot before any state changes
+    const screenshot = await this.captureScreenshot('click', timestamp);
+    
+    // Get all possible selectors
+    const selectors = this.generateAllSelectors(element);
+    
+    // Capture DOM context
+    const domContext = this.captureDOMContext(element);
+    
+    // Get computed styles
+    const computedStyles = this.getComputedStyles(element);
+    
+    // Find nearby interactive elements
+    const nearbyElements = this.findNearbyElements(element);
+    
+    // Capture page state
+    const pageState = this.capturePageState();
+    
+    const enhancedClickData = {
+      type: 'click',
+      timestamp,
+      sessionTime: Date.now() - this.startTime,
       
-      // Set up state preservation for navigation
-      this.setupStatePreservation();
+      // Element identification
+      selectors: {
+        primary: selectors.primary,
+        alternatives: selectors.alternatives,
+        xpath: selectors.xpath,
+        fullPath: selectors.fullPath
+      },
       
-      // Restore state if needed
-      this.restoreState();
+      // Visual context
+      visual: {
+        screenshot: screenshot.id,
+        boundingBox: this.getBoundingBox(element),
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          scrollX: window.scrollX,
+          scrollY: window.scrollY
+        },
+        isInViewport: this.isElementInViewport(element),
+        percentVisible: this.getElementVisibility(element)
+      },
       
-      console.log('Unified CodeSight Tracker initialized v2.0');
-    }
-
-    async handleMessage(message, sender, sendResponse) {
-      try {
-        switch (message.action) {
-          case 'START_TRACKING':
-            await this.startTracking(message.sessionId, message.config);
-            sendResponse({ success: true });
-            break;
-            
-          case 'STOP_TRACKING':
-            const result = await this.stopTracking();
-            sendResponse({ success: true, data: result });
-            break;
-            
-          case 'GET_STATUS':
-            sendResponse(this.getStatus());
-            break;
-            
-          case 'UPDATE_CONFIG':
-            this.updateConfig(message.config);
-            sendResponse({ success: true });
-            break;
-            
-          case 'CAPTURE_SCREENSHOT':
-            const screenshot = await this.captureScreenshot(message.trigger);
-            sendResponse({ success: true, screenshot });
-            break;
-            
-          case 'GET_SESSION_DATA':
-            const sessionData = await this.getSessionData();
-            sendResponse({ success: true, data: sessionData });
-            break;
-
-          case 'ping':
-            sendResponse({ success: true, message: 'Content script is working', tracker: !!window.UnifiedCodeSightTracker });
-            break;
-            
-          default:
-            sendResponse({ success: false, error: 'Unknown action' });
-        }
-      } catch (error) {
-        console.error('Unified: Message handling error:', error);
-        sendResponse({ success: false, error: error.message });
-      }
-    }
-
-    async startTracking(sessionId, config = {}) {
-      if (this.isTracking) {
-        console.log('Unified: Already tracking');
-        return;
-      }
-
-      this.sessionId = sessionId;
-      this.startTime = Date.now();
-      this.isTracking = true;
-      this.events = [];
-      this.screenshots = [];
-      this.interactionSequence = 0;
-      
-      // Update configuration
-      this.config = { ...this.config, ...config };
-      
-      // Analyze initial page structure
-      this.pageStructure = this.analyzePageStructure();
-      
-      // Bind event listeners
-      this.bindEventListeners();
-      
-      // Show tracking indicator
-      this.showTrackingIndicator();
-      
-      // Save state
-      this.saveState();
-      
-      // Capture initial screenshot
-      await this.captureScreenshot('session_start');
-      
-      // Start periodic validation
-      this.startPeriodicValidation();
-      
-      // Notify background script to start session on backend
-      this.startBackendSession();
-      
-      console.log('Unified: Tracking started for session:', sessionId);
-    }
-
-    async stopTracking() {
-      if (!this.isTracking) {
-        console.log('Unified: Not currently tracking');
-        return null;
-      }
-
-      this.isTracking = false;
-      
-      // Unbind event listeners
-      this.unbindEventListeners();
-      
-      // Stop navigation handling
-      this.cleanupNavigationHandling();
-      
-      // Stop state preservation
-      this.cleanupStatePreservation();
-      
-      // Stop periodic validation
-      this.stopPeriodicValidation();
-      
-      // Hide tracking indicator
-      this.hideTrackingIndicator();
-      
-      // Capture final screenshot
-      await this.captureScreenshot('session_end');
-      
-      // Perform final validation
-      const finalValidation = this.validateSessionData();
-      console.log('Unified: Final validation score:', finalValidation.score);
-      
-      // Prepare session data
-      const sessionData = await this.prepareSessionData();
-      
-      // Stop backend session
-      await this.stopBackendSession();
-      
-      // Clear state
-      this.clearState();
-      
-      console.log('Unified: Tracking stopped, captured', this.events.length, 'events');
-      
-      return sessionData;
-    }
-
-    bindEventListeners() {
-      // Enhanced click tracking
-      this.boundClickHandler = this.handleClick.bind(this);
-      document.addEventListener('click', this.boundClickHandler, true);
-      
-      // Input tracking with privacy protection
-      this.boundInputHandler = this.handleInput.bind(this);
-      document.addEventListener('input', this.boundInputHandler, true);
-      
-      // Form submission tracking
-      this.boundFormHandler = this.handleFormSubmit.bind(this);
-      document.addEventListener('submit', this.boundFormHandler, true);
-      
-      // Scroll tracking (throttled)
-      this.boundScrollHandler = this.throttle(this.handleScroll.bind(this), 200);
-      document.addEventListener('scroll', this.boundScrollHandler, true);
-      
-      // Focus tracking for accessibility
-      this.boundFocusHandler = this.handleFocus.bind(this);
-      document.addEventListener('focus', this.boundFocusHandler, true);
-      
-      // Key press tracking (for shortcuts and navigation)
-      this.boundKeyHandler = this.handleKeyPress.bind(this);
-      document.addEventListener('keydown', this.boundKeyHandler, true);
-    }
-
-    unbindEventListeners() {
-      if (this.boundClickHandler) {
-        document.removeEventListener('click', this.boundClickHandler, true);
-      }
-      if (this.boundInputHandler) {
-        document.removeEventListener('input', this.boundInputHandler, true);
-      }
-      if (this.boundFormHandler) {
-        document.removeEventListener('submit', this.boundFormHandler, true);
-      }
-      if (this.boundScrollHandler) {
-        document.removeEventListener('scroll', this.boundScrollHandler, true);
-      }
-      if (this.boundFocusHandler) {
-        document.removeEventListener('focus', this.boundFocusHandler, true);
-      }
-      if (this.boundKeyHandler) {
-        document.removeEventListener('keydown', this.boundKeyHandler, true);
-      }
-    }
-
-    async handleClick(event) {
-      if (!this.isTracking) return;
-      
-      const element = event.target;
-      const timestamp = Date.now();
-      
-      // Skip if element is too small (likely tracking pixel)
-      const rect = element.getBoundingClientRect();
-      if (rect.width < 3 && rect.height < 3) return;
-      
-      // Capture screenshot before state changes
-      const screenshotPromise = this.captureScreenshot('click', timestamp);
-      
-      // Generate comprehensive selectors (using existing methods)
-      const selectors = {
-        primary: this.generateCSSSelector(element),
-        alternatives: [this.generateCSSSelector(element)],
-        xpath: this.generateXPath(element),
-        cssPath: this.generateCSSSelector(element),
-        reliability: this.testSelectorReliability(this.generateCSSSelector(element))
-      };
-      
-      // Capture DOM context with error handling
-      console.log('🔄 Starting DOM context collection...');
-      const domContext = {};
-      
-      try {
-        console.log('📁 Collecting parent info...');
-        const parentInfo = this.getParentElementInfo(element);
-        domContext.parents = parentInfo ? [parentInfo] : [];
-        console.log('✅ Parent info collected:', domContext.parents);
-      } catch (error) {
-        console.error('❌ Error collecting parent info:', error);
-        domContext.parents = [];
-      }
-      
-      try {
-        console.log('🏗️ Collecting ancestor chain...');
-        domContext.ancestors = this.getAncestorChain(element);
-        console.log('✅ Ancestor chain collected:', domContext.ancestors);
-      } catch (error) {
-        console.error('❌ Error collecting ancestors:', error);
-        domContext.ancestors = [];
-      }
-      
-      try {
-        console.log('👫 Collecting siblings...');
-        domContext.siblings = this.getSiblingElements(element);
-        console.log('✅ Siblings collected:', domContext.siblings);
-      } catch (error) {
-        console.error('❌ Error collecting siblings:', error);
-        domContext.siblings = [];
-      }
-      
-      try {
-        console.log('🎯 Collecting nearby elements...');
-        domContext.nearbyElements = this.findNearbyClickableElements(element, 100);
-        console.log('✅ Nearby elements collected:', domContext.nearbyElements);
-      } catch (error) {
-        console.error('❌ Error collecting nearby elements:', error);
-        domContext.nearbyElements = [];
-      }
-      
-      // Get element analysis (simple version)
-      const elementAnalysis = {
+      // Element details
+      element: {
         tagName: element.tagName.toLowerCase(),
         text: this.getElementText(element),
         value: element.value || null,
-        attributes: this.getElementAttributes(element),
-        boundingBox: this.getElementBoundingBox(element)
-      };
+        attributes: this.getAllAttributes(element),
+        computedStyles: computedStyles,
+        isInteractive: this.isInteractiveElement(element),
+        role: element.getAttribute('role') || this.inferElementRole(element)
+      },
       
-      // Capture page state before interaction
-      const stateBefore = this.capturePageState();
-      
-      const interactionData = {
-        type: 'CLICK',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-
-        // 1) Flattened selectors → top‑level fields
-        primarySelector: selectors.primary,
-        selectorAlternatives: selectors.alternatives,
-        xpath: selectors.xpath,
-        cssPath: selectors.cssPath,
-        selectorReliability: selectors.reliability,
-
-        // 2) Element details as real objects
-        elementTag: element.tagName.toLowerCase(),
-        elementText: this.getElementText(element),
-        elementValue: element.value || null,
-        elementAttributes: this.getElementAttributes(element),
-        boundingBox: this.getElementBoundingBox(element),
-        isInViewport: this.isElementInViewport(element),
-        percentVisible: this.testSelectorReliability(selectors.primary),
-
-        // 3) Surrounding context as arrays
+      // DOM context
+      context: {
         parentElements: domContext.parents,
-        siblingElements: domContext.siblings,
-        nearbyElements: domContext.nearbyElements,
-
-        // 4) Metadata & pageContext as objects
-        metadata: {
-          sessionId: this.sessionId,
-          userId: 'anon-user',
-          timestamp: new Date(timestamp).toISOString(),
-          pageUrl: window.location.href,
-          pageTitle: document.title,
-          viewport: this.getViewportInfo()
-        },
-        pageContext: {
-          domSnapshot: this.getPrunedDOMSnapshot(element),
-          htmlHash: this.generatePageHash(),
-          networkRequests: this.getRecentNetworkRequests()
-        },
-
-        // 5) Detailed elementDetails & overlays & action
-        elementDetails: {
-          tag: element.tagName.toLowerCase(),
-          text: this.getElementText(element),
-          attributes: this.getElementAttributes(element),
-          cssSelector: this.generateCSSSelector(element),
-          xpath: this.generateXPath(element),
-          boundingBox: this.getElementBoundingBox(element),
-          computedStyle: this.getRelevantComputedStyle(element)
-        },
-        contextData: {
-          parent: this.getParentElementInfo(element),
-          ancestors: this.getAncestorChain(element),
-          siblings: this.getSiblingElements(element),
-          nearestClickable: this.findNearbyClickableElements(element, 100)
-        },
-        overlays: this.detectActiveOverlays(),
-        action: {
-          type: 'click',
-          selector: selectors.primary,
-          timestamp: new Date(timestamp).toISOString()
-        },
-        
-        // 6) Coordinates & modifiers
+        siblings: domContext.siblings,
+        nearbyElements: nearbyElements,
+        pageStructure: this.analyzePageStructure()
+      },
+      
+      // State information
+      state: {
+        before: pageState,
+        url: window.location.href,
+        pageTitle: document.title,
+        activeElement: document.activeElement?.tagName
+      },
+      
+      // User interaction details
+      interaction: {
         coordinates: {
           clientX: event.clientX,
           clientY: event.clientY,
@@ -403,2115 +134,1455 @@
           altKey: event.altKey,
           metaKey: event.metaKey
         },
-
-        // 7) Legacy fields (for pipeline)
-        stateBefore,
-        url: window.location.href,
-        pageTitle: document.title,
-        viewport: this.getViewportInfo()
-      };
-
-      // 🔍 COMPREHENSIVE CLICK DATA LOGGING
-      console.log('🎯 CLICK EVENT TRIGGERED:', {
-        element: element,
-        timestamp: new Date(timestamp).toISOString(),
-        sessionId: this.sessionId,
-        isTracking: this.isTracking
-      });
-      
-      console.log('🔍 SELECTORS GENERATED:', {
-        primary: selectors.primary,
-        alternatives: selectors.alternatives,
-        xpath: selectors.xpath,
-        cssPath: selectors.cssPath,
-        reliability: selectors.reliability
-      });
-      
-      console.log('🏗️ DOM CONTEXT COLLECTED:', {
-        parents: domContext.parents,
-        parentCount: domContext.parents?.length || 0,
-        ancestors: domContext.ancestors,
-        ancestorCount: domContext.ancestors?.length || 0,
-        siblings: domContext.siblings,
-        siblingCount: domContext.siblings?.length || 0,
-        nearbyElements: domContext.nearbyElements,
-        nearbyCount: domContext.nearbyElements?.length || 0
-      });
-      
-      console.log('🧩 ELEMENT ANALYSIS:', {
-        tagName: elementAnalysis.tagName,
-        text: elementAnalysis.text,
-        textLength: elementAnalysis.text?.length || 0,
-        value: elementAnalysis.value,
-        attributes: elementAnalysis.attributes,
-        attributeCount: Object.keys(elementAnalysis.attributes || {}).length,
-        boundingBox: elementAnalysis.boundingBox
-      });
-
-      // 🔍 LOG: Show what data we're collecting
-      console.log('🎯 CLICK DATA COLLECTED:', {
-        type: interactionData.type,
-        timestamp: new Date(interactionData.timestamp).toISOString(),
-        element: {
-          tag: interactionData.elementTag,
-          text: interactionData.elementText?.substring(0, 50) + '...',
-          selector: interactionData.primarySelector
-        },
-        selectors: {
-          primary: interactionData.primarySelector,
-          alternatives: interactionData.selectorAlternatives?.length,
-          xpath: interactionData.xpath?.substring(0, 50) + '...',
-          cssPath: interactionData.cssPath?.substring(0, 50) + '...',
-          reliability: interactionData.selectorReliability
-        },
-        coordinates: interactionData.coordinates,
-        modifiers: interactionData.modifiers,
-        viewport: interactionData.viewport,
-        enhancedFields: {
-          hasMetadata: !!interactionData.metadata,
-          hasPageContext: !!interactionData.pageContext,
-          hasElementDetails: !!interactionData.elementDetails,
-          hasContextData: !!interactionData.contextData,
-          hasOverlays: !!interactionData.overlays,
-          hasAction: !!interactionData.action,
-          overlayCount: interactionData.overlays?.length || 0,
-          nearbyElementCount: interactionData.nearbyElements?.length || 0
-        }
-      });
-
-      // Wait for screenshot
-      const screenshot = await screenshotPromise;
-      if (screenshot) {
-        interactionData.screenshotId = screenshot.id;
+        button: event.button
       }
+    };
+    
+    // Capture what happens after the click
+    setTimeout(async () => {
+      enhancedClickData.state.after = this.capturePageState();
+      enhancedClickData.state.changes = this.detectStateChanges(
+        enhancedClickData.state.before,
+        enhancedClickData.state.after
+      );
+      
+      // Update the event with post-click data
+      this.updateEvent(enhancedClickData);
+      
+      console.log('Enhanced: Updated event with post-click state:', enhancedClickData.state.changes);
+    }, 1000); // Increased from 500ms to 1000ms
+    
+    this.captureEvent('click', enhancedClickData);
+  }
 
-      // Capture state after a delay to see changes
-      setTimeout(() => {
-        interactionData.stateAfter = this.capturePageState();
-        interactionData.stateChanges = this.detectStateChanges(
-          interactionData.stateBefore,
-          interactionData.stateAfter
-        );
-        
-        // Update the stored event
-        this.updateEvent(interactionData);
-      }, 1000);
-
-      this.captureEvent(interactionData);
-      this.lastInteractionTime = timestamp;
+  // Generate all possible selectors for an element
+  generateAllSelectors(element) {
+    const selectors = {
+      primary: null,
+      alternatives: [],
+      xpath: null,
+      fullPath: null
+    };
+    
+    // Priority 1: ID selector
+    if (element.id) {
+      selectors.primary = `#${element.id}`;
+      selectors.alternatives.push(selectors.primary);
     }
-
-    async handleInput(event) {
-      if (!this.isTracking) return;
-      
-      const element = event.target;
-      
-      // Privacy protection - skip sensitive inputs
-      if (this.isSensitiveInput(element)) {
-        console.log('Unified: Skipping sensitive input');
-        return;
-      }
-      
-      const timestamp = Date.now();
-      
-      const interactionData = {
-        type: 'INPUT',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-        
-        selectors: this.generateMultipleSelectors(element),
-        element: this.analyzeElement(element),
-        
-        // Input details (sanitized)
-        inputType: element.type || 'text',
-        inputName: element.name || '',
-        placeholder: element.placeholder || '',
-        valueLength: element.value ? element.value.length : 0,
-        
-        url: window.location.href,
-        pageTitle: document.title
-      };
-
-      this.captureEvent(interactionData);
-    }
-
-    async handleFormSubmit(event) {
-      if (!this.isTracking) return;
-      
-      const form = event.target;
-      const timestamp = Date.now();
-      
-      // Capture screenshot of form submission
-      const screenshot = await this.captureScreenshot('form_submit', timestamp);
-      
-      const interactionData = {
-        type: 'FORM_SUBMIT',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-        
-        selectors: this.generateMultipleSelectors(form),
-        element: this.analyzeElement(form),
-        
-        // Form details (privacy-safe)
-        formAction: form.action || '',
-        formMethod: form.method || 'GET',
-        fieldCount: form.elements.length,
-        
-        screenshotId: screenshot?.id,
-        url: window.location.href,
-        pageTitle: document.title
-      };
-
-      this.captureEvent(interactionData);
-    }
-
-    handleScroll(event) {
-      if (!this.isTracking) return;
-      
-      // Skip scroll events to reduce noise (can be re-enabled if needed)
-      return;
-      
-      const timestamp = Date.now();
-      
-      const interactionData = {
-        type: 'SCROLL',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-        
-        scrollPosition: {
-          x: window.scrollX,
-          y: window.scrollY
-        },
-        
-        viewport: this.getViewportInfo(),
-        url: window.location.href
-      };
-
-      this.captureEvent(interactionData);
-    }
-
-    handleFocus(event) {
-      if (!this.isTracking) return;
-      
-      const element = event.target;
-      const timestamp = Date.now();
-      
-      const interactionData = {
-        type: 'FOCUS',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-        
-        selectors: this.generateMultipleSelectors(element),
-        element: this.analyzeElement(element),
-        
-        url: window.location.href
-      };
-
-      this.captureEvent(interactionData);
-    }
-
-    handleKeyPress(event) {
-      if (!this.isTracking) return;
-      
-      // Only capture significant key presses
-      const significantKeys = ['Enter', 'Tab', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-      if (!significantKeys.includes(event.key) && !event.ctrlKey && !event.metaKey) {
-        return;
-      }
-      
-      const timestamp = Date.now();
-      
-      const interactionData = {
-        type: 'KEY_PRESS',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-        
-        key: event.key,
-        code: event.code,
-        modifiers: {
-          ctrlKey: event.ctrlKey,
-          shiftKey: event.shiftKey,
-          altKey: event.altKey,
-          metaKey: event.metaKey
-        },
-        
-        url: window.location.href
-      };
-
-      this.captureEvent(interactionData);
-    }
-
-    // Enhanced selector generation
-    generateMultipleSelectors(element) {
-      const selectors = {
-        primary: null,
-        alternatives: [],
-        xpath: null,
-        cssPath: null,
-        reliability: {}
-      };
-
-      // Priority 1: ID selector
-      if (element.id && typeof element.id === 'string' && element.id.trim()) {
-        const idSelector = `#${element.id}`;
-        selectors.primary = idSelector;
-        selectors.alternatives.push(idSelector);
-        selectors.reliability[idSelector] = 0.95;
-      }
-
-      // Priority 2: Data attributes (test-friendly)
-      const dataAttrs = ['data-testid', 'data-test', 'data-cy', 'data-qa', 'data-automation'];
-      for (const attr of dataAttrs) {
-        const value = element.getAttribute(attr);
-        if (value) {
-          const selector = `[${attr}="${value}"]`;
-          if (!selectors.primary) selectors.primary = selector;
-          selectors.alternatives.push(selector);
-          selectors.reliability[selector] = 0.9;
-        }
-      }
-
-      // Priority 3: ARIA attributes
-      const ariaLabel = element.getAttribute('aria-label');
-      if (ariaLabel) {
-        const selector = `[aria-label="${ariaLabel}"]`;
+    
+    // Priority 2: Data attributes
+    const dataAttrs = ['data-testid', 'data-test', 'data-cy', 'data-qa'];
+    for (const attr of dataAttrs) {
+      const value = element.getAttribute(attr);
+      if (value) {
+        const selector = `[${attr}="${value}"]`;
         if (!selectors.primary) selectors.primary = selector;
         selectors.alternatives.push(selector);
-        selectors.reliability[selector] = 0.85;
       }
-
-      // Priority 4: Name attribute (for form elements)
-      if (element.name) {
-        const selector = `[name="${element.name}"]`;
+    }
+    
+    // Priority 3: ARIA attributes
+    const ariaLabel = element.getAttribute('aria-label');
+    if (ariaLabel) {
+      const selector = `[aria-label="${ariaLabel}"]`;
+      if (!selectors.primary) selectors.primary = selector;
+      selectors.alternatives.push(selector);
+    }
+    
+    // Priority 4: Role + text
+    const role = element.getAttribute('role');
+    const text = this.getElementText(element);
+    if (role && text) {
+      const selector = `[role="${role}"]:contains("${text}")`;
+      selectors.alternatives.push(selector);
+    }
+    
+    // Priority 5: Class-based selector
+    if (element.className && typeof element.className === 'string') {
+      const classes = element.className.split(' ')
+        .filter(c => c.trim() && !c.match(/^(active|hover|focus)/));
+      if (classes.length > 0) {
+        const selector = '.' + classes.join('.');
         if (!selectors.primary) selectors.primary = selector;
         selectors.alternatives.push(selector);
-        selectors.reliability[selector] = 0.8;
       }
+    }
+    
+    // Priority 6: Tag + attributes
+    const tagSelector = this.buildTagSelector(element);
+    if (!selectors.primary) selectors.primary = tagSelector;
+    selectors.alternatives.push(tagSelector);
+    
+    // Generate XPath
+    selectors.xpath = this.getXPath(element);
+    
+    // Generate full CSS path
+    selectors.fullPath = this.getFullCSSPath(element);
+    
+    // Remove duplicates
+    selectors.alternatives = [...new Set(selectors.alternatives)];
+    
+    return selectors;
+  }
 
-      // Priority 5: Class-based selector (stable classes only)
-      if (element.className && typeof element.className === 'string') {
-        const classes = element.className.split(' ')
-          .filter(c => c.trim() && !this.isUnstableClass(c));
-        
-        if (classes.length > 0) {
-          const selector = '.' + classes.join('.');
-          if (!selectors.primary) selectors.primary = selector;
-          selectors.alternatives.push(selector);
-          selectors.reliability[selector] = 0.6;
+  // Capture DOM context around element
+  captureDOMContext(element) {
+    const context = {
+      parents: [],
+      siblings: [],
+      domPath: []
+    };
+    
+    // Capture parent hierarchy
+    let parent = element.parentElement;
+    let depth = 0;
+    while (parent && depth < 5) {
+      context.parents.push({
+        tagName: parent.tagName.toLowerCase(),
+        id: parent.id || null,
+        className: (typeof parent.className === 'string' ? parent.className : parent.className?.baseVal) || null,
+        role: parent.getAttribute('role'),
+        selector: this.generateAllSelectors(parent).primary
+      });
+      parent = parent.parentElement;
+      depth++;
+    }
+    
+    // Capture siblings
+    if (element.parentElement) {
+      const siblings = Array.from(element.parentElement.children);
+      const elementIndex = siblings.indexOf(element);
+      
+      // Get previous and next siblings
+      for (let i = Math.max(0, elementIndex - 2); i <= Math.min(siblings.length - 1, elementIndex + 2); i++) {
+        if (i !== elementIndex) {
+          const sibling = siblings[i];
+          context.siblings.push({
+            position: i < elementIndex ? 'before' : 'after',
+            distance: Math.abs(i - elementIndex),
+            tagName: sibling.tagName.toLowerCase(),
+            text: this.getElementText(sibling),
+            selector: this.generateAllSelectors(sibling).primary
+          });
         }
       }
-
-      // Priority 6: Tag + attributes combination
-      const tagSelector = this.buildTagSelector(element);
-      if (!selectors.primary) selectors.primary = tagSelector;
-      selectors.alternatives.push(tagSelector);
-      selectors.reliability[tagSelector] = 0.5;
-
-      // Generate XPath
-      selectors.xpath = this.generateXPath(element);
-      selectors.reliability[selectors.xpath] = 0.7;
-
-      // Generate CSS path
-      selectors.cssPath = this.generateCSSPath(element);
-      selectors.reliability[selectors.cssPath] = 0.4;
-
-      // Remove duplicates
-      selectors.alternatives = [...new Set(selectors.alternatives)];
-
-      return selectors;
     }
+    
+    return context;
+  }
 
-    isUnstableClass(className) {
-      const unstablePatterns = [
-        /^(active|hover|focus|selected|current)$/i,
-        /^(is-|has-)/i,
-        /\d{4,}/, // Long numbers (likely generated)
-        /^[a-f0-9]{8,}$/i, // Hash-like strings
-        /^css-/i, // CSS-in-JS generated classes
-        /^sc-/i, // Styled-components
-        /^emotion-/i // Emotion CSS
-      ];
-      
-      return unstablePatterns.some(pattern => pattern.test(className));
-    }
+  // Get computed styles relevant for interaction
+  getComputedStyles(element) {
+    const computed = window.getComputedStyle(element);
+    const relevantProps = [
+      'display', 'visibility', 'position', 'zIndex',
+      'width', 'height', 'padding', 'margin',
+      'backgroundColor', 'color', 'fontSize',
+      'cursor', 'pointerEvents', 'opacity',
+      'transform', 'transition'
+    ];
+    
+    const styles = {};
+    relevantProps.forEach(prop => {
+      styles[prop] = computed.getPropertyValue(prop);
+    });
+    
+    return styles;
+  }
 
-    buildTagSelector(element) {
-      let selector = element.tagName.toLowerCase();
+  // Find nearby interactive elements
+  findNearbyElements(targetElement, radius = 200) {
+    const nearby = [];
+    const targetRect = targetElement.getBoundingClientRect();
+    const targetCenter = {
+      x: targetRect.left + targetRect.width / 2,
+      y: targetRect.top + targetRect.height / 2
+    };
+    
+    console.log('Enhanced: Target element center:', targetCenter, 'rect:', targetRect);
+    
+    // Find all interactive elements
+    const interactiveSelectors = 'a, button, input, select, textarea, [role="button"], [onclick], [data-clickable]';
+    const candidates = document.querySelectorAll(interactiveSelectors);
+    
+    candidates.forEach(element => {
+      if (element === targetElement) return;
       
-      // Add type for input elements
-      if (element.type) {
-        selector += `[type="${element.type}"]`;
-      }
-      
-      // Add role if present
-      if (element.getAttribute('role')) {
-        selector += `[role="${element.getAttribute('role')}"]`;
-      }
-      
-      return selector;
-    }
-
-    generateXPath(element) {
-      if (element.id) {
-        return `//*[@id="${element.id}"]`;
-      }
-      
-      const parts = [];
-      while (element && element.nodeType === Node.ELEMENT_NODE) {
-        let index = 0;
-        let sibling = element.previousSibling;
-        
-        while (sibling) {
-          if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === element.tagName) {
-            index++;
-          }
-          sibling = sibling.previousSibling;
-        }
-        
-        const tagName = element.tagName.toLowerCase();
-        const part = index > 0 ? `${tagName}[${index + 1}]` : tagName;
-        parts.unshift(part);
-        
-        element = element.parentElement;
-      }
-      
-      return parts.length ? '/' + parts.join('/') : null;
-    }
-
-    generateCSSPath(element) {
-      const names = [];
-      while (element.parentNode) {
-        if (element.id) {
-          names.unshift('#' + element.id);
-          break;
-        } else {
-          let tagName = element.nodeName.toLowerCase();
-          
-          if (element.className && typeof element.className === 'string') {
-            const stableClasses = element.className.split(' ')
-              .filter(c => c.trim() && !this.isUnstableClass(c));
-            if (stableClasses.length > 0) {
-              tagName += '.' + stableClasses.join('.');
-            }
-          }
-          
-          const siblings = Array.from(element.parentNode.children);
-          const sameTagSiblings = siblings.filter(sibling => 
-            sibling.nodeName === element.nodeName
-          );
-          
-          if (sameTagSiblings.length > 1) {
-            const index = sameTagSiblings.indexOf(element) + 1;
-            tagName += `:nth-of-type(${index})`;
-          }
-          
-          names.unshift(tagName);
-          element = element.parentNode;
-        }
-      }
-      return names.join(' > ');
-    }
-
-    // DOM context capture
-    captureDOMContext(element) {
-      const context = {
-        parents: [],
-        siblings: [],
-        children: [],
-        nearbyElements: []
+      const rect = element.getBoundingClientRect();
+      const center = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
       };
-
-      // Capture parent hierarchy (up to 5 levels)
-      let parent = element.parentElement;
-      let depth = 0;
-      while (parent && depth < 5) {
-        context.parents.push({
-          tagName: parent.tagName.toLowerCase(),
-          id: parent.id || null,
-          className: this.getStableClasses(parent),
-          role: parent.getAttribute('role'),
-          selector: this.generateMultipleSelectors(parent).primary
+      
+      const distance = Math.sqrt(
+        Math.pow(center.x - targetCenter.x, 2) +
+        Math.pow(center.y - targetCenter.y, 2)
+      );
+      
+      if (distance <= radius) {
+        nearby.push({
+          selector: this.generateAllSelectors(element).primary,
+          tagName: element.tagName.toLowerCase(),
+          text: this.getElementText(element),
+          distance: Math.round(distance),
+          direction: this.getRelativeDirection(targetCenter, center),
+          isVisible: this.isElementVisible(element)
         });
-        parent = parent.parentElement;
-        depth++;
       }
+    });
+    
+    // Sort by distance
+    nearby.sort((a, b) => a.distance - b.distance);
+    
+    console.log('Enhanced: Found', nearby.length, 'nearby elements within', radius, 'px');
+    
+    return nearby.slice(0, 10); // Return closest 10
+  }
 
-      // Capture siblings
-      if (element.parentElement) {
-        const siblings = Array.from(element.parentElement.children);
-        const elementIndex = siblings.indexOf(element);
-        
-        for (let i = Math.max(0, elementIndex - 2); i <= Math.min(siblings.length - 1, elementIndex + 2); i++) {
-          if (i !== elementIndex) {
-            const sibling = siblings[i];
-            context.siblings.push({
-              position: i < elementIndex ? 'before' : 'after',
-              distance: Math.abs(i - elementIndex),
-              tagName: sibling.tagName.toLowerCase(),
-              text: this.getElementText(sibling),
-              selector: this.generateMultipleSelectors(sibling).primary
+  // Capture current page state
+  capturePageState() {
+    return {
+      url: window.location.href,
+      title: document.title,
+      readyState: document.readyState,
+      documentHeight: document.documentElement.scrollHeight,
+      viewportHeight: window.innerHeight,
+      scrollPosition: {
+        x: window.scrollX,
+        y: window.scrollY
+      },
+      activeModals: this.detectActiveModals(),
+      formData: this.captureFormStates(),
+      visibleProducts: this.countVisibleProducts()
+    };
+  }
+
+  // Capture screenshot using Chrome API with cooldown
+  async captureScreenshot(eventType, timestamp) {
+    const now = Date.now();
+    
+    // Check cooldown period (except for clicks which are important)
+    if (eventType !== 'click' && (now - this.lastScreenshotTime) < this.screenshotCooldown) {
+      console.log(`Enhanced: Screenshot skipped for ${eventType} due to cooldown`);
+      return { id: null, dataUrl: null };
+    }
+    
+    console.log(`Enhanced: captureScreenshot called with eventType: ${eventType}, timestamp: ${timestamp}`);
+    this.lastScreenshotTime = now;
+    
+    return new Promise((resolve) => {
+      // Send message to background script to capture
+      chrome.runtime.sendMessage({
+        action: 'CAPTURE_SCREENSHOT',
+        data: {
+          eventType,
+          timestamp,
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            scrollX: window.scrollX,
+            scrollY: window.scrollY
+          }
+        }
+      }, (response) => {
+        if (response && response.screenshotId) {
+          resolve({
+            id: response.screenshotId,
+            dataUrl: response.dataUrl
+          });
+        } else {
+          resolve({ id: null, dataUrl: null });
+        }
+      });
+    });
+  }
+
+  // Helper methods
+  isElementVisible(element) {
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    
+    return rect.width > 0 && 
+           rect.height > 0 && 
+           style.display !== 'none' && 
+           style.visibility !== 'hidden' && 
+           style.opacity !== '0';
+  }
+
+  isElementInViewport(element) {
+    const rect = element.getBoundingClientRect();
+    return (
+      rect.top >= 0 &&
+      rect.left >= 0 &&
+      rect.bottom <= window.innerHeight &&
+      rect.right <= window.innerWidth
+    );
+  }
+
+  getElementVisibility(element) {
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+    const visibleWidth = Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0);
+    
+    const visibleArea = Math.max(0, visibleHeight) * Math.max(0, visibleWidth);
+    const totalArea = rect.height * rect.width;
+    
+    return totalArea > 0 ? (visibleArea / totalArea) * 100 : 0;
+  }
+
+  detectActiveModals() {
+    const modalSelectors = [
+      '[role="dialog"]',
+      '.modal:visible',
+      '.popup:visible',
+      '[class*="modal"][style*="display: block"]',
+      '[class*="overlay"][style*="visible"]'
+    ];
+    
+    const modals = [];
+    modalSelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (this.isElementVisible(el)) {
+            modals.push({
+              selector: this.generateAllSelectors(el).primary,
+              zIndex: window.getComputedStyle(el).zIndex
             });
           }
+        });
+      } catch (e) {
+        // Invalid selector, skip
+      }
+    });
+    
+    return modals;
+  }
+
+  getXPath(element) {
+    if (element.id) {
+      return `//*[@id="${element.id}"]`;
+    }
+    
+    const parts = [];
+    while (element && element.nodeType === Node.ELEMENT_NODE) {
+      let index = 0;
+      let sibling = element.previousSibling;
+      
+      while (sibling) {
+        if (sibling.nodeType === Node.ELEMENT_NODE && sibling.tagName === element.tagName) {
+          index++;
+        }
+        sibling = sibling.previousSibling;
+      }
+      
+      const tagName = element.tagName.toLowerCase();
+      const part = index > 0 ? `${tagName}[${index + 1}]` : tagName;
+      parts.unshift(part);
+      
+      element = element.parentElement;
+    }
+    
+    return parts.length ? '/' + parts.join('/') : null;
+  }
+
+  // Additional helper methods
+  buildTagSelector(element) {
+    let selector = element.tagName.toLowerCase();
+    
+    // Add important attributes
+    const importantAttrs = ['name', 'type', 'role'];
+    importantAttrs.forEach(attr => {
+      const value = element.getAttribute(attr);
+      if (value) {
+        selector += `[${attr}="${value}"]`;
+      }
+    });
+    
+    return selector;
+  }
+
+  getFullCSSPath(element) {
+    const names = [];
+    while (element.parentNode) {
+      if (element.id) {
+        names.unshift('#' + element.id);
+        break;
+      } else {
+        let tagName = element.nodeName.toLowerCase();
+        if (element.className && typeof element.className === 'string') {
+          tagName += '.' + element.className.split(' ').join('.');
+        }
+        
+        const siblings = Array.from(element.parentNode.children);
+        const sameTagSiblings = siblings.filter(sibling => 
+          sibling.nodeName === element.nodeName
+        );
+        
+        if (sameTagSiblings.length > 1) {
+          const index = sameTagSiblings.indexOf(element) + 1;
+          tagName += `:nth-of-type(${index})`;
+        }
+        
+        names.unshift(tagName);
+        element = element.parentNode;
+      }
+    }
+    return names.join(' > ');
+  }
+
+  getElementText(element) {
+    // Get direct text content, not including children
+    const textNodes = [];
+    for (let node of element.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNodes.push(node.textContent.trim());
+      }
+    }
+    
+    let text = textNodes.join(' ').trim();
+    
+    // Fallback to full text content if no direct text
+    if (!text) {
+      text = element.textContent?.trim() || '';
+    }
+    
+    // Also check common attributes
+    if (!text) {
+      text = element.value || 
+             element.placeholder || 
+             element.alt || 
+             element.title || 
+             element.getAttribute('aria-label') || '';
+    }
+    
+    return text.length > 100 ? text.substring(0, 100) + '...' : text;
+  }
+
+  getAllAttributes(element) {
+    const attrs = {};
+    for (let attr of element.attributes) {
+      attrs[attr.name] = attr.value;
+    }
+    return attrs;
+  }
+
+  isInteractiveElement(element) {
+    const interactiveTags = ['button', 'a', 'input', 'select', 'textarea'];
+    const interactiveRoles = ['button', 'link', 'tab', 'menuitem'];
+    
+    return interactiveTags.includes(element.tagName.toLowerCase()) ||
+           interactiveRoles.includes(element.getAttribute('role')) ||
+           element.onclick ||
+           element.getAttribute('onclick') ||
+           element.style.cursor === 'pointer';
+  }
+
+  inferElementRole(element) {
+    const tag = element.tagName.toLowerCase();
+    
+    switch (tag) {
+      case 'button':
+        return 'button';
+      case 'a':
+        return 'link';
+      case 'input':
+        return element.type || 'input';
+      case 'select':
+        return 'combobox';
+      case 'textarea':
+        return 'textbox';
+      default:
+        if (element.onclick || element.getAttribute('onclick')) {
+          return 'button';
+        }
+        return null;
+    }
+  }
+
+  getBoundingBox(element) {
+    const rect = element.getBoundingClientRect();
+    return {
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      top: Math.round(rect.top),
+      left: Math.round(rect.left),
+      bottom: Math.round(rect.bottom),
+      right: Math.round(rect.right)
+    };
+  }
+
+  getRelativeDirection(center1, center2) {
+    const deltaX = center2.x - center1.x;
+    const deltaY = center2.y - center1.y;
+    
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      return deltaX > 0 ? 'right' : 'left';
+    } else {
+      return deltaY > 0 ? 'below' : 'above';
+    }
+  }
+
+  analyzePageStructure() {
+    return {
+      hasNavigation: !!document.querySelector('nav, [role="navigation"]'),
+      hasSearch: !!document.querySelector('input[type="search"], [role="searchbox"]'),
+      hasFilters: !!document.querySelectorAll('[class*="filter"], [data-filter]').length,
+      productGridExists: !!document.querySelector('[class*="grid"], [class*="list"], [data-products]'),
+      hasShoppingCart: !!document.querySelector('[class*="cart"], [data-cart]'),
+      hasPagination: !!document.querySelector('[class*="page"], [aria-label*="page"]'),
+      totalElements: document.querySelectorAll('*').length,
+      interactiveElements: document.querySelectorAll('button, a, input, select, textarea, [role="button"]').length
+    };
+  }
+
+  detectStateChanges(stateBefore, stateAfter) {
+    const changes = {};
+    
+    // URL change
+    if (stateBefore.url !== stateAfter.url) {
+      changes.urlChanged = {
+        from: stateBefore.url,
+        to: stateAfter.url
+      };
+    }
+    
+    // Title change
+    if (stateBefore.title !== stateAfter.title) {
+      changes.titleChanged = {
+        from: stateBefore.title,
+        to: stateAfter.title
+      };
+    }
+    
+    // Scroll change
+    if (stateBefore.scrollPosition.y !== stateAfter.scrollPosition.y) {
+      changes.scrollChanged = {
+        from: stateBefore.scrollPosition.y,
+        to: stateAfter.scrollPosition.y,
+        delta: stateAfter.scrollPosition.y - stateBefore.scrollPosition.y
+      };
+    }
+    
+    // Modal changes
+    const beforeModals = stateBefore.activeModals?.length || 0;
+    const afterModals = stateAfter.activeModals?.length || 0;
+    if (beforeModals !== afterModals) {
+      changes.modalStateChanged = {
+        before: beforeModals,
+        after: afterModals
+      };
+    }
+    
+    // Product count changes
+    if (stateBefore.visibleProducts !== stateAfter.visibleProducts) {
+      changes.productCountChanged = {
+        from: stateBefore.visibleProducts,
+        to: stateAfter.visibleProducts
+      };
+    }
+    
+    return changes;
+  }
+
+  captureFormStates() {
+    const forms = document.querySelectorAll('form');
+    const formData = [];
+    
+    forms.forEach((form, index) => {
+      const inputs = form.querySelectorAll('input, select, textarea');
+      const formState = {
+        formIndex: index,
+        action: form.action,
+        method: form.method,
+        fields: []
+      };
+      
+      inputs.forEach(input => {
+        formState.fields.push({
+          name: input.name,
+          type: input.type,
+          value: input.type === 'password' ? '[HIDDEN]' : input.value,
+          required: input.required
+        });
+      });
+      
+      formData.push(formState);
+    });
+    
+    return formData;
+  }
+
+  countVisibleProducts() {
+    // Try to detect product elements by common patterns
+    const productSelectors = [
+      '[data-product]',
+      '[class*="product"]',
+      '[class*="item"]',
+      '[itemtype*="Product"]'
+    ];
+    
+    let count = 0;
+    productSelectors.forEach(selector => {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (this.isElementVisible(el)) {
+            count++;
+          }
+        });
+      } catch (e) {
+        // Invalid selector
+      }
+    });
+    
+    return count;
+  }
+
+  updateEvent(eventData) {
+    // Find and update the event in the events array
+    const index = this.events.findIndex(e => 
+      e.data.timestamp === eventData.timestamp && 
+      e.data.type === eventData.type
+    );
+    
+    if (index !== -1) {
+      this.events[index].data = eventData;
+    }
+  }
+
+  captureEvent(type, data) {
+    const event = {
+      type,
+      data,
+      sessionId: this.sessionId
+    };
+    
+    this.events.push(event);
+    
+    // Save state after each event
+    this.saveState();
+    
+    // Update indicator
+    this.updateIndicatorText();
+    
+    // Send to background script
+    chrome.runtime.sendMessage({
+      action: 'EVENT_CAPTURED',
+      event: event
+    });
+    
+    console.log('Enhanced event captured:', type, data);
+  }
+
+  // Initialize enhanced tracker
+  initializeTracker() {
+    // Listen for messages from popup/background
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      switch (message.action) {
+        case 'START_TRACKING':
+          this.startTracking(message.sessionId);
+          sendResponse({ success: true });
+          break;
+        case 'STOP_TRACKING':
+          // Call stopTracking without await since message handlers can't be async
+          this.stopTracking().then(() => {
+            sendResponse({ success: true, events: this.events });
+          }).catch((error) => {
+            console.error('Enhanced: stopTracking failed:', error);
+            sendResponse({ success: false, error: error.message });
+          });
+          return true; // Keep message channel open for async response
+        case 'GET_STATUS':
+          sendResponse({ 
+            isTracking: this.isTracking, 
+            eventCount: this.events.length 
+          });
+          break;
+        case 'GET_SESSION_DATA':
+          this.handleGetSessionData(message.sessionId, sendResponse);
+          return true; // Keep message channel open for async response
+      }
+      return false; // Don't keep channel open for sync responses
+    });
+
+    // Handle page navigation like the basic tracker
+    this.setupNavigationHandling();
+
+    // Restore state if tracking was active
+    this.restoreState();
+  }
+
+  // Setup navigation handling with burst screenshots
+  setupNavigationHandling() {
+    // Check for URL changes less frequently to reduce screenshot spam
+    setInterval(() => {
+      if (this.isTracking) {
+        if (window.location.href !== this.currentUrl) {
+          console.log('Enhanced: Page navigation detected', this.currentUrl, '->', window.location.href);
+        
+          // Take single navigation screenshot
+          this.startBurstMode('page_navigation');
+        
+          // Capture navigation event
+          this.captureEvent('navigation', {
+            from: this.currentUrl,
+            to: window.location.href,
+            title: document.title,
+            timestamp: Date.now()
+          });
+          
+          this.currentUrl = window.location.href;
+          
+          // Re-establish tracking on new page
+          setTimeout(() => {
+            if (this.isTracking) {
+              this.rebindEventsAfterNavigation();
+            }
+          }, 500);
         }
       }
+    }, 3000); // Check every 3 seconds instead of 1 second
 
-      // Capture nearby interactive elements
-      context.nearbyElements = this.findNearbyInteractiveElements(element);
+    // Also listen for popstate events
+    window.addEventListener('popstate', () => {
+      if (this.isTracking) {
+        console.log('Enhanced: Popstate navigation detected');
+        // Use same reduced screenshot approach for popstate
+        this.startBurstMode('page_navigation');
+        setTimeout(() => {
+          this.rebindEventsAfterNavigation();
+        }, 500);
+      }
+    });
 
-      return context;
-    }
+    // Setup DOM mutation observer for overlays/modals
+    this.setupModalDetection();
+  }
 
-    findNearbyInteractiveElements(targetElement, radius = 150) {
-      const nearby = [];
-      const targetRect = targetElement.getBoundingClientRect();
-      const targetCenter = {
-        x: targetRect.left + targetRect.width / 2,
-        y: targetRect.top + targetRect.height / 2
-      };
-
-      const interactiveSelectors = 'a, button, input, select, textarea, [role="button"], [onclick], [tabindex]';
-      const candidates = document.querySelectorAll(interactiveSelectors);
-
-      candidates.forEach(element => {
-        if (element === targetElement) return;
-        
-        const rect = element.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-        
-        const center = {
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2
-        };
-
-        const distance = Math.sqrt(
-          Math.pow(center.x - targetCenter.x, 2) +
-          Math.pow(center.y - targetCenter.y, 2)
-        );
-
-        if (distance <= radius) {
-          nearby.push({
-            selector: this.generateMultipleSelectors(element).primary,
-            tagName: element.tagName.toLowerCase(),
-            text: this.getElementText(element),
-            distance: Math.round(distance),
-            direction: this.getRelativeDirection(targetCenter, center),
-            isVisible: this.isElementVisible(element)
+  setupModalDetection() {
+    this.mutationObserver = new MutationObserver((mutations) => {
+      if (!this.isTracking) return;
+      
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              if (this.isModalOrOverlay(node)) {
+                console.log('Enhanced: Modal/overlay detected');
+                this.startBurstMode('overlay_detected');
+              }
+            }
           });
         }
       });
+    });
 
-      return nearby.sort((a, b) => a.distance - b.distance).slice(0, 8);
-    }
+    // Start observing
+    this.mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
 
-    // Element analysis
-    analyzeElement(element) {
-      const computed = window.getComputedStyle(element);
-      
-      return {
-        tagName: element.tagName.toLowerCase(),
-        text: this.getElementText(element),
-        value: this.isSensitiveInput(element) ? '[PROTECTED]' : (element.value || null),
-        attributes: this.getRelevantAttributes(element),
-        
-        // Visual properties
-        boundingBox: this.getBoundingBox(element),
-        isVisible: this.isElementVisible(element),
-        isInViewport: this.isElementInViewport(element),
-        
-        // Computed styles (relevant ones)
-        styles: {
-          display: computed.display,
-          visibility: computed.visibility,
-          position: computed.position,
-          zIndex: computed.zIndex,
-          cursor: computed.cursor,
-          backgroundColor: computed.backgroundColor,
-          color: computed.color
-        },
-        
-        // Interaction properties
-        isInteractive: this.isInteractiveElement(element),
-        role: element.getAttribute('role') || this.inferElementRole(element),
-        tabIndex: element.tabIndex
-      };
-    }
-
-    getRelevantAttributes(element) {
-      const relevantAttrs = [
-        'id', 'class', 'name', 'type', 'role', 'aria-label', 'aria-describedby',
-        'data-testid', 'data-test', 'data-cy', 'data-qa', 'href', 'src', 'alt', 'title'
-      ];
-      
-      const attrs = {};
-      relevantAttrs.forEach(attr => {
-        const value = element.getAttribute(attr);
-        if (value !== null) {
-          attrs[attr] = value;
-        }
-      });
-      
-      return attrs;
-    }
-
-    // Privacy protection
-    isSensitiveInput(element) {
-      if (!element) return false;
-      
-      // Check input type
-      if (element.type && ['password', 'hidden'].includes(element.type.toLowerCase())) {
-        return true;
-      }
-      
-      // Check against sensitive selectors
-      return this.sensitiveSelectors.some(selector => {
-        try {
-          return element.matches(selector);
-        } catch (e) {
-          return false;
-        }
-      });
-    }
-
-    // Screenshot capture
-    async captureScreenshot(trigger, timestamp = Date.now()) {
-      if (!this.config.screenshotEnabled || this.screenshots.length >= this.config.maxScreenshots) {
-        return null;
-      }
-
-      try {
-        const screenshotData = {
-          trigger,
-          timestamp,
-          viewport: this.getViewportInfo(),
-          url: window.location.href,
-          quality: this.config.screenshotQuality
-        };
-
-        // Send to background script for actual capture
-        const response = await chrome.runtime.sendMessage({
-          action: 'CAPTURE_SCREENSHOT',
-          data: screenshotData
-        });
-
-        if (response && response.success) {
-          const screenshot = {
-            id: response.screenshotId,
-            trigger,
-            timestamp,
-            ...screenshotData
-          };
-          
-          this.screenshots.push(screenshot);
-          return screenshot;
-        }
-      } catch (error) {
-        console.error('Unified: Screenshot capture failed:', error);
-      }
-      
-      return null;
-    }
-
-    // Page structure analysis
-    analyzePageStructure() {
-      return {
-        hasNavigation: !!document.querySelector('nav, [role="navigation"]'),
-        hasSearch: !!document.querySelector('input[type="search"], [role="searchbox"]'),
-        hasFilters: document.querySelectorAll('[class*="filter"], [data-filter]').length > 0,
-        hasProductGrid: !!document.querySelector('[class*="grid"], [class*="product"], [data-products]'),
-        hasShoppingCart: !!document.querySelector('[class*="cart"], [data-cart]'),
-        hasPagination: !!document.querySelector('[class*="page"], [aria-label*="page"]'),
-        
-        // Element counts
-        totalElements: document.querySelectorAll('*').length,
-        interactiveElements: document.querySelectorAll('button, a, input, select, textarea, [role="button"]').length,
-        images: document.querySelectorAll('img').length,
-        forms: document.querySelectorAll('form').length,
-        
-        // Page type detection
-        pageType: this.detectPageType(),
-        
-        // Framework detection
-        framework: this.detectFramework()
-      };
-    }
-
-    detectPageType() {
-      const url = window.location.href.toLowerCase();
-      const title = document.title.toLowerCase();
-      const content = document.body.textContent.toLowerCase();
-      
-      if (url.includes('/cart') || title.includes('cart') || content.includes('shopping cart')) {
-        return 'cart';
-      }
-      if (url.includes('/checkout') || title.includes('checkout')) {
-        return 'checkout';
-      }
-      if (url.includes('/product') || url.includes('/item') || document.querySelector('[itemtype*="Product"]')) {
-        return 'product';
-      }
-      if (url.includes('/search') || url.includes('?q=') || document.querySelector('[role="search"]')) {
-        return 'search';
-      }
-      if (url.includes('/category') || url.includes('/browse')) {
-        return 'category';
-      }
-      
-      return 'other';
-    }
-
-    detectFramework() {
-      const frameworks = [];
-      
-      if (window.React || document.querySelector('[data-reactroot]')) {
-        frameworks.push('React');
-      }
-      if (window.Vue || document.querySelector('[data-v-]')) {
-        frameworks.push('Vue');
-      }
-      if (window.angular || document.querySelector('[ng-app], [data-ng-app]')) {
-        frameworks.push('Angular');
-      }
-      if (window.jQuery || window.$) {
-        frameworks.push('jQuery');
-      }
-      
-      return frameworks;
-    }
-
-    // Navigation handling
-    setupNavigationHandling() {
-      // URL change detection
-      let lastUrl = window.location.href;
-      
-      const checkUrlChange = () => {
-        if (this.isTracking && window.location.href !== lastUrl) {
-          this.handleNavigation(lastUrl, window.location.href);
-          lastUrl = window.location.href;
-        }
-      };
-      
-      // Check every second
-      this.navigationInterval = setInterval(checkUrlChange, 1000);
-      
-      // Also listen for popstate
-      this.popstateHandler = () => {
-        if (this.isTracking) {
-          setTimeout(checkUrlChange, 100);
-        }
-      };
-      window.addEventListener('popstate', this.popstateHandler);
-    }
+  isModalOrOverlay(element) {
+    const modalSelectors = [
+      'modal', 'popup', 'overlay', 'dialog', 'tooltip', 'dropdown',
+      'flyout', 'popover', 'menu', 'lightbox'
+    ];
     
-    cleanupNavigationHandling() {
-      if (this.navigationInterval) {
-        clearInterval(this.navigationInterval);
-        this.navigationInterval = null;
-      }
-      
-      if (this.popstateHandler) {
-        window.removeEventListener('popstate', this.popstateHandler);
-        this.popstateHandler = null;
-      }
-    }
-
-    async handleNavigation(fromUrl, toUrl) {
-      const timestamp = Date.now();
-      
-      // Capture navigation screenshot burst
-      if (this.config.burstModeEnabled) {
-        this.startBurstMode('navigation');
-      }
-      
-      // Update page structure
-      setTimeout(() => {
-        this.pageStructure = this.analyzePageStructure();
-      }, 1000);
-      
-      const navigationData = {
-        type: 'NAVIGATION',
-        timestamp,
-        sessionTime: timestamp - this.startTime,
-        sequence: ++this.interactionSequence,
-        
-        fromUrl,
-        toUrl,
-        pageTitle: document.title,
-        
-        // Navigation type detection
-        navigationType: this.detectNavigationType(fromUrl, toUrl),
-        
-        // Page structure will be updated after delay
-        pageStructure: this.pageStructure
-      };
-
-      this.captureEvent(navigationData);
-    }
-
-    detectNavigationType(fromUrl, toUrl) {
-      if (fromUrl === toUrl) return 'refresh';
-      if (toUrl.includes('#')) return 'hash_change';
-      if (new URL(fromUrl).pathname === new URL(toUrl).pathname) return 'query_change';
-      return 'page_change';
-    }
-
-    startBurstMode(trigger) {
-      const burstCount = trigger === 'navigation' ? 3 : 5;
-      const interval = 500; // 500ms between shots
-      
-      for (let i = 0; i < burstCount; i++) {
-        setTimeout(() => {
-          if (this.isTracking) {
-            this.captureScreenshot(`burst_${trigger}_${i + 1}`);
-          }
-        }, i * interval);
-      }
-    }
-
-    // Utility methods
-    captureEvent(eventData) {
-      if (this.events.length >= this.config.maxEvents) {
-        console.warn('Unified: Max events reached, dropping oldest');
-        this.events.shift();
-      }
-      
-      this.events.push({
-        ...eventData,
-        id: this.generateId(),
-        sessionId: this.sessionId
-      });
-      
-      // 📡 LOG: Final data being sent to backend
-      console.log('📡 SENDING TO BACKEND:', {
-        finalInteractionData: eventData,
-        dataSize: JSON.stringify(eventData).length,
-        contextArrays: {
-          parentElements: eventData.parentElements,
-          siblingElements: eventData.siblingElements,
-          nearbyElements: eventData.nearbyElements,
-          parentCount: eventData.parentElements?.length || 0,
-          siblingCount: eventData.siblingElements?.length || 0,
-          nearbyCount: eventData.nearbyElements?.length || 0
-        },
-        selectors: {
-          primary: eventData.primarySelector,
-          alternatives: eventData.selectorAlternatives,
-          xpath: eventData.xpath,
-          cssPath: eventData.cssPath
-        }
-      });
-
-      // Send to background script for processing
-      this.sendEventToBackground(eventData);
-      
-      // Save state
-      this.saveState();
-      
-      // Periodic cleanup to prevent memory issues
-      if (this.events.length > this.config.maxEvents / 2) {
-        this.performEventCleanup();
-      }
-    }
+    const className = (typeof element.className === 'string' ? element.className : element.className?.baseVal || '').toLowerCase();
+    const role = element.getAttribute('role');
     
-    performEventCleanup() {
-      const now = Date.now();
-      const maxAge = 30 * 60 * 1000; // 30 minutes
-      
-      // Remove very old events
-      this.events = this.events.filter(event => {
-        return (now - event.timestamp) < maxAge;
-      });
-      
-      // If still too many, keep only the most recent
-      if (this.events.length > this.config.maxEvents) {
-        this.events = this.events.slice(-this.config.maxEvents);
-      }
-    }
-
-    updateEvent(eventData) {
-      const index = this.events.findIndex(e => e.id === eventData.id);
-      if (index !== -1) {
-        this.events[index] = { ...this.events[index], ...eventData };
-        this.saveState();
-      }
-    }
-
-    async sendEventToBackground(eventData) {
-      try {
-        console.log('Unified: Sending event to background:', eventData.type);
-        const response = await chrome.runtime.sendMessage({
-          action: 'SEND_DATA',
-          data: eventData
-        });
-        console.log('Unified: Background response:', response);
-      } catch (error) {
-        console.error('Unified: Failed to send event to background:', error);
-        
-        // If background script is not ready, try to wake it up
-        if (error.message.includes('Could not establish connection')) {
-          console.log('Unified: Background script disconnected, attempting to reconnect...');
-          setTimeout(() => {
-            this.sendEventToBackground(eventData);
-          }, 1000);
-        }
-      }
-    }
-
-    async startBackendSession() {
-      try {
-        console.log('Unified: Starting backend session:', this.sessionId);
-        const response = await chrome.runtime.sendMessage({
-          action: 'START_BACKEND_SESSION',
-          sessionId: this.sessionId,
-          config: {
-            type: 'AUTOMATED',
-            url: window.location.href,
-            userAgent: navigator.userAgent,
-            timestamp: Date.now()
-          }
-        });
-        console.log('Unified: Backend session started:', response);
-      } catch (error) {
-        console.error('Unified: Failed to start backend session:', error);
-      }
-    }
-
-    async stopBackendSession() {
-      try {
-        console.log('Unified: Stopping backend session:', this.sessionId);
-        const response = await chrome.runtime.sendMessage({
-          action: 'STOP_BACKEND_SESSION',
-          sessionId: this.sessionId
-        });
-        console.log('Unified: Backend session stopped:', response);
-      } catch (error) {
-        console.error('Unified: Failed to stop backend session:', error);
-      }
-    }
-
-    // Page state capture
-    capturePageState() {
-      return {
-        url: window.location.href,
-        title: document.title,
-        scrollPosition: {
-          x: window.scrollX,
-          y: window.scrollY
-        },
-        viewport: this.getViewportInfo(),
-        activeElement: this.getActiveElementInfo(),
-        visibleElements: this.getVisibleElementsCount(),
-        timestamp: Date.now()
-      };
-    }
-
-    detectStateChanges(stateBefore, stateAfter) {
-      const changes = {};
-      
-      if (stateBefore.url !== stateAfter.url) {
-        changes.urlChanged = true;
-        changes.newUrl = stateAfter.url;
-      }
-      
-      if (stateBefore.title !== stateAfter.title) {
-        changes.titleChanged = true;
-        changes.newTitle = stateAfter.title;
-      }
-      
-      const scrollDiff = {
-        x: Math.abs(stateAfter.scrollPosition.x - stateBefore.scrollPosition.x),
-        y: Math.abs(stateAfter.scrollPosition.y - stateBefore.scrollPosition.y)
-      };
-      
-      if (scrollDiff.x > 10 || scrollDiff.y > 10) {
-        changes.scrollChanged = true;
-        changes.scrollDiff = scrollDiff;
-      }
-      
-      if (stateBefore.visibleElements !== stateAfter.visibleElements) {
-        changes.elementsChanged = true;
-        changes.elementDiff = stateAfter.visibleElements - stateBefore.visibleElements;
-      }
-      
-      return changes;
-    }
-
-    getActiveElementInfo() {
-      const activeElement = document.activeElement;
-      if (!activeElement || activeElement === document.body) {
-        return null;
-      }
-      
-      return {
-        tagName: activeElement.tagName.toLowerCase(),
-        id: activeElement.id || null,
-        className: activeElement.className || null,
-        selector: this.generateMultipleSelectors(activeElement).primary
-      };
-    }
-
-    getVisibleElementsCount() {
-      const elements = document.querySelectorAll('*');
-      let visibleCount = 0;
-      
-      for (const element of elements) {
-        if (this.isElementVisible(element)) {
-          visibleCount++;
-        }
-      }
-      
-      return visibleCount;
-    }
-
-    // Utility methods
-    getViewportInfo() {
-      return {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        scrollX: window.scrollX,
-        scrollY: window.scrollY,
-        devicePixelRatio: window.devicePixelRatio || 1
-      };
-    }
-
-    getBoundingBox(element) {
-      const rect = element.getBoundingClientRect();
-      return {
-        x: rect.x,
-        y: rect.y,
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        right: rect.right,
-        bottom: rect.bottom,
-        left: rect.left
-      };
-    }
-
-    isElementVisible(element) {
-      if (!element) return false;
-      
-      const rect = element.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return false;
-      
-      const style = window.getComputedStyle(element);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-        return false;
-      }
-      
+    // Check class names
+    if (modalSelectors.some(selector => className.includes(selector))) {
       return true;
     }
-
-    isElementInViewport(element) {
-      const rect = element.getBoundingClientRect();
-      return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= window.innerHeight &&
-        rect.right <= window.innerWidth
-      );
+    
+    // Check role attributes
+    if (role && ['dialog', 'menu', 'tooltip', 'popup'].includes(role)) {
+      return true;
     }
-
-    isInteractiveElement(element) {
-      const interactiveTags = ['a', 'button', 'input', 'select', 'textarea'];
-      const interactiveRoles = ['button', 'link', 'menuitem', 'tab'];
-      
-      if (interactiveTags.includes(element.tagName.toLowerCase())) {
-        return true;
-      }
-      
-      const role = element.getAttribute('role');
-      if (role && interactiveRoles.includes(role.toLowerCase())) {
-        return true;
-      }
-      
-      if (element.hasAttribute('onclick') || element.hasAttribute('tabindex')) {
-        return true;
-      }
-      
-      return false;
+    
+    // Check z-index (modals usually have high z-index)
+    const computedStyle = window.getComputedStyle(element);
+    const zIndex = parseInt(computedStyle.zIndex);
+    if (zIndex > 100) {
+      return true;
     }
+    
+    return false;
+  }
 
-    inferElementRole(element) {
-      const tagName = element.tagName.toLowerCase();
+  startBurstMode(trigger) {
+    console.log(`Enhanced: Starting reduced burst mode for ${trigger}`);
+    
+    if (trigger === 'page_navigation') {
+      // Just 1 screenshot for page navigation
+      console.log('Enhanced: Taking navigation screenshot');
+      this.captureScreenshot('navigation', Date.now());
       
-      const roleMap = {
-        'a': 'link',
-        'button': 'button',
-        'input': 'textbox',
-        'select': 'combobox',
-        'textarea': 'textbox',
-        'img': 'image',
-        'nav': 'navigation',
-        'main': 'main',
-        'header': 'banner',
-        'footer': 'contentinfo',
-        'aside': 'complementary'
-      };
-      
-      return roleMap[tagName] || 'generic';
+    } else if (trigger === 'overlay_detected') {
+      // Just 1 screenshot for modal detection
+      console.log('Enhanced: Taking modal screenshot');
+      this.captureScreenshot('modal', Date.now());
     }
-
-    getElementText(element) {
-      if (!element) return '';
-      
-      // For input elements, get placeholder or value
-      if (element.tagName.toLowerCase() === 'input') {
-        return element.placeholder || element.value || '';
-      }
-      
-      // Get text content, but limit length
-      const text = element.textContent || element.innerText || '';
-      return text.trim().substring(0, 200);
-    }
-
-    getStableClasses(element) {
-      if (!element.className || typeof element.className !== 'string') {
-        return '';
-      }
-      
-      return element.className.split(' ')
-        .filter(c => c.trim() && !this.isUnstableClass(c))
-        .join(' ');
-    }
-
-    getRelativeDirection(center1, center2) {
-      const dx = center2.x - center1.x;
-      const dy = center2.y - center1.y;
-      
-      if (Math.abs(dx) > Math.abs(dy)) {
-        return dx > 0 ? 'right' : 'left';
-      } else {
-        return dy > 0 ? 'below' : 'above';
-      }
-    }
-
-    // State management
-    saveState() {
-      if (!this.sessionId) return;
-      
-      const state = {
-        sessionId: this.sessionId,
-        isTracking: this.isTracking,
-        startTime: this.startTime,
-        eventCount: this.events.length,
-        screenshotCount: this.screenshots.length,
-        lastSaved: Date.now()
-      };
-      
-      try {
-        localStorage.setItem('unified_codesight_state', JSON.stringify(state));
-      } catch (error) {
-        console.error('Unified: Failed to save state:', error);
-      }
-    }
-
-    restoreState() {
-      try {
-        const stateStr = localStorage.getItem('unified_codesight_state');
-        if (!stateStr) return;
-        
-        const state = JSON.parse(stateStr);
-        
-        // Only restore if recent (within 1 hour)
-        if (Date.now() - state.lastSaved < 60 * 60 * 1000) {
-          this.sessionId = state.sessionId;
-          this.isTracking = state.isTracking;
-          this.startTime = state.startTime;
-          
-          if (this.isTracking) {
-            console.log('Unified: Restored tracking state for session:', this.sessionId);
-            this.bindEventListeners();
-            this.showTrackingIndicator();
-          }
-        }
-      } catch (error) {
-        console.error('Unified: Failed to restore state:', error);
-      }
-    }
-
-    clearState() {
-      try {
-        localStorage.removeItem('unified_codesight_state');
-      } catch (error) {
-        console.error('Unified: Failed to clear state:', error);
-      }
-    }
-
-    // Session data preparation
-    async prepareSessionData() {
-      const sessionData = {
-        sessionId: this.sessionId,
-        startTime: this.startTime,
-        endTime: Date.now(),
-        duration: Date.now() - this.startTime,
-        
-        // Event data
-        events: this.events,
-        eventCount: this.events.length,
-        
-        // Screenshot data
-        screenshots: this.screenshots,
-        screenshotCount: this.screenshots.length,
-        
-        // Page data
-        initialUrl: this.currentUrl,
-        finalUrl: window.location.href,
-        pageStructure: this.pageStructure,
-        
-        // Browser data
-        userAgent: navigator.userAgent,
-        viewport: this.getViewportInfo(),
-        
-        // Quality metrics
-        qualityScore: this.calculateQualityScore(),
-        completeness: this.calculateCompleteness()
-      };
-      
-      return sessionData;
-    }
-
-    calculateQualityScore() {
-      let score = 0;
-      
-      // Base score for having events
-      if (this.events.length > 0) score += 20;
-      
-      // Bonus for variety of event types
-      const eventTypes = new Set(this.events.map(e => e.type));
-      score += Math.min(eventTypes.size * 10, 30);
-      
-      // Bonus for screenshots
-      if (this.screenshots.length > 0) score += 20;
-      
-      // Bonus for session duration (sweet spot: 30s - 5min)
-      const duration = Date.now() - this.startTime;
-      const durationMinutes = duration / (1000 * 60);
-      if (durationMinutes >= 0.5 && durationMinutes <= 5) {
-        score += 20;
-      } else if (durationMinutes > 5) {
-        score += 10;
-      }
-      
-      // Bonus for interaction variety
-      const clickEvents = this.events.filter(e => e.type === 'CLICK').length;
-      const inputEvents = this.events.filter(e => e.type === 'INPUT').length;
-      const navEvents = this.events.filter(e => e.type === 'NAVIGATION').length;
-      
-      if (clickEvents > 0 && inputEvents > 0) score += 10;
-      if (navEvents > 0) score += 10;
-      
-      return Math.min(score, 100);
-    }
-
-    calculateCompleteness() {
-      let completeness = 0;
-      
-      // Check for essential data
-      if (this.events.length > 0) completeness += 25;
-      if (this.screenshots.length > 0) completeness += 25;
-      if (this.pageStructure) completeness += 25;
-      
-      // Check for interaction completeness
-      const hasClicks = this.events.some(e => e.type === 'CLICK');
-      const hasNavigation = this.events.some(e => e.type === 'NAVIGATION');
-      
-      if (hasClicks) completeness += 12.5;
-      if (hasNavigation) completeness += 12.5;
-      
-      return Math.min(completeness, 100);
-    }
-
-    // Data Quality Validation System
-    validateSessionData() {
-      const validation = {
-        isValid: true,
-        score: 100,
-        errors: [],
-        warnings: [],
-        suggestions: [],
-        metrics: {}
-      };
-
-      // Validate basic session data
-      this.validateBasicSessionData(validation);
-      
-      // Validate events
-      this.validateEvents(validation);
-      
-      // Validate screenshots
-      this.validateScreenshots(validation);
-      
-      // Validate interaction patterns
-      this.validateInteractionPatterns(validation);
-      
-      // Validate data completeness
-      this.validateDataCompleteness(validation);
-      
-      // Calculate final validation score
-      validation.score = Math.max(0, validation.score - (validation.errors.length * 10) - (validation.warnings.length * 5));
-      validation.isValid = validation.score >= 60 && validation.errors.length === 0;
-      
-      return validation;
-    }
-
-    validateBasicSessionData(validation) {
-      // Check session ID
-      if (!this.sessionId) {
-        validation.errors.push('Missing session ID');
-        validation.score -= 20;
-      }
-
-      // Check session duration
-      const duration = Date.now() - this.startTime;
-      if (duration < 10000) { // Less than 10 seconds
-        validation.warnings.push('Session duration is very short (< 10s)');
-        validation.suggestions.push('Consider longer interaction sessions for better training data');
-      } else if (duration > 30 * 60 * 1000) { // More than 30 minutes
-        validation.warnings.push('Session duration is very long (> 30min)');
-        validation.suggestions.push('Consider breaking long sessions into smaller chunks');
-      }
-
-      validation.metrics.sessionDuration = duration;
-      validation.metrics.sessionDurationMinutes = Math.round(duration / 60000);
-    }
-
-    validateEvents(validation) {
-      if (this.events.length === 0) {
-        validation.errors.push('No interaction events captured');
-        validation.score -= 30;
-        return;
-      }
-
-      let validEvents = 0;
-      let invalidEvents = 0;
-      const eventTypes = new Set();
-      const missingSelectors = [];
-      const missingTimestamps = [];
-
-      this.events.forEach((event, index) => {
-        let eventValid = true;
-
-        // Check required fields
-        if (!event.type) {
-          validation.errors.push(`Event ${index}: Missing event type`);
-          eventValid = false;
-        } else {
-          eventTypes.add(event.type);
-        }
-
-        if (!event.timestamp) {
-          validation.errors.push(`Event ${index}: Missing timestamp`);
-          missingTimestamps.push(index);
-          eventValid = false;
-        }
-
-        // Validate selectors for click events
-        if (event.type === 'CLICK') {
-          if (!event.selectors || !event.selectors.primary) {
-            validation.warnings.push(`Click event ${index}: Missing primary selector`);
-            missingSelectors.push(index);
-          } else {
-            // Test selector reliability
-            const reliability = this.testSelectorReliability(event.selectors.primary);
-            if (reliability < 0.5) {
-              validation.warnings.push(`Click event ${index}: Low selector reliability (${Math.round(reliability * 100)}%)`);
-            }
-          }
-
-          // Check for coordinates
-          if (!event.coordinates) {
-            validation.warnings.push(`Click event ${index}: Missing click coordinates`);
-          }
-        }
-
-        // Validate URL
-        if (!event.url) {
-          validation.warnings.push(`Event ${index}: Missing URL`);
-        }
-
-        if (eventValid) {
-          validEvents++;
-        } else {
-          invalidEvents++;
-        }
-      });
-
-      // Event diversity check
-      if (eventTypes.size < 2) {
-        validation.warnings.push('Low event type diversity - consider capturing more interaction types');
-        validation.suggestions.push('Try to include clicks, inputs, navigation, and scrolling');
-      }
-
-      // Check for suspicious patterns
-      this.detectSuspiciousPatterns(validation);
-
-      validation.metrics.totalEvents = this.events.length;
-      validation.metrics.validEvents = validEvents;
-      validation.metrics.invalidEvents = invalidEvents;
-      validation.metrics.eventTypes = Array.from(eventTypes);
-      validation.metrics.eventTypeCount = eventTypes.size;
-      validation.metrics.missingSelectors = missingSelectors.length;
-      validation.metrics.missingTimestamps = missingTimestamps.length;
-    }
-
-    validateScreenshots(validation) {
-      if (this.screenshots.length === 0) {
-        validation.warnings.push('No screenshots captured');
-        validation.suggestions.push('Screenshots provide valuable visual context for training');
-        validation.score -= 10;
-      } else {
-        let validScreenshots = 0;
-        let corruptedScreenshots = 0;
-
-        this.screenshots.forEach((screenshot, index) => {
-          if (!screenshot.dataUrl || !screenshot.dataUrl.startsWith('data:image/')) {
-            validation.errors.push(`Screenshot ${index}: Invalid or missing image data`);
-            corruptedScreenshots++;
-          } else {
-            validScreenshots++;
-          }
-
-          if (!screenshot.timestamp) {
-            validation.warnings.push(`Screenshot ${index}: Missing timestamp`);
-          }
-
-          if (!screenshot.trigger) {
-            validation.warnings.push(`Screenshot ${index}: Missing trigger information`);
-          }
-        });
-
-        // Check screenshot frequency
-        const duration = Date.now() - this.startTime;
-        const screenshotRate = this.screenshots.length / (duration / 1000);
-        
-        if (screenshotRate > 2) { // More than 2 per second
-          validation.warnings.push('Very high screenshot capture rate - may impact performance');
-        } else if (screenshotRate < 0.1) { // Less than 1 per 10 seconds
-          validation.warnings.push('Low screenshot capture rate - may miss important visual changes');
-        }
-
-        validation.metrics.totalScreenshots = this.screenshots.length;
-        validation.metrics.validScreenshots = validScreenshots;
-        validation.metrics.corruptedScreenshots = corruptedScreenshots;
-        validation.metrics.screenshotRate = screenshotRate;
-      }
-    }
-
-    validateInteractionPatterns(validation) {
-      const clickEvents = this.events.filter(e => e.type === 'CLICK');
-      const inputEvents = this.events.filter(e => e.type === 'INPUT');
-      const navEvents = this.events.filter(e => e.type === 'NAVIGATION');
-      const scrollEvents = this.events.filter(e => e.type === 'SCROLL');
-
-      // Check for realistic interaction patterns
-      if (clickEvents.length === 0) {
-        validation.warnings.push('No click interactions captured');
-        validation.suggestions.push('Click interactions are essential for shopping behavior training');
-      }
-
-      // Check interaction timing
-      if (clickEvents.length > 1) {
-        const intervals = [];
-        for (let i = 1; i < clickEvents.length; i++) {
-          intervals.push(clickEvents[i].timestamp - clickEvents[i-1].timestamp);
-        }
-        
-        const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-        const minInterval = Math.min(...intervals);
-        
-        if (minInterval < 100) { // Less than 100ms between clicks
-          validation.warnings.push('Suspiciously fast clicking detected - may indicate automated behavior');
-        }
-        
-        if (avgInterval < 500) { // Average less than 500ms
-          validation.warnings.push('Very rapid clicking pattern - may not represent natural human behavior');
-        }
-
-        validation.metrics.averageClickInterval = avgInterval;
-        validation.metrics.minimumClickInterval = minInterval;
-      }
-
-      // Check for shopping-specific patterns
-      this.validateShoppingPatterns(validation);
-
-      validation.metrics.clickCount = clickEvents.length;
-      validation.metrics.inputCount = inputEvents.length;
-      validation.metrics.navigationCount = navEvents.length;
-      validation.metrics.scrollCount = scrollEvents.length;
-    }
-
-    validateShoppingPatterns(validation) {
-      const urls = this.events.map(e => e.url).filter(Boolean);
-      const uniqueUrls = new Set(urls);
-      
-      // Check for shopping-related URLs
-      const shoppingKeywords = ['product', 'item', 'cart', 'checkout', 'buy', 'shop', 'category', 'search'];
-      const hasShoppingUrls = urls.some(url => 
-        shoppingKeywords.some(keyword => url.toLowerCase().includes(keyword))
-      );
-
-      if (!hasShoppingUrls) {
-        validation.warnings.push('No shopping-related URLs detected');
-        validation.suggestions.push('Ensure interactions occur on e-commerce pages for relevant training data');
-      }
-
-      // Check for product interaction patterns
-      const productViews = this.events.filter(e => 
-        e.url && e.url.toLowerCase().includes('product')
-      ).length;
-
-      const cartActions = this.events.filter(e => 
-        e.elementText && e.elementText.toLowerCase().includes('cart')
-      ).length;
-
-      if (productViews === 0) {
-        validation.warnings.push('No product page interactions detected');
-      }
-
-      if (cartActions === 0) {
-        validation.suggestions.push('Consider including cart interactions for complete shopping behavior');
-      }
-
-      validation.metrics.uniqueUrls = uniqueUrls.size;
-      validation.metrics.productViews = productViews;
-      validation.metrics.cartActions = cartActions;
-      validation.metrics.hasShoppingUrls = hasShoppingUrls;
-    }
-
-    validateDataCompleteness(validation) {
-      const completeness = this.calculateCompleteness();
-      
-      if (completeness < 50) {
-        validation.errors.push('Data completeness is too low for quality training');
-        validation.score -= 20;
-      } else if (completeness < 75) {
-        validation.warnings.push('Data completeness could be improved');
-        validation.suggestions.push('Try to capture more diverse interactions and screenshots');
-      }
-
-      // Check for missing critical data
-      const criticalMissing = [];
-      
-      if (this.events.length === 0) criticalMissing.push('interaction events');
-      if (this.screenshots.length === 0) criticalMissing.push('screenshots');
-      if (!this.pageStructure) criticalMissing.push('page structure analysis');
-
-      if (criticalMissing.length > 0) {
-        validation.errors.push(`Missing critical data: ${criticalMissing.join(', ')}`);
-      }
-
-      validation.metrics.completeness = completeness;
-      validation.metrics.criticalMissing = criticalMissing;
-    }
-
-    detectSuspiciousPatterns(validation) {
-      // Check for bot-like behavior patterns
-      const clickEvents = this.events.filter(e => e.type === 'CLICK');
-      
-      if (clickEvents.length > 0) {
-        // Check for identical coordinates (bot-like)
-        const coordinates = clickEvents.map(e => `${e.coordinates?.clientX},${e.coordinates?.clientY}`);
-        const uniqueCoordinates = new Set(coordinates);
-        
-        if (coordinates.length > 3 && uniqueCoordinates.size === 1) {
-          validation.warnings.push('Identical click coordinates detected - may indicate automated behavior');
-        }
-
-        // Check for perfect timing patterns
-        const intervals = [];
-        for (let i = 1; i < clickEvents.length; i++) {
-          intervals.push(clickEvents[i].timestamp - clickEvents[i-1].timestamp);
-        }
-        
-        if (intervals.length > 2) {
-          const variance = this.calculateVariance(intervals);
-          if (variance < 100) { // Very low variance in timing
-            validation.warnings.push('Suspiciously consistent timing pattern detected');
-          }
-        }
-      }
-
-      // Check for missing human-like variations
-      const hasScrolling = this.events.some(e => e.type === 'SCROLL');
-      const hasMouseMovement = this.events.some(e => e.coordinates);
-      
-      if (!hasScrolling && this.events.length > 5) {
-        validation.suggestions.push('Consider including scrolling behavior for more natural interaction patterns');
-      }
-    }
-
-    testSelectorReliability(selector) {
-      try {
-        const elements = document.querySelectorAll(selector);
-        if (elements.length === 0) return 0; // Selector doesn't match anything
-        if (elements.length === 1) return 1; // Perfect match
-        if (elements.length <= 3) return 0.8; // Good match
-        if (elements.length <= 10) return 0.6; // Okay match
-        return 0.3; // Poor match (too many elements)
-      } catch (error) {
-        return 0; // Invalid selector
-      }
-    }
-
-    calculateVariance(numbers) {
-      const mean = numbers.reduce((a, b) => a + b, 0) / numbers.length;
-      const squaredDiffs = numbers.map(n => Math.pow(n - mean, 2));
-      return squaredDiffs.reduce((a, b) => a + b, 0) / numbers.length;
-    }
-
-    // Real-time validation feedback
-    showValidationFeedback(validation) {
-      // Remove existing feedback
-      const existingFeedback = document.getElementById('unified-validation-feedback');
-      if (existingFeedback) {
-        existingFeedback.remove();
-      }
-
-      // Only show if there are issues
-      if (validation.errors.length === 0 && validation.warnings.length === 0) {
-        return;
-      }
-
-      const feedback = document.createElement('div');
-      feedback.id = 'unified-validation-feedback';
-      feedback.innerHTML = `
-        <div style="
-          position: fixed;
-          top: 50px;
-          right: 10px;
-          background: ${validation.errors.length > 0 ? '#f44336' : '#ff9800'};
-          color: white;
-          padding: 12px;
-          border-radius: 4px;
-          font-family: Arial, sans-serif;
-          font-size: 12px;
-          z-index: 999998;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          max-width: 300px;
-          cursor: pointer;
-        " onclick="this.style.display='none'">
-          <div style="font-weight: bold; margin-bottom: 8px;">
-            Data Quality: ${validation.score}/100
-          </div>
-          ${validation.errors.length > 0 ? `
-            <div style="margin-bottom: 4px;">
-              <strong>Errors:</strong> ${validation.errors.length}
-            </div>
-          ` : ''}
-          ${validation.warnings.length > 0 ? `
-            <div style="margin-bottom: 4px;">
-              <strong>Warnings:</strong> ${validation.warnings.length}
-            </div>
-          ` : ''}
-          <div style="font-size: 10px; opacity: 0.8;">
-            Click to dismiss
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(feedback);
-
-      // Auto-hide after 10 seconds
-      setTimeout(() => {
-        if (feedback.parentNode) {
-          feedback.remove();
-        }
-      }, 10000);
-    }
-
-    // Periodic validation during session
-    startPeriodicValidation() {
-      if (this.validationInterval) {
-        clearInterval(this.validationInterval);
-      }
-
-      this.validationInterval = setInterval(() => {
-        if (this.isTracking && this.events.length > 0) {
-          const validation = this.validateSessionData();
-          
-          // Show feedback for significant issues
-          if (validation.errors.length > 0 || validation.warnings.length > 2) {
-            this.showValidationFeedback(validation);
-          }
-
-          // Send validation metrics to background
-          chrome.runtime.sendMessage({
-            action: 'VALIDATION_UPDATE',
-            sessionId: this.sessionId,
-            validation: {
-              score: validation.score,
-              isValid: validation.isValid,
-              errorCount: validation.errors.length,
-              warningCount: validation.warnings.length,
-              metrics: validation.metrics
-            }
-          }).catch(() => {
-            // Ignore errors - background script might not be ready
-          });
-        }
-      }, 30000); // Every 30 seconds
-    }
-
-    stopPeriodicValidation() {
-      if (this.validationInterval) {
-        clearInterval(this.validationInterval);
-        this.validationInterval = null;
-      }
-    }
-
-    // UI feedback
-    showTrackingIndicator() {
-      if (document.getElementById('unified-tracking-indicator')) return;
-      
-      const indicator = document.createElement('div');
-      indicator.id = 'unified-tracking-indicator';
-      indicator.innerHTML = `
-        <div style="
-          position: fixed;
-          top: 10px;
-          right: 10px;
-          background: #4CAF50;
-          color: white;
-          padding: 8px 12px;
-          border-radius: 4px;
-          font-family: Arial, sans-serif;
-          font-size: 12px;
-          z-index: 999999;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        ">
-          🔴 CodeSight Recording
-        </div>
-      `;
-      
-      document.body.appendChild(indicator);
-    }
-
-    hideTrackingIndicator() {
-      const indicator = document.getElementById('unified-tracking-indicator');
-      if (indicator) {
-        indicator.remove();
-      }
-    }
-
-    // Status methods
-    getStatus() {
-      return {
+  }
+
+  rebindEventsAfterNavigation() {
+    console.log('Enhanced: Re-establishing tracking after navigation');
+    // Events should still be bound, but let's make sure
+    this.bindEvents();
+  }
+
+  // State persistence (like basic tracker)
+  saveState() {
+    if (this.sessionId) {
+      sessionStorage.setItem('codesight-enhanced-state', JSON.stringify({
         isTracking: this.isTracking,
         sessionId: this.sessionId,
         startTime: this.startTime,
-        duration: this.isTracking ? Date.now() - this.startTime : 0,
         eventCount: this.events.length,
-        screenshotCount: this.screenshots.length,
-        currentUrl: window.location.href,
-        qualityScore: this.calculateQualityScore(),
-        completeness: this.calculateCompleteness()
-      };
+        allEvents: this.events
+      }));
     }
+  }
 
-    async getSessionData() {
-      if (!this.isTracking) {
-        return null;
-      }
-      
-      return await this.prepareSessionData();
-    }
-
-    updateConfig(newConfig) {
-      this.config = { ...this.config, ...newConfig };
-      console.log('Unified: Config updated:', newConfig);
-    }
-
-    // Utility methods
-    throttle(func, limit) {
-      let inThrottle;
-      return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-          func.apply(context, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      };
-    }
-
-    generateId() {
-      return Date.now().toString(36) + Math.random().toString(36).substr(2);
-    }
-
-    setupStatePreservation() {
-      // Save state before page unloads
-      const saveBeforeUnload = () => {
-        if (this.isTracking) {
-          console.log('Unified: Saving state before navigation');
-          this.saveState();
-        }
-      };
-
-      // Multiple event listeners to catch all navigation scenarios
-      window.addEventListener('beforeunload', saveBeforeUnload);
-      window.addEventListener('pagehide', saveBeforeUnload);
-      window.addEventListener('unload', saveBeforeUnload);
-      
-      // Also save state periodically during tracking
-      if (this.statePreservationInterval) {
-        clearInterval(this.statePreservationInterval);
-      }
-      
-      this.statePreservationInterval = setInterval(() => {
-        if (this.isTracking) {
-          this.saveState();
-        }
-      }, 5000); // Save every 5 seconds
-    }
-
-    cleanupStatePreservation() {
-      if (this.statePreservationInterval) {
-        clearInterval(this.statePreservationInterval);
-        this.statePreservationInterval = null;
-      }
-    }
-
-    // Enhanced data collection methods per ChatGPT specification
-    
-    getPrunedDOMSnapshot(targetElement) {
-      // Get a focused DOM snapshot around the target element (5 levels up/down)
-      let container = targetElement;
-      for (let i = 0; i < 5 && container.parentElement; i++) {
-        container = container.parentElement;
-      }
-      
-      return this.serializeElementTree(container, 5);
-    }
-    
-    serializeElementTree(element, maxDepth) {
-      if (maxDepth <= 0) return null;
-      
-      const result = {
-        tag: element.tagName.toLowerCase(),
-        attributes: {},
-        children: []
-      };
-      
-      // Copy important attributes
-      for (const attr of element.attributes) {
-        if (['id', 'class', 'data-testid', 'role', 'type'].includes(attr.name)) {
-          result.attributes[attr.name] = attr.value;
-        }
-      }
-      
-      // Add text content for text nodes
-      if (element.childNodes.length === 1 && element.childNodes[0].nodeType === Node.TEXT_NODE) {
-        result.text = element.textContent.trim().substring(0, 100);
-      }
-      
-      // Recursively serialize children (but limit to avoid huge payloads)
-      for (let i = 0; i < Math.min(element.children.length, 10); i++) {
-        const child = this.serializeElementTree(element.children[i], maxDepth - 1);
-        if (child) result.children.push(child);
-      }
-      
-      return result;
-    }
-    
-    generatePageHash() {
-      // Simple hash of page structure for duplicate detection
-      const content = document.title + window.location.pathname + document.body.innerHTML.substring(0, 1000);
-      let hash = 0;
-      for (let i = 0; i < content.length; i++) {
-        const char = content.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-      }
-      return `sha256-${Math.abs(hash).toString(16)}`;
-    }
-    
-    getRecentNetworkRequests() {
-      // This would require additional setup to capture network requests
-      // For now, return placeholder
-      return [];
-    }
-    
-    getElementAttributes(element) {
-      const attrs = {};
-      for (const attr of element.attributes) {
-        attrs[attr.name] = attr.value;
-      }
-      return attrs;
-    }
-    
-    generateCSSSelector(element) {
-      const path = [];
-      let current = element;
-      
-      while (current && current !== document.body) {
-        let selector = current.tagName.toLowerCase();
-        
-        if (current.id) {
-          selector += `#${current.id}`;
-          path.unshift(selector);
-          break;
-        }
-        
-        if (current.className) {
-          const classes = current.className.split(' ').filter(c => c.trim());
-          if (classes.length > 0) {
-            selector += `.${classes.join('.')}`;
-          }
-        }
-        
-        // Add nth-child if needed for uniqueness
-        const parent = current.parentElement;
-        if (parent) {
-          const siblings = Array.from(parent.children).filter(s => s.tagName === current.tagName);
-          if (siblings.length > 1) {
-            const index = siblings.indexOf(current) + 1;
-            selector += `:nth-child(${index})`;
-          }
-        }
-        
-        path.unshift(selector);
-        current = current.parentElement;
-      }
-      
-      return path.join(' > ');
-    }
-    
-    generateXPath(element) {
-      const path = [];
-      let current = element;
-      
-      while (current && current !== document.documentElement) {
-        let selector = current.tagName.toLowerCase();
-        
-        if (current.id) {
-          selector = `${selector}[@id='${current.id}']`;
-          path.unshift(selector);
-          break;
-        }
-        
-        // Add position among siblings
-        const parent = current.parentElement;
-        if (parent) {
-          const siblings = Array.from(parent.children).filter(s => s.tagName === current.tagName);
-          if (siblings.length > 1) {
-            const index = siblings.indexOf(current) + 1;
-            selector += `[${index}]`;
-          }
-        }
-        
-        path.unshift(selector);
-        current = current.parentElement;
-      }
-      
-      return '//' + path.join('/');
-    }
-    
-    getElementBoundingBox(element) {
-      const rect = element.getBoundingClientRect();
-      return {
-        x: Math.round(rect.left),
-        y: Math.round(rect.top),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height)
-      };
-    }
-    
-    getRelevantComputedStyle(element) {
-      const computed = window.getComputedStyle(element);
-      return {
-        visibility: computed.visibility,
-        display: computed.display,
-        cursor: computed.cursor,
-        z_index: computed.zIndex,
-        position: computed.position
-      };
-    }
-    
-    getParentElementInfo(element) {
-      const parent = element.parentElement;
-      if (!parent) return null;
-      
-      return {
-        tag: parent.tagName.toLowerCase(),
-        classes: parent.className.split(' ').filter(c => c.trim()),
-        id: parent.id || null,
-        css_selector: this.generateCSSSelector(parent)
-      };
-    }
-    
-    getAncestorChain(element) {
-      const ancestors = [];
-      let current = element.parentElement;
-      
-      while (current && current !== document.body && ancestors.length < 10) {
-        ancestors.push({
-          tag: current.tagName.toLowerCase(),
-          classes: current.className.split(' ').filter(c => c.trim()),
-          id: current.id || null,
-          css_selector: this.generateCSSSelector(current)
-        });
-        current = current.parentElement;
-      }
-      
-      return ancestors;
-    }
-    
-    getSiblingElements(element) {
-      const parent = element.parentElement;
-      if (!parent) return [];
-      
-      const siblings = [];
-      const children = Array.from(parent.children);
-      const elementIndex = children.indexOf(element);
-      
-      // Get 2 siblings on each side
-      for (let i = Math.max(0, elementIndex - 2); i <= Math.min(children.length - 1, elementIndex + 2); i++) {
-        if (i !== elementIndex) {
-          const sibling = children[i];
-          siblings.push({
-            position: i < elementIndex ? 'before' : 'after',
-            tag: sibling.tagName.toLowerCase(),
-            text: this.getElementText(sibling).substring(0, 50),
-            css_selector: this.generateCSSSelector(sibling)
-          });
-        }
-      }
-      
-      return siblings;
-    }
-    
-    findNearbyClickableElements(targetElement, radius = 100) {
-      const nearby = [];
-      const targetRect = targetElement.getBoundingClientRect();
-      const targetCenter = {
-        x: targetRect.left + targetRect.width / 2,
-        y: targetRect.top + targetRect.height / 2
-      };
-      
-      const clickableSelectors = 'a, button, input, select, textarea, [role="button"], [onclick], [tabindex]';
-      const candidates = document.querySelectorAll(clickableSelectors);
-      
-      candidates.forEach(element => {
-        if (element === targetElement) return;
-        
-        const rect = element.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-        
-        const center = {
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2
-        };
-        
-        const distance = Math.sqrt(
-          Math.pow(center.x - targetCenter.x, 2) + 
-          Math.pow(center.y - targetCenter.y, 2)
-        );
-        
-        if (distance <= radius) {
-          nearby.push({
-            tag: element.tagName.toLowerCase(),
-            text: this.getElementText(element).substring(0, 50),
-            css_selector: this.generateCSSSelector(element),
-            distance: Math.round(distance)
-          });
-        }
-      });
-      
-      return nearby.sort((a, b) => a.distance - b.distance).slice(0, 5);
-    }
-    
-    detectActiveOverlays() {
-      const overlays = [];
-      
-      // Common modal/overlay selectors
-      const overlaySelectors = [
-        '.modal:not([style*="display: none"])',
-        '.overlay:not([style*="display: none"])',
-        '.popup:not([style*="display: none"])',
-        '.dialog:not([style*="display: none"])',
-        '[role="dialog"]:not([style*="display: none"])',
-        '.cookie-banner:not([style*="display: none"])',
-        '.cookie-consent:not([style*="display: none"])'
-      ];
-      
-      overlaySelectors.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-          const computed = window.getComputedStyle(element);
-          if (computed.display !== 'none' && computed.visibility !== 'hidden') {
-            const closeButton = element.querySelector('button[class*="close"], .close, [aria-label*="close"]');
-            overlays.push({
-              id: element.id || `overlay-${overlays.length}`,
-              css_selector: this.generateCSSSelector(element),
-              bounding_box: this.getElementBoundingBox(element),
-              close_button: closeButton ? {
-                css_selector: this.generateCSSSelector(closeButton)
-              } : null
-            });
-          }
-        });
-      });
-      
-      return overlays;
-    }
-
-    // Check if element is in viewport
-    isElementInViewport(element) {
-      const rect = element.getBoundingClientRect();
-      return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= window.innerHeight &&
-        rect.right <= window.innerWidth
-      );
-    }
-
-    // Test selector reliability (simplified)
-    testSelectorReliability(selector) {
+  restoreState() {
+    const saved = sessionStorage.getItem('codesight-enhanced-state');
+    if (saved) {
       try {
-        const elements = document.querySelectorAll(selector);
-        return elements.length === 1 ? 1.0 : Math.max(0.1, 1.0 / elements.length);
-      } catch (e) {
-        return 0.1;
-      }
-    }
-
-    // Get viewport information
-    getViewportInfo() {
-      return {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        scrollX: window.scrollX,
-        scrollY: window.scrollY,
-        devicePixelRatio: window.devicePixelRatio || 1
-      };
-    }
-
-    // Update existing event and send to background
-    updateEvent(eventData) {
-      const idx = this.events.findIndex(e => e.id === eventData.id);
-      if (idx !== -1) {
-        this.events[idx] = { ...this.events[idx], ...eventData };
-        this.saveState();
-        // **New**: push updated event to background
-        chrome.runtime.sendMessage({
-          action: 'SEND_DATA',
-          data: this.events[idx]
-        });
+        const state = JSON.parse(saved);
+        this.isTracking = state.isTracking;
+        this.sessionId = state.sessionId;
+        this.startTime = state.startTime || Date.now();
+        this.events = state.allEvents || [];
+        
+        if (this.isTracking) {
+          console.log(`Enhanced: Restored tracking state for session: ${this.sessionId} with ${this.events.length} events`);
+          this.bindEvents();
+        }
+      } catch (error) {
+        console.log('Enhanced: Failed to restore state:', error);
       }
     }
   }
 
-  // Initialize the tracker
-  window.UnifiedCodeSightTracker = new UnifiedCodeSightTracker();
-  
-  // 🔍 TEST: Immediate console log to verify script loading
-  console.log('🚀 CodeSight Enhanced Tracker Loaded!', new Date().toISOString());
+  // Handle GET_SESSION_DATA request from frontend
+  async handleGetSessionData(requestedSessionId, sendResponse) {
+    try {
+      console.log('Enhanced: GET_SESSION_DATA request for session:', requestedSessionId);
+      console.log('Enhanced: Current session:', this.sessionId);
+      console.log('Enhanced: Current events count:', this.events.length);
+      console.log('Enhanced: Is tracking:', this.isTracking);
+      
+      // If no session ID provided, try to return current session data
+      if (!requestedSessionId && this.sessionId) {
+        console.log('Enhanced: No session ID requested, using current session:', this.sessionId);
+        requestedSessionId = this.sessionId;
+      }
+      
+      // Verify session ID matches (or accept if we have data and no specific session requested)
+      if (requestedSessionId && requestedSessionId !== this.sessionId) {
+        console.warn('Enhanced: Session ID mismatch');
+        sendResponse({ 
+          success: false, 
+          error: 'Session ID mismatch',
+          requestedSession: requestedSessionId,
+          currentSession: this.sessionId
+        });
+        return;
+      }
+      
+      // If we have events but no exact session match, still return the data
+      if (this.events.length > 0 && !this.sessionId) {
+        console.log('Enhanced: Have events but no session ID, returning data anyway');
+      }
+      
+      // Get screenshots from background script
+      console.log('Enhanced: Fetching screenshots from background...');
+      const screenshotResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({
+          action: 'GET_SESSION_SCREENSHOTS',
+          sessionId: this.sessionId
+        }, resolve);
+      });
+      
+      if (!screenshotResponse || !screenshotResponse.screenshots) {
+        console.warn('Enhanced: No screenshots available');
+        sendResponse({
+          success: false,
+          error: 'No screenshots available for session'
+        });
+        return;
+      }
+      
+      console.log('Enhanced: Received screenshots:', screenshotResponse.screenshots.length);
+      
+      // Create screenshot map for enrichment
+      const screenshotMap = new Map();
+      screenshotResponse.screenshots.forEach(screenshot => {
+        screenshotMap.set(screenshot.id, screenshot);
+      });
+      
+      // Generate complete training data with embedded screenshots
+      console.log('Enhanced: Generating training data...');
+      const trainingData = this.generateTrainingData(screenshotMap);
+      
+      // Create complete session package
+      const sessionData = {
+        sessionId: this.sessionId,
+        totalEvents: this.events.length,
+        screenshotCount: screenshotResponse.screenshots.length,
+        trainingData: trainingData,
+        summary: {
+          eventTypes: this.summarizeEventTypes(),
+          timeRange: this.getTimeRange(),
+          dataSize: JSON.stringify(trainingData).length
+        },
+        timestamp: Date.now()
+      };
+      
+      console.log('Enhanced: Session data package complete:', {
+        events: sessionData.totalEvents,
+        screenshots: sessionData.screenshotCount,
+        trainingDataSize: sessionData.trainingData.length,
+        totalDataSize: sessionData.summary.dataSize
+      });
+      
+      sendResponse({
+        success: true,
+        data: sessionData
+      });
+      
+    } catch (error) {
+      console.error('Enhanced: Error in handleGetSessionData:', error);
+      sendResponse({
+        success: false,
+        error: error.message || 'Failed to get session data'
+      });
+    }
+  }
 
-})();
+  // Helper method to summarize event types
+  summarizeEventTypes() {
+    const summary = {};
+    this.events.forEach(event => {
+      const type = event.data?.type || 'unknown';
+      summary[type] = (summary[type] || 0) + 1;
+    });
+    return summary;
+  }
+
+  // Helper method to get time range
+  getTimeRange() {
+    if (this.events.length === 0) return { start: null, end: null, duration: 0 };
+    
+    const timestamps = this.events.map(e => e.data?.timestamp || 0).filter(t => t > 0);
+    if (timestamps.length === 0) return { start: null, end: null, duration: 0 };
+    
+    const start = Math.min(...timestamps);
+    const end = Math.max(...timestamps);
+    
+    return {
+      start: start,
+      end: end,
+      duration: end - start
+    };
+  }
+
+  bindEvents() {
+    // Bind enhanced event handlers with stored references for proper removal
+    this.boundHandleClick = this.handleClick.bind(this);
+    document.addEventListener('click', this.boundHandleClick, true);
+  }
+
+  startTracking(sessionId) {
+    if (this.isTracking) return;
+    
+    this.isTracking = true;
+    this.sessionId = sessionId;
+    this.startTime = Date.now();
+    this.events = [];
+    
+    // Bind enhanced event handlers
+    this.bindEvents();
+    
+    // Show tracking indicator
+    this.showTrackingIndicator();
+    
+    // Save state for persistence across navigation
+    this.saveState();
+    
+    console.log('Enhanced tracking started for session:', sessionId);
+  }
+
+  async stopTracking() {
+    if (!this.isTracking) return;
+    
+    this.isTracking = false;
+    
+    // Unbind events (store bound functions to properly remove them)
+    if (this.boundHandleClick) {
+      document.removeEventListener('click', this.boundHandleClick, true);
+    }
+    
+    // Stop mutation observer
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+    
+    // Hide tracking indicator
+    this.hideTrackingIndicator();
+    
+    // Create downloadable file with enhanced session data
+    try {
+      await this.downloadSessionData();
+    } catch (error) {
+      console.error('Enhanced: Download failed:', error);
+      alert('Download failed - check console for details');
+    }
+    
+    // Send final data to background script
+    try {
+      chrome.runtime.sendMessage({
+        action: 'TRACKING_COMPLETE',
+        sessionId: this.sessionId,
+        events: this.events
+      });
+    } catch (error) {
+      console.error('Enhanced: Failed to send tracking complete:', error);
+    }
+    
+    // Clear persistent state
+    sessionStorage.removeItem('codesight-enhanced-state');
+    
+    console.log('Enhanced tracking stopped. Events captured:', this.events.length);
+    return this.events;
+  }
+
+  async downloadSessionData() {
+    console.log('Enhanced: Starting download process...');
+    console.log('Enhanced: Events to download:', this.events.length);
+    
+    // Fetch screenshot data from background script
+    console.log('Enhanced: Fetching screenshots from background...');
+    const screenshotData = await this.getSessionScreenshots();
+    
+    // Process screenshots and create file mapping
+    const screenshotFiles = [];
+    const screenshotMetadata = [];
+    
+    screenshotData.forEach((screenshot, index) => {
+      // Create descriptive filename with timestamp and event type
+      const timestamp = screenshot.metadata.timestamp;
+      const eventType = screenshot.metadata.eventType || 'unknown';
+      const filename = `screenshot_${this.sessionId}_${index}_${eventType}_${timestamp}.jpg`;
+      
+      // Convert base64 to blob for separate file download
+      const base64Data = screenshot.dataUrl.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+      
+      screenshotFiles.push({ filename, blob });
+      
+      // Store metadata without the large data_url
+      screenshotMetadata.push({
+        id: screenshot.id,
+        filename: filename,
+        timestamp: timestamp,
+        eventType: eventType,
+        viewport: screenshot.metadata.viewport,
+        size: blob.size
+      });
+    });
+    
+    const sessionData = {
+      sessionId: this.sessionId,
+      startTime: new Date(this.startTime).toISOString(),
+      endTime: new Date().toISOString(),
+      duration: Date.now() - this.startTime,
+      totalEvents: this.events.length,
+      events: this.enrichEventsWithScreenshots(this.events, screenshotData, screenshotMetadata),
+      screenshots: screenshotMetadata, // Only metadata, not full data
+      summary: {
+        clicks: this.events.filter(e => e.type === 'click').length,
+        inputs: this.events.filter(e => e.type === 'input').length,
+        scrolls: this.events.filter(e => e.type === 'scroll').length,
+        navigations: this.events.filter(e => e.type === 'navigation').length,
+        screenshots: screenshotData.length,
+        pagesVisited: [...new Set(this.events.map(e => e.data.url || e.data.state?.url).filter(Boolean))],
+        enhancedData: {
+          multipleSelectors: this.events.filter(e => e.data.selectors?.alternatives?.length > 1).length,
+          visualContext: this.events.filter(e => e.data.visual?.screenshot).length,
+          nearbyElements: this.events.filter(e => e.data.context?.nearbyElements?.length > 0).length,
+          stateChanges: this.events.filter(e => e.data.state?.changes && Object.keys(e.data.state.changes).length > 0).length,
+          screenshotsWithData: screenshotData.length
+        }
+      }
+    };
+
+    console.log('Enhanced: Session summary:', sessionData.summary);
+
+    try {
+      // Download JSON file
+      const dataStr = JSON.stringify(sessionData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const jsonUrl = URL.createObjectURL(dataBlob);
+      
+      const baseFilename = `codesight-enhanced-session-${this.sessionId}-${new Date().toISOString().slice(0,10)}`;
+      const jsonFilename = `${baseFilename}.json`;
+      
+      console.log('Enhanced: Creating JSON download:', jsonFilename);
+      
+      const jsonLink = document.createElement('a');
+      jsonLink.href = jsonUrl;
+      jsonLink.download = jsonFilename;
+      jsonLink.style.display = 'none';
+      document.body.appendChild(jsonLink);
+      jsonLink.click();
+      
+      // Screenshots are now included in the JSON file for proper timestamp correlation
+      
+      // Cleanup JSON download
+      setTimeout(() => {
+        document.body.removeChild(jsonLink);
+        URL.revokeObjectURL(jsonUrl);
+        console.log('Enhanced: Download cleanup completed');
+      }, 500);
+      
+      // Show alert with enhanced data stats
+      alert(`Enhanced CodeSight: Session data downloaded!\nFiles: ${jsonFilename} + ${screenshotFiles.length} screenshot files\nEvents: ${sessionData.totalEvents}\nScreenshots: ${screenshotData.length}\nEnhanced Features: ${sessionData.summary.enhancedData.multipleSelectors} multi-selectors, ${sessionData.summary.enhancedData.visualContext} visual contexts`);
+      
+    } catch (error) {
+      console.error('Enhanced: Download failed:', error);
+      alert('Enhanced CodeSight: Download failed - check console for details');
+    }
+  }
+
+  async getSessionScreenshots() {
+    return new Promise((resolve) => {
+      console.log('Enhanced: Requesting screenshots for session:', this.sessionId);
+      console.log('Enhanced: Content script sessionId type:', typeof this.sessionId);
+      
+      // Set a timeout in case the message never gets a response
+      const timeout = setTimeout(() => {
+        console.log('Enhanced: Screenshot request timed out, continuing without screenshots');
+        resolve([]);
+      }, 5000);
+      
+      try {
+        chrome.runtime.sendMessage({
+          action: 'GET_SESSION_SCREENSHOTS',
+          sessionId: this.sessionId
+        }, (response) => {
+          clearTimeout(timeout);
+          
+          if (chrome.runtime.lastError) {
+            console.error('Enhanced: Runtime error fetching screenshots:', chrome.runtime.lastError.message);
+            resolve([]);
+            return;
+          }
+          
+          if (response && response.screenshots) {
+            console.log('Enhanced: Retrieved', response.screenshots.length, 'screenshots');
+            resolve(response.screenshots);
+          } else {
+            console.log('Enhanced: No screenshots found in response:', response);
+            resolve([]);
+          }
+        });
+      } catch (error) {
+        clearTimeout(timeout);
+        console.error('Enhanced: Failed to fetch screenshots:', error);
+        resolve([]);
+      }
+    });
+  }
+
+  enrichEventsWithScreenshots(events, screenshots, screenshotMetadata = null) {
+    // Create a map of screenshot IDs to screenshot data
+    const screenshotMap = new Map();
+    screenshots.forEach(screenshot => {
+      screenshotMap.set(screenshot.id, screenshot);
+    });
+
+    // Enrich events with full screenshot data in AI-training friendly format
+    return events.map((event, index) => {
+      const enrichedEvent = {
+        // Training sequence info
+        sequence_id: index + 1,
+        session_id: this.sessionId,
+        
+        // Timing correlation (CRITICAL for AI training)
+        timing: {
+          event_timestamp: event.data.timestamp,
+          session_time_ms: event.data.sessionTime,
+          human_readable: new Date(event.data.timestamp).toISOString()
+        },
+        
+        // User action (what the AI needs to learn)
+        user_action: {
+          type: event.data.type,
+          target_element: {
+            tag: event.data.element?.tagName,
+            text: event.data.element?.text,
+            selectors: event.data.selectors,
+            coordinates: event.data.interaction?.coordinates,
+            bounding_box: event.data.visual?.boundingBox
+          }
+        },
+        
+        // Visual context (screenshot + metadata)
+        visual_context: this.createVisualContext(event, screenshotMap, screenshotMetadata),
+        
+        // Page context
+        page_context: {
+          url: event.data.state?.url,
+          title: event.data.state?.pageTitle,
+          viewport: event.data.visual?.viewport,
+          dom_structure: event.data.context
+        },
+        
+        // State changes (what happened after the action)
+        result: {
+          state_changes: event.data.state?.changes || {},
+          navigation_occurred: !!(event.data.state?.changes?.urlChanged),
+          modal_changes: this.detectModalChanges(event.data.state)
+        },
+        
+        // Original event data (for debugging)
+        _original: event.data
+      };
+      
+      return enrichedEvent;
+    });
+  }
+
+  createVisualContext(event, screenshotMap, screenshotMetadata = null) {
+    if (!event.data?.visual?.screenshot) {
+      return {
+        screenshot_available: false,
+        reason: "No screenshot captured for this event"
+      };
+    }
+
+    const screenshotId = event.data.visual.screenshot;
+    const screenshotInfo = screenshotMap.get(screenshotId);
+    
+    if (!screenshotInfo) {
+      return {
+        screenshot_available: false,
+        screenshot_id: screenshotId,
+        reason: "Screenshot data not found in background storage"
+      };
+    }
+
+    // Find corresponding metadata if provided
+    let metadata = null;
+    if (screenshotMetadata) {
+      metadata = screenshotMetadata.find(meta => meta.id === screenshotId);
+    }
+
+    return {
+      screenshot_available: true,
+      // CLEAR timestamp correlation for AI training
+      screenshot_timing: {
+        captured_at: screenshotInfo.metadata.timestamp,
+        event_timestamp: event.data.timestamp,
+        time_diff_ms: Math.abs(screenshotInfo.metadata.timestamp - event.data.timestamp),
+        synchronized: Math.abs(screenshotInfo.metadata.timestamp - event.data.timestamp) < 1000
+      },
+      // Screenshot data included in JSON for timestamp correlation
+      image: {
+        filename: metadata ? metadata.filename : `screenshot_${screenshotId}.jpg`,
+        format: "jpeg",
+        viewport: screenshotInfo.metadata.viewport,
+        capture_quality: 50,
+        file_size: metadata ? metadata.size : null,
+        data_url: screenshotInfo.dataUrl, // Screenshot data included for proper correlation
+      },
+      // Visual element location within screenshot
+      target_location: {
+        bounding_box: event.data.visual.boundingBox,
+        in_viewport: event.data.visual.isInViewport,
+        visibility_percent: event.data.visual.percentVisible,
+        scroll_position: event.data.visual.viewport
+      }
+    };
+  }
+
+  detectModalChanges(stateData) {
+    if (!stateData?.before || !stateData?.after) return null;
+    
+    const beforeModals = stateData.before.activeModals || [];
+    const afterModals = stateData.after.activeModals || [];
+    
+    return {
+      modal_opened: afterModals.length > beforeModals.length,
+      modal_closed: afterModals.length < beforeModals.length,
+      modal_count_before: beforeModals.length,
+      modal_count_after: afterModals.length
+    };
+  }
+
+  showTrackingIndicator() {
+    const indicator = document.createElement('div');
+    indicator.id = 'codesight-enhanced-indicator';
+    indicator.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(34, 197, 94, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      z-index: 999999;
+      pointer-events: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      min-width: 200px;
+    `;
+    
+    indicator.innerHTML = `
+      🚀 Enhanced CodeSight<br>
+      <small>Events: ${this.events.length} | Enhanced mode active</small>
+    `;
+    
+    document.body.appendChild(indicator);
+  }
+
+  hideTrackingIndicator() {
+    const indicator = document.getElementById('codesight-enhanced-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+  }
+
+  updateIndicatorText() {
+    const indicator = document.getElementById('codesight-enhanced-indicator');
+    if (indicator) {
+      indicator.innerHTML = `
+        🚀 Enhanced CodeSight<br>
+        <small>Events: ${this.events.length} | Enhanced mode active</small>
+      `;
+    }
+  }
+
+  // Generate training data compatible with backend processing
+  generateTrainingData(screenshotMap) {
+    return this.events.map((event, index) => {
+      // Convert enhanced structure to training data format
+      return {
+        prompt: this.generatePrompt(event.data),
+        completion: this.generateCompletion(event.data),
+        metadata: {
+          sequence: index + 1,
+          session_id: this.sessionId,
+          timestamp: event.data.timestamp,
+          quality_score: this.calculateEventQuality(event.data)
+        }
+      };
+    });
+  }
+
+  generatePrompt(eventData) {
+    const pageType = this.inferPageType(eventData.state?.url);
+    const elementType = eventData.element?.tagName || 'unknown';
+    const elementText = eventData.element?.text || '';
+    const context = eventData.context?.pageStructure || {};
+    
+    return `Navigate on ${pageType} page: Find and click ${elementType}${elementText ? ` with text "${elementText}"` : ''}.${context.hasSearch ? ' Page has search functionality.' : ''}${context.hasShoppingCart ? ' Shopping cart is available.' : ''}`;
+  }
+
+  generateCompletion(eventData) {
+    return {
+      action: eventData.type,
+      element: {
+        selector: eventData.selectors?.primary || 'unknown',
+        text: eventData.element?.text || '',
+        coordinates: eventData.interaction?.coordinates || null
+      },
+      reasoning: this.generateReasoning(eventData)
+    };
+  }
+
+  generateReasoning(eventData) {
+    const elementType = eventData.element?.tagName || 'element';
+    const hasText = eventData.element?.text;
+    const isInteractive = eventData.element?.isInteractive;
+    
+    let reasoning = `Clicked ${elementType}`;
+    if (hasText) reasoning += ` containing "${eventData.element.text}"`;
+    if (isInteractive) reasoning += ` (interactive element)`;
+    if (eventData.visual?.isInViewport) reasoning += ` in viewport`;
+    
+    return reasoning;
+  }
+
+  inferPageType(url) {
+    if (!url) return 'unknown';
+    const lowercaseUrl = url.toLowerCase();
+    
+    if (lowercaseUrl.includes('product') || lowercaseUrl.includes('/p/')) return 'product';
+    if (lowercaseUrl.includes('cart')) return 'cart';
+    if (lowercaseUrl.includes('checkout')) return 'checkout';
+    if (lowercaseUrl.includes('search')) return 'search';
+    if (lowercaseUrl.includes('category')) return 'category';
+    
+    return 'general';
+  }
+
+  calculateEventQuality(eventData) {
+    let score = 0;
+    
+    // Selector quality (30 points)
+    if (eventData.selectors?.primary) score += 15;
+    if (eventData.selectors?.alternatives?.length > 1) score += 10;
+    if (eventData.selectors?.xpath) score += 5;
+    
+    // Element data quality (30 points)
+    if (eventData.element?.text?.length > 0) score += 15;
+    if (eventData.element?.attributes && Object.keys(eventData.element.attributes).length > 0) score += 10;
+    if (eventData.element?.isInteractive) score += 5;
+    
+    // Context quality (30 points)
+    if (eventData.context?.parentElements?.length > 0) score += 10;
+    if (eventData.context?.siblings?.length > 0) score += 5;
+    if (eventData.context?.nearbyElements?.length > 0) score += 10;
+    if (eventData.context?.pageStructure) score += 5;
+    
+    // Visual quality (10 points)
+    if (eventData.visual?.screenshot) score += 5;
+    if (eventData.visual?.isInViewport) score += 3;
+    if (eventData.visual?.percentVisible > 50) score += 2;
+    
+    return Math.min(score, 100);
+  }
+}
+
+// Export for use and instantiate
+window.EnhancedShoppingTracker = EnhancedShoppingTracker;
+
+// Create instance immediately so it's available when content-script.js loads
+try {
+  window.enhancedTracker = new EnhancedShoppingTracker();
+  console.log('Enhanced tracker class defined and instantiated successfully');
+  console.log('Enhanced tracker instance:', window.enhancedTracker);
+} catch (error) {
+  console.error('Enhanced tracker instantiation failed:', error);
+}
+
+})(); // End of IIFE
