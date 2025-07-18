@@ -20,6 +20,7 @@ import { trainingRoutes } from "./routes/training";
 import { archiveRoutes } from "./routes/archives";
 import { adminRoutes } from "./routes/admin";
 import { analyticsRoutes } from "./routes/analytics";
+import testRoutes from "./routes/test";
 
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { authMiddleware, authRateLimit, authBruteForceProtection } from "./middleware/auth";
@@ -244,7 +245,7 @@ app.get("/api/status", async (_req, res) => {
 });
 
 // Test endpoint for development (bypasses auth)
-app.use("/api/test", sessionRoutes);
+app.use("/api/test", testRoutes);
 
 // API Routes with middleware
 app.use("/api/sessions", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, validationMiddleware as any, sessionRoutes);
