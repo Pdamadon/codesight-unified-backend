@@ -270,13 +270,46 @@
         reliability: this.testSelectorReliability(this.generateCSSSelector(element))
       };
       
-      // Capture DOM context
-      const domContext = {
-        parents: this.getParentElementInfo(element) ? [this.getParentElementInfo(element)] : [],
-        ancestors: this.getAncestorChain(element),
-        siblings: this.getSiblingElements(element),
-        nearbyElements: this.findNearbyClickableElements(element, 100)
-      };
+      // Capture DOM context with error handling
+      console.log('🔄 Starting DOM context collection...');
+      const domContext = {};
+      
+      try {
+        console.log('📁 Collecting parent info...');
+        const parentInfo = this.getParentElementInfo(element);
+        domContext.parents = parentInfo ? [parentInfo] : [];
+        console.log('✅ Parent info collected:', domContext.parents);
+      } catch (error) {
+        console.error('❌ Error collecting parent info:', error);
+        domContext.parents = [];
+      }
+      
+      try {
+        console.log('🏗️ Collecting ancestor chain...');
+        domContext.ancestors = this.getAncestorChain(element);
+        console.log('✅ Ancestor chain collected:', domContext.ancestors);
+      } catch (error) {
+        console.error('❌ Error collecting ancestors:', error);
+        domContext.ancestors = [];
+      }
+      
+      try {
+        console.log('👫 Collecting siblings...');
+        domContext.siblings = this.getSiblingElements(element);
+        console.log('✅ Siblings collected:', domContext.siblings);
+      } catch (error) {
+        console.error('❌ Error collecting siblings:', error);
+        domContext.siblings = [];
+      }
+      
+      try {
+        console.log('🎯 Collecting nearby elements...');
+        domContext.nearbyElements = this.findNearbyClickableElements(element, 100);
+        console.log('✅ Nearby elements collected:', domContext.nearbyElements);
+      } catch (error) {
+        console.error('❌ Error collecting nearby elements:', error);
+        domContext.nearbyElements = [];
+      }
       
       // Get element analysis (simple version)
       const elementAnalysis = {
@@ -377,6 +410,43 @@
         pageTitle: document.title,
         viewport: this.getViewportInfo()
       };
+
+      // 🔍 COMPREHENSIVE CLICK DATA LOGGING
+      console.log('🎯 CLICK EVENT TRIGGERED:', {
+        element: element,
+        timestamp: new Date(timestamp).toISOString(),
+        sessionId: this.sessionId,
+        isTracking: this.isTracking
+      });
+      
+      console.log('🔍 SELECTORS GENERATED:', {
+        primary: selectors.primary,
+        alternatives: selectors.alternatives,
+        xpath: selectors.xpath,
+        cssPath: selectors.cssPath,
+        reliability: selectors.reliability
+      });
+      
+      console.log('🏗️ DOM CONTEXT COLLECTED:', {
+        parents: domContext.parents,
+        parentCount: domContext.parents?.length || 0,
+        ancestors: domContext.ancestors,
+        ancestorCount: domContext.ancestors?.length || 0,
+        siblings: domContext.siblings,
+        siblingCount: domContext.siblings?.length || 0,
+        nearbyElements: domContext.nearbyElements,
+        nearbyCount: domContext.nearbyElements?.length || 0
+      });
+      
+      console.log('🧩 ELEMENT ANALYSIS:', {
+        tagName: elementAnalysis.tagName,
+        text: elementAnalysis.text,
+        textLength: elementAnalysis.text?.length || 0,
+        value: elementAnalysis.value,
+        attributes: elementAnalysis.attributes,
+        attributeCount: Object.keys(elementAnalysis.attributes || {}).length,
+        boundingBox: elementAnalysis.boundingBox
+      });
 
       // 🔍 LOG: Show what data we're collecting
       console.log('🎯 CLICK DATA COLLECTED:', {
@@ -1115,6 +1185,26 @@
         sessionId: this.sessionId
       });
       
+      // 📡 LOG: Final data being sent to backend
+      console.log('📡 SENDING TO BACKEND:', {
+        finalInteractionData: eventData,
+        dataSize: JSON.stringify(eventData).length,
+        contextArrays: {
+          parentElements: eventData.parentElements,
+          siblingElements: eventData.siblingElements,
+          nearbyElements: eventData.nearbyElements,
+          parentCount: eventData.parentElements?.length || 0,
+          siblingCount: eventData.siblingElements?.length || 0,
+          nearbyCount: eventData.nearbyElements?.length || 0
+        },
+        selectors: {
+          primary: eventData.primarySelector,
+          alternatives: eventData.selectorAlternatives,
+          xpath: eventData.xpath,
+          cssPath: eventData.cssPath
+        }
+      });
+
       // Send to background script for processing
       this.sendEventToBackground(eventData);
       
