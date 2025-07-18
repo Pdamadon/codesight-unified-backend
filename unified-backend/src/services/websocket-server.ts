@@ -37,6 +37,19 @@ export class UnifiedWebSocketServer {
   private maxConnections: number = 100;
   private connectionTimeout: number = 300000; // 5 minutes
 
+  // Message processing queue to prevent database overload
+  private messageQueue: Array<{
+    clientId: string;
+    message: WebSocketMessage;
+    timestamp: number;
+    retryCount: number;
+  }> = [];
+  private isProcessingQueue = false;
+  private readonly MAX_QUEUE_SIZE = 1000;
+  private readonly QUEUE_PROCESS_INTERVAL = 100; // Process every 100ms
+  private readonly MAX_RETRIES = 3;
+  private queueProcessingInterval?: NodeJS.Timeout;
+
   constructor(server: HttpServer, dataProcessingPipeline: DataProcessingPipeline) {
     this.logger = new Logger('WebSocketServer');
     this.dataProcessingPipeline = dataProcessingPipeline;
@@ -58,12 +71,15 @@ export class UnifiedWebSocketServer {
     this.setupWebSocketServer();
     this.startHeartbeat();
     this.startCleanupInterval();
+    this.startMessageQueueProcessing();
     
     this.logger.info('WebSocket server initialized', {
       path: '/ws',
       compression: true,
       maxConnections: this.maxConnections,
-      connectionTimeout: this.connectionTimeout
+      connectionTimeout: this.connectionTimeout,
+      messageQueueEnabled: true,
+      maxQueueSize: this.MAX_QUEUE_SIZE
     });
   }
 
@@ -191,51 +207,30 @@ export class UnifiedWebSocketServer {
       this.logger.info('Received WebSocket message', {
         clientId,
         type: message.type,
-        sessionId: message.sessionId
+        sessionId: message.sessionId,
+        queueSize: this.messageQueue.length
       });
 
-      switch (message.type) {
-        case 'authenticate':
-          await this.handleAuthentication(clientId, message);
-          break;
+      // Handle immediate response messages (ping, authenticate) without queuing
+      if (message.type === 'ping') {
+        this.sendToClient(clientId, {
+          type: 'pong',
+          timestamp: Date.now()
+        });
+        return;
+      }
 
-        case 'session_start':
-          await this.handleSessionStart(clientId, message);
-          break;
+      if (message.type === 'authenticate') {
+        await this.handleAuthentication(clientId, message);
+        return;
+      }
 
-        case 'session_stop':
-          await this.handleSessionStop(clientId, message);
-          break;
-
-        case 'interaction_event':
-          await this.handleInteractionEvent(clientId, message);
-          break;
-
-        case 'screenshot_data':
-          await this.handleScreenshotData(clientId, message);
-          break;
-
-        case 'session_complete':
-          await this.handleSessionComplete(clientId, message);
-          break;
-
-        case 'ping':
-          this.sendToClient(clientId, {
-            type: 'pong',
-            timestamp: Date.now()
-          });
-          break;
-
-        case 'subscribe_updates':
-          await this.handleSubscribeUpdates(clientId, message);
-          break;
-
-        default:
-          this.logger.warn('Unknown message type', {
-            clientId,
-            type: message.type
-          });
-          this.sendError(clientId, 'Unknown message type', message.type);
+      // Queue database-intensive messages to prevent overload
+      if (this.shouldQueueMessage(message.type)) {
+        this.queueMessage(clientId, message);
+      } else {
+        // Handle non-queued messages immediately
+        await this.processMessage(clientId, message);
       }
 
     } catch (error) {
@@ -246,6 +241,136 @@ export class UnifiedWebSocketServer {
         rawData: data.toString().substring(0, 200) // First 200 chars for debugging
       });
       this.sendError(clientId, 'Invalid message format', errorMessage);
+    }
+  }
+
+  // Determine if a message type should be queued
+  private shouldQueueMessage(messageType: string): boolean {
+    const queuedTypes = [
+      'session_start',
+      'session_stop', 
+      'interaction_event',
+      'screenshot_data',
+      'session_complete'
+    ];
+    return queuedTypes.includes(messageType);
+  }
+
+  // Queue a message for processing
+  private queueMessage(clientId: string, message: WebSocketMessage): void {
+    if (this.messageQueue.length >= this.MAX_QUEUE_SIZE) {
+      this.logger.warn('Message queue full, dropping oldest message', {
+        queueSize: this.messageQueue.length,
+        maxSize: this.MAX_QUEUE_SIZE,
+        droppedMessageType: this.messageQueue[0]?.message.type
+      });
+      this.messageQueue.shift(); // Remove oldest message
+    }
+
+    this.messageQueue.push({
+      clientId,
+      message,
+      timestamp: Date.now(),
+      retryCount: 0
+    });
+
+    this.logger.debug('Message queued', {
+      clientId,
+      messageType: message.type,
+      queueSize: this.messageQueue.length
+    });
+  }
+
+  // Start message queue processing
+  private startMessageQueueProcessing(): void {
+    this.queueProcessingInterval = setInterval(() => {
+      this.processMessageQueue();
+    }, this.QUEUE_PROCESS_INTERVAL);
+
+    this.logger.info('Message queue processing started', {
+      interval: this.QUEUE_PROCESS_INTERVAL,
+      maxQueueSize: this.MAX_QUEUE_SIZE
+    });
+  }
+
+  // Process messages from the queue
+  private async processMessageQueue(): Promise<void> {
+    if (this.isProcessingQueue || this.messageQueue.length === 0) return;
+
+    this.isProcessingQueue = true;
+
+    try {
+      // Process up to 5 messages per cycle to avoid blocking
+      const messagesToProcess = this.messageQueue.splice(0, 5);
+      
+      const processPromises = messagesToProcess.map(async (queueItem) => {
+        try {
+          await this.processMessage(queueItem.clientId, queueItem.message);
+        } catch (error) {
+          queueItem.retryCount++;
+          
+          if (queueItem.retryCount < this.MAX_RETRIES) {
+            // Re-queue for retry
+            this.messageQueue.push(queueItem);
+            this.logger.warn('Message processing failed, retrying', {
+              clientId: queueItem.clientId,
+              messageType: queueItem.message.type,
+              retryCount: queueItem.retryCount,
+              error: error instanceof Error ? error.message : String(error)
+            });
+          } else {
+            // Max retries reached, send error to client
+            this.logger.error('Message processing failed after max retries', {
+              clientId: queueItem.clientId,
+              messageType: queueItem.message.type,
+              retryCount: queueItem.retryCount,
+              error: error instanceof Error ? error.message : String(error)
+            });
+            this.sendError(queueItem.clientId, 'Message processing failed after retries', queueItem.message.type);
+          }
+        }
+      });
+
+      await Promise.all(processPromises);
+
+    } finally {
+      this.isProcessingQueue = false;
+    }
+  }
+
+  // Process individual message
+  private async processMessage(clientId: string, message: WebSocketMessage): Promise<void> {
+    switch (message.type) {
+      case 'session_start':
+        await this.handleSessionStart(clientId, message);
+        break;
+
+      case 'session_stop':
+        await this.handleSessionStop(clientId, message);
+        break;
+
+      case 'interaction_event':
+        await this.handleInteractionEvent(clientId, message);
+        break;
+
+      case 'screenshot_data':
+        await this.handleScreenshotData(clientId, message);
+        break;
+
+      case 'session_complete':
+        await this.handleSessionComplete(clientId, message);
+        break;
+
+      case 'subscribe_updates':
+        await this.handleSubscribeUpdates(clientId, message);
+        break;
+
+      default:
+        this.logger.warn('Unknown message type', {
+          clientId,
+          type: message.type
+        });
+        this.sendError(clientId, 'Unknown message type', message.type);
     }
   }
 
@@ -728,7 +853,13 @@ export class UnifiedWebSocketServer {
       clientTypes: Array.from(this.clients.values()).reduce((acc, client) => {
         acc[client.type] = (acc[client.type] || 0) + 1;
         return acc;
-      }, {} as Record<string, number>)
+      }, {} as Record<string, number>),
+      messageQueue: {
+        size: this.messageQueue.length,
+        maxSize: this.MAX_QUEUE_SIZE,
+        isProcessing: this.isProcessingQueue,
+        processInterval: this.QUEUE_PROCESS_INTERVAL
+      }
     };
   }
 
@@ -741,6 +872,21 @@ export class UnifiedWebSocketServer {
       clearInterval(this.cleanupInterval);
     }
 
+    if (this.queueProcessingInterval) {
+      clearInterval(this.queueProcessingInterval);
+    }
+
+    // Process any remaining messages in queue before shutdown
+    if (this.messageQueue.length > 0) {
+      this.logger.info('Processing remaining messages before shutdown', {
+        remainingMessages: this.messageQueue.length
+      });
+      while (this.messageQueue.length > 0 && !this.isProcessingQueue) {
+        await this.processMessageQueue();
+        await new Promise(resolve => setTimeout(resolve, 50)); // Small delay
+      }
+    }
+
     // Close all client connections
     this.clients.forEach((client) => {
       if (client.socket.readyState === WebSocket.OPEN) {
@@ -751,6 +897,7 @@ export class UnifiedWebSocketServer {
     // Clear all collections
     this.clients.clear();
     this.sessionClients.clear();
+    this.messageQueue.length = 0; // Clear message queue
 
     // Close WebSocket server
     return new Promise((resolve) => {

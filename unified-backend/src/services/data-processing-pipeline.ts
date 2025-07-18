@@ -66,6 +66,22 @@ export class DataProcessingPipeline extends EventEmitter {
   private maxConcurrentJobs = 5;
   private processingInterval: NodeJS.Timeout | null = null;
 
+  // Database connection pool throttling
+  private readonly MAX_CONCURRENT_DB_OPERATIONS = 15; // Stay under pool limit of 20
+  private activeDatabaseOperations = 0;
+  private databaseQueue: Array<() => Promise<void>> = [];
+
+  // Database operation batching
+  private readonly BATCH_SIZE = 5; // Batch operations together
+  private readonly BATCH_TIMEOUT = 2000; // 2 seconds max wait for batch
+  private batchQueue: Array<{
+    operation: () => Promise<any>;
+    resolve: (value: any) => void;
+    reject: (error: any) => void;
+    type: string;
+  }> = [];
+  private batchTimeout: NodeJS.Timeout | null = null;
+
   constructor(
     prisma: PrismaClient,
     storageManager: StorageManager,
@@ -88,32 +104,152 @@ export class DataProcessingPipeline extends EventEmitter {
     
     this.startProcessing();
     // this.setupParallelProcessingEvents();
+    
+    // Start batch processing
+    this.startBatchProcessing();
+  }
+
+  // Database connection pool throttling methods
+  private async executeWithThrottling<T>(operation: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const execute = async () => {
+        if (this.activeDatabaseOperations >= this.MAX_CONCURRENT_DB_OPERATIONS) {
+          // Queue the operation
+          this.databaseQueue.push(async () => {
+            try {
+              this.activeDatabaseOperations++;
+              const result = await operation();
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            } finally {
+              this.activeDatabaseOperations--;
+              this.processNextInQueue();
+            }
+          });
+        } else {
+          // Execute immediately
+          this.activeDatabaseOperations++;
+          try {
+            const result = await operation();
+            resolve(result);
+          } catch (error) {
+            reject(error);
+          } finally {
+            this.activeDatabaseOperations--;
+            this.processNextInQueue();
+          }
+        }
+      };
+      
+      execute();
+    });
+  }
+
+  private processNextInQueue(): void {
+    if (this.databaseQueue.length > 0 && this.activeDatabaseOperations < this.MAX_CONCURRENT_DB_OPERATIONS) {
+      const nextOperation = this.databaseQueue.shift();
+      if (nextOperation) {
+        nextOperation();
+      }
+    }
+  }
+
+  // Database operation batching methods
+  private async executeWithBatching<T>(operation: () => Promise<T>, operationType: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.batchQueue.push({
+        operation,
+        resolve,
+        reject,
+        type: operationType
+      });
+
+      // If batch is full, process immediately
+      if (this.batchQueue.length >= this.BATCH_SIZE) {
+        this.processBatch();
+      } else {
+        // Set timeout to process batch if not full
+        if (!this.batchTimeout) {
+          this.batchTimeout = setTimeout(() => {
+            this.processBatch();
+          }, this.BATCH_TIMEOUT);
+        }
+      }
+    });
+  }
+
+  private async processBatch(): Promise<void> {
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout);
+      this.batchTimeout = null;
+    }
+
+    if (this.batchQueue.length === 0) return;
+
+    const currentBatch = this.batchQueue.splice(0, this.BATCH_SIZE);
+    
+    this.logger.info('🔄 Processing database operation batch', {
+      batchSize: currentBatch.length,
+      operations: currentBatch.map(b => b.type),
+      activeDatabaseOperations: this.activeDatabaseOperations,
+      queueSize: this.databaseQueue.length
+    });
+
+    // Execute all operations in the batch concurrently
+    await this.executeWithThrottling(async () => {
+      const promises = currentBatch.map(async (batchItem) => {
+        try {
+          const result = await batchItem.operation();
+          batchItem.resolve(result);
+        } catch (error) {
+          batchItem.reject(error);
+        }
+      });
+
+      await Promise.all(promises);
+    });
   }
 
   // Session Management
   async createSession(data: SessionCreationData): Promise<any> {
     try {
-      const session = await this.prisma.unifiedSession.create({
-        data: {
-          id: data.id,
-          type: data.type,
-          config: data.config,
-          workerId: data.workerId,
-          userAgent: data.userAgent,
-          ipAddress: data.ipAddress,
-          status: 'ACTIVE',
-          processingStatus: 'PENDING'
-        }
-      });
+      // Use upsert to handle duplicate session IDs gracefully
+      const session = await this.executeWithThrottling(() => 
+        this.prisma.unifiedSession.upsert({
+          where: { id: data.id },
+          create: {
+            id: data.id,
+            type: data.type,
+            config: data.config,
+            workerId: data.workerId,
+            userAgent: data.userAgent,
+            ipAddress: data.ipAddress,
+            status: 'ACTIVE',
+            processingStatus: 'PENDING'
+          },
+          update: {
+            // Update session if it already exists (in case of duplicate start messages)
+            status: 'ACTIVE',
+            config: data.config,
+            userAgent: data.userAgent,
+            ipAddress: data.ipAddress
+          }
+        })
+      );
 
-      this.logger.info('Session created', {
+      this.logger.info('Session created/updated', {
         sessionId: session.id,
-        type: session.type
+        type: session.type,
+        isNew: session.startTime.getTime() > (Date.now() - 5000) // New if created in last 5 seconds
       });
 
       return session;
     } catch (error) {
-      this.logger.error('Failed to create session', error, { sessionId: data.id });
+      this.logger.error('Failed to create/update session', {
+        sessionId: data.id,
+        error: error instanceof Error ? error.message : String(error)
+      });
       throw error;
     }
   }
@@ -121,22 +257,26 @@ export class DataProcessingPipeline extends EventEmitter {
   async stopSession(sessionId: string): Promise<void> {
     try {
       // Check if session exists first
-      const existingSession = await this.prisma.unifiedSession.findUnique({
-        where: { id: sessionId }
-      });
+      const existingSession = await this.executeWithThrottling(() => 
+        this.prisma.unifiedSession.findUnique({
+          where: { id: sessionId }
+        })
+      );
 
       if (!existingSession) {
         this.logger.warn('Cannot stop session - session not found in database', { sessionId });
         return; // Don't throw error for missing sessions
       }
 
-      await this.prisma.unifiedSession.update({
-        where: { id: sessionId },
-        data: {
-          status: 'COMPLETED',
-          endTime: new Date()
-        }
-      });
+      await this.executeWithThrottling(() => 
+        this.prisma.unifiedSession.update({
+          where: { id: sessionId },
+          data: {
+            status: 'COMPLETED',
+            endTime: new Date()
+          }
+        })
+      );
 
       this.logger.info('Session stopped successfully', { sessionId });
     } catch (error) {
@@ -151,10 +291,18 @@ export class DataProcessingPipeline extends EventEmitter {
 
   // Stream Data Validation (Real-time)
   async validateStreamData(data: any, dataType: 'interaction' | 'screenshot' | 'session_metadata'): Promise<any> {
+    this.logger.info('📥 DataProcessingPipeline.validateStreamData() called', {
+      dataType,
+      dataId: data?.id || 'unknown',
+      sessionId: data?.sessionId || 'unknown',
+      dataKeys: data ? Object.keys(data) : [],
+      timestamp: new Date().toISOString()
+    });
+
     try {
       const validation = await this.dataValidation.validateStreamData(data, dataType);
       
-      this.logger.debug('Stream data validated', {
+      this.logger.info('✅ Stream data validated successfully', {
         sessionId: validation.sessionId,
         dataType,
         isValid: validation.isValid,
@@ -175,6 +323,15 @@ export class DataProcessingPipeline extends EventEmitter {
   async processInteraction(interactionData: any): Promise<ProcessingResult> {
     const jobId = uuidv4();
     
+    this.logger.info('🎯 DataProcessingPipeline.processInteraction() called', {
+      jobId,
+      sessionId: interactionData?.sessionId || 'unknown',
+      interactionType: interactionData?.type || 'unknown',
+      interactionId: interactionData?.id || 'unknown',
+      dataKeys: interactionData ? Object.keys(interactionData) : [],
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       // Step 1: Validate incoming interaction data
       const validation = await this.validateStreamData(interactionData, 'interaction');
@@ -192,53 +349,71 @@ export class DataProcessingPipeline extends EventEmitter {
       }
 
       // Step 2: Create interaction record
-      const interaction = await this.prisma.interaction.create({
-        data: {
-          sessionId: interactionData.sessionId,
-          type: interactionData.type,
-          timestamp: BigInt(interactionData.timestamp),
-          sessionTime: interactionData.sessionTime || 0,
-          primarySelector: interactionData.primarySelector || interactionData.selector,
-          selectorAlternatives: JSON.stringify(interactionData.selectorAlternatives || []),
-          xpath: interactionData.xpath,
-          cssPath: interactionData.cssPath,
-          elementTag: interactionData.elementTag || interactionData.element || 'unknown',
-          elementText: interactionData.elementText || interactionData.text,
-          elementValue: interactionData.elementValue || interactionData.value,
-          elementAttributes: JSON.stringify(interactionData.elementAttributes || {}),
-          clientX: interactionData.clientX || interactionData.coordinates?.clientX,
-          clientY: interactionData.clientY || interactionData.coordinates?.clientY,
-          pageX: interactionData.pageX || interactionData.coordinates?.pageX,
-          pageY: interactionData.pageY || interactionData.coordinates?.pageY,
-          boundingBox: JSON.stringify(interactionData.boundingBox || {}),
-          viewport: JSON.stringify(interactionData.viewport || {}),
-          isInViewport: interactionData.isInViewport || false,
-          percentVisible: interactionData.percentVisible || 0,
-          url: interactionData.url || 'unknown',
-          pageTitle: interactionData.pageTitle || '',
-          pageStructure: JSON.stringify(interactionData.pageStructure || {}),
-          parentElements: JSON.stringify(interactionData.parentElements || []),
-          siblingElements: JSON.stringify(interactionData.siblingElements || []),
-          nearbyElements: JSON.stringify(interactionData.nearbyElements || []),
-          stateBefore: JSON.stringify(interactionData.stateBefore || {}),
-          stateAfter: JSON.stringify(interactionData.stateAfter || {}),
-          stateChanges: JSON.stringify(interactionData.stateChanges || {}),
-          confidence: interactionData.confidence || 0.5,
-          selectorReliability: JSON.stringify(interactionData.selectorReliability || {}),
-          userIntent: interactionData.userIntent,
-          userReasoning: interactionData.userReasoning,
-          visualCues: JSON.stringify(interactionData.visualCues || [])
-        }
+      this.logger.info('💾 Storing interaction in database', {
+        jobId,
+        sessionId: interactionData.sessionId,
+        interactionType: interactionData.type,
+        timestamp: interactionData.timestamp
+      });
+      
+      const interaction = await this.executeWithBatching(() => 
+        this.prisma.interaction.create({
+          data: {
+            sessionId: interactionData.sessionId,
+            type: interactionData.type,
+            timestamp: BigInt(interactionData.timestamp),
+            sessionTime: interactionData.sessionTime || 0,
+            primarySelector: interactionData.primarySelector || interactionData.selector,
+            selectorAlternatives: JSON.stringify(interactionData.selectorAlternatives || []),
+            xpath: interactionData.xpath,
+            cssPath: interactionData.cssPath,
+            elementTag: interactionData.elementTag || interactionData.element || 'unknown',
+            elementText: interactionData.elementText || interactionData.text,
+            elementValue: interactionData.elementValue || interactionData.value,
+            elementAttributes: JSON.stringify(interactionData.elementAttributes || {}),
+            clientX: interactionData.clientX || interactionData.coordinates?.clientX,
+            clientY: interactionData.clientY || interactionData.coordinates?.clientY,
+            pageX: interactionData.pageX || interactionData.coordinates?.pageX,
+            pageY: interactionData.pageY || interactionData.coordinates?.pageY,
+            boundingBox: JSON.stringify(interactionData.boundingBox || {}),
+            viewport: JSON.stringify(interactionData.viewport || {}),
+            isInViewport: interactionData.isInViewport || false,
+            percentVisible: interactionData.percentVisible || 0,
+            url: interactionData.url || 'unknown',
+            pageTitle: interactionData.pageTitle || '',
+            pageStructure: JSON.stringify(interactionData.pageStructure || {}),
+            parentElements: JSON.stringify(interactionData.parentElements || []),
+            siblingElements: JSON.stringify(interactionData.siblingElements || []),
+            nearbyElements: JSON.stringify(interactionData.nearbyElements || []),
+            stateBefore: JSON.stringify(interactionData.stateBefore || {}),
+            stateAfter: JSON.stringify(interactionData.stateAfter || {}),
+            stateChanges: JSON.stringify(interactionData.stateChanges || {}),
+            confidence: interactionData.confidence || 0.5,
+            selectorReliability: JSON.stringify(interactionData.selectorReliability || {}),
+            userIntent: interactionData.userIntent,
+            userReasoning: interactionData.userReasoning,
+            visualCues: JSON.stringify(interactionData.visualCues || [])
+          }
+        }), 'interaction_create'
+      );
+
+      this.logger.info('✅ Interaction stored in database successfully', {
+        jobId,
+        interactionId: interaction.id,
+        sessionId: interaction.sessionId,
+        interactionType: interaction.type
       });
 
       // Calculate quality score
       const qualityScore = await this.qualityControl.scoreInteraction(interaction);
 
       // Update interaction with quality score
-      await this.prisma.interaction.update({
-        where: { id: interaction.id },
-        data: { confidence: qualityScore }
-      });
+      await this.executeWithBatching(() => 
+        this.prisma.interaction.update({
+          where: { id: interaction.id },
+          data: { confidence: qualityScore }
+        }), 'interaction_update'
+      );
 
       // Queue for enhanced processing if high quality
       if (qualityScore > 0.7) {
@@ -286,6 +461,14 @@ export class DataProcessingPipeline extends EventEmitter {
   async processScreenshot(screenshotData: any): Promise<ProcessingResult> {
     const jobId = uuidv4();
     
+    this.logger.info('📷 DataProcessingPipeline.processScreenshot() called', {
+      jobId,
+      sessionId: screenshotData?.sessionId || 'unknown',
+      screenshotId: screenshotData?.id || 'unknown',
+      dataKeys: screenshotData ? Object.keys(screenshotData) : [],
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       // Step 1: Validate incoming screenshot data
       const validation = await this.validateStreamData(screenshotData, 'screenshot');
@@ -310,20 +493,22 @@ export class DataProcessingPipeline extends EventEmitter {
       );
 
       // Create screenshot record
-      const screenshot = await this.prisma.screenshot.create({
-        data: {
-          sessionId: screenshotData.sessionId,
-          interactionId: screenshotData.interactionId,
-          timestamp: BigInt(screenshotData.timestamp),
-          eventType: screenshotData.eventType,
-          s3Key: compressionResult.s3Key,
-          compressed: true,
-          format: compressionResult.format,
-          fileSize: compressionResult.fileSize,
-          viewport: JSON.stringify(screenshotData.viewport || {}),
-          quality: compressionResult.quality || 0
-        }
-      });
+      const screenshot = await this.executeWithBatching(() => 
+        this.prisma.screenshot.create({
+          data: {
+            sessionId: screenshotData.sessionId,
+            interactionId: screenshotData.interactionId,
+            timestamp: BigInt(screenshotData.timestamp),
+            eventType: screenshotData.eventType,
+            s3Key: compressionResult.s3Key,
+            compressed: true,
+            format: compressionResult.format,
+            fileSize: compressionResult.fileSize,
+            viewport: JSON.stringify(screenshotData.viewport || {}),
+            quality: compressionResult.quality || 0
+          }
+        }), 'screenshot_create'
+      );
 
       // Queue for vision analysis if high quality
       if (compressionResult.quality > 0.8) {
@@ -374,16 +559,25 @@ export class DataProcessingPipeline extends EventEmitter {
   async completeSession(sessionId: string, completionData: any): Promise<any> {
     const processingId = uuidv4();
     
+    this.logger.info('🏁 DataProcessingPipeline.completeSession() called', {
+      processingId,
+      sessionId,
+      completionDataKeys: completionData ? Object.keys(completionData) : [],
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       // Update session status
-      await this.prisma.unifiedSession.update({
-        where: { id: sessionId },
-        data: {
-          status: 'PROCESSING',
-          processingStatus: 'VALIDATING',
-          endTime: new Date()
-        }
-      });
+      await this.executeWithThrottling(() => 
+        this.prisma.unifiedSession.update({
+          where: { id: sessionId },
+          data: {
+            status: 'PROCESSING',
+            processingStatus: 'VALIDATING',
+            endTime: new Date()
+          }
+        })
+      );
 
       // Queue comprehensive processing job
       this.queueJob({
@@ -446,6 +640,17 @@ export class DataProcessingPipeline extends EventEmitter {
     }, 1000); // Check every second
 
     this.logger.info('Processing pipeline started');
+  }
+
+  private startBatchProcessing(): void {
+    // Process batches every 500ms if there are pending operations
+    setInterval(() => {
+      if (this.batchQueue.length > 0) {
+        this.processBatch();
+      }
+    }, 500);
+    
+    this.logger.info('Database batch processing started');
   }
 
   private async processJobs(): Promise<void> {
@@ -540,10 +745,12 @@ export class DataProcessingPipeline extends EventEmitter {
 
   // Processing Methods
   private async enhanceInteraction(interactionId: string): Promise<any> {
-    const interaction = await this.prisma.interaction.findUnique({
-      where: { id: interactionId },
-      include: { relatedScreenshots: true }
-    });
+    const interaction = await this.executeWithThrottling(() => 
+      this.prisma.interaction.findUnique({
+        where: { id: interactionId },
+        include: { relatedScreenshots: true }
+      })
+    );
 
     if (!interaction) {
       throw new Error('Interaction not found');
@@ -558,14 +765,16 @@ export class DataProcessingPipeline extends EventEmitter {
       // Get the first analysis result
       const firstAnalysis = visionAnalysis[0];
       if (firstAnalysis) {
-        await this.prisma.interaction.update({
-          where: { id: interactionId },
-          data: {
-            userIntent: firstAnalysis.userPsychology?.insights?.[0] || 'Unknown intent',
-            userReasoning: firstAnalysis.analysis || 'No reasoning available',
-            visualCues: JSON.stringify(firstAnalysis.userPsychology?.behaviorPredictions || [])
-          }
-        });
+        await this.executeWithThrottling(() => 
+          this.prisma.interaction.update({
+            where: { id: interactionId },
+            data: {
+              userIntent: firstAnalysis.userPsychology?.insights?.[0] || 'Unknown intent',
+              userReasoning: firstAnalysis.analysis || 'No reasoning available',
+              visualCues: JSON.stringify(firstAnalysis.userPsychology?.behaviorPredictions || [])
+            }
+          })
+        );
       }
     }
 
@@ -573,9 +782,11 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async analyzeScreenshot(screenshotId: string): Promise<any> {
-    const screenshot = await this.prisma.screenshot.findUnique({
-      where: { id: screenshotId }
-    });
+    const screenshot = await this.executeWithThrottling(() => 
+      this.prisma.screenshot.findUnique({
+        where: { id: screenshotId }
+      })
+    );
 
     if (!screenshot) {
       throw new Error('Screenshot not found');
@@ -585,14 +796,16 @@ export class DataProcessingPipeline extends EventEmitter {
     const visionAnalysis = await this.openaiService.analyzeScreenshot(screenshot);
 
     // Update screenshot with analysis
-    await this.prisma.screenshot.update({
-      where: { id: screenshotId },
-      data: {
-        visionAnalysis: JSON.stringify(visionAnalysis.analysis),
-        userPsychology: JSON.stringify(visionAnalysis.userPsychology),
-        quality: visionAnalysis.qualityScore
-      }
-    });
+    await this.executeWithThrottling(() => 
+      this.prisma.screenshot.update({
+        where: { id: screenshotId },
+        data: {
+          visionAnalysis: JSON.stringify(visionAnalysis.analysis),
+          userPsychology: JSON.stringify(visionAnalysis.userPsychology),
+          quality: visionAnalysis.qualityScore
+        }
+      })
+    );
 
     return visionAnalysis;
   }
@@ -611,14 +824,16 @@ export class DataProcessingPipeline extends EventEmitter {
       });
       
       // Update session with validation results
-      await this.prisma.unifiedSession.update({
-        where: { id: sessionId },
-        data: {
-          qualityScore: validationResult.overallScore,
-          completeness: validationResult.metrics.completenessScore,
-          reliability: validationResult.metrics.reliabilityScore
-        }
-      });
+      await this.executeWithThrottling(() => 
+        this.prisma.unifiedSession.update({
+          where: { id: sessionId },
+          data: {
+            qualityScore: validationResult.overallScore,
+            completeness: validationResult.metrics.completenessScore,
+            reliability: validationResult.metrics.reliabilityScore
+          }
+        })
+      );
       
       // If validation score is too low, mark as failed
       if (validationResult.overallScore < 30) {
@@ -648,17 +863,19 @@ export class DataProcessingPipeline extends EventEmitter {
 
     // Step 5: Complete
     await this.updateProcessingStatus(sessionId, 'COMPLETED');
-    await this.prisma.unifiedSession.update({
-      where: { id: sessionId },
-      data: {
-        status: 'COMPLETED',
-        qualityScore: qualityReport.overallScore,
-        completeness: qualityReport.completenessScore,
-        reliability: qualityReport.reliabilityScore,
-        archiveUrl: archive.s3Key,
-        trainingFileId: trainingData.openaiFileId
-      }
-    });
+    await this.executeWithThrottling(() => 
+      this.prisma.unifiedSession.update({
+        where: { id: sessionId },
+        data: {
+          status: 'COMPLETED',
+          qualityScore: qualityReport.overallScore,
+          completeness: qualityReport.completenessScore,
+          reliability: qualityReport.reliabilityScore,
+          archiveUrl: archive.s3Key,
+          trainingFileId: trainingData.openaiFileId
+        }
+      })
+    );
 
     return {
       qualityReport,
@@ -672,13 +889,15 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async generateTrainingData(sessionId: string): Promise<any> {
-    const session = await this.prisma.unifiedSession.findUnique({
-      where: { id: sessionId },
-      include: {
-        interactions: true,
-        screenshots: true
-      }
-    });
+    const session = await this.executeWithThrottling(() => 
+      this.prisma.unifiedSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          interactions: true,
+          screenshots: true
+        }
+      })
+    );
 
     if (!session) {
       throw new Error('Session not found');
@@ -689,15 +908,17 @@ export class DataProcessingPipeline extends EventEmitter {
 
     // Save training data
     const jsonlContent = trainingData.messages.map((msg: any) => JSON.stringify(msg)).join('\n');
-    const trainingRecord = await this.prisma.trainingData.create({
-      data: {
-        sessionId,
-        jsonlData: jsonlContent,
-        fileSize: jsonlContent.length,
-        trainingQuality: trainingData.trainingValue,
-        status: 'PENDING'
-      }
-    });
+    const trainingRecord = await this.executeWithThrottling(() => 
+      this.prisma.trainingData.create({
+        data: {
+          sessionId,
+          jsonlData: jsonlContent,
+          fileSize: jsonlContent.length,
+          trainingQuality: trainingData.trainingValue,
+          status: 'PENDING'
+        }
+      })
+    );
 
     return trainingRecord;
   }
@@ -755,10 +976,12 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async updateProcessingStatus(sessionId: string, status: string): Promise<void> {
-    await this.prisma.unifiedSession.update({
-      where: { id: sessionId },
-      data: { processingStatus: status as any }
-    });
+    await this.executeWithThrottling(() => 
+      this.prisma.unifiedSession.update({
+        where: { id: sessionId },
+        data: { processingStatus: status as any }
+      })
+    );
   }
 
   // Event Handling
@@ -797,14 +1020,16 @@ export class DataProcessingPipeline extends EventEmitter {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return await this.prisma.unifiedSession.count({
-      where: {
-        status: 'COMPLETED',
-        updatedAt: {
-          gte: today
+    return await this.executeWithThrottling(() => 
+      this.prisma.unifiedSession.count({
+        where: {
+          status: 'COMPLETED',
+          updatedAt: {
+            gte: today
+          }
         }
-      }
-    });
+      })
+    );
   }
 
   // Parallel Processing Methods
@@ -1089,6 +1314,17 @@ export class DataProcessingPipeline extends EventEmitter {
 
     // Stop parallel processing manager
     // Note: ParallelProcessingManager handles its own shutdown via process events
+    
+    // Process any remaining batches
+    if (this.batchQueue.length > 0) {
+      this.logger.info('Processing remaining database batches before shutdown');
+      await this.processBatch();
+    }
+    
+    if (this.batchTimeout) {
+      clearTimeout(this.batchTimeout);
+      this.batchTimeout = null;
+    }
     
     this.logger.info('Processing pipeline stopped');
   }

@@ -50,16 +50,18 @@ router.post('/database',
         case 'create_interaction':
           result = await prisma.interaction.create({
             data: {
-              id: `interaction_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
               sessionId: data.sessionId,
               type: data.type,
-              elementSelector: data.elementSelector,
+              timestamp: BigInt(data.timestamp || Date.now()),
+              sessionTime: 0,
+              primarySelector: data.elementSelector,
               elementText: data.elementText,
-              timestamp: new Date(data.timestamp),
-              viewport: data.viewport || {},
-              coordinates: data.coordinates || {},
-              qualityScore: 50, // Default quality score
-              processingStatus: 'PENDING'
+              viewport: JSON.stringify(data.viewport || {}),
+              boundingBox: JSON.stringify(data.boundingBox || {}),
+              url: data.url || 'test-url',
+              pageTitle: data.pageTitle || 'Test Page',
+              elementTag: data.elementTag || 'unknown',
+              confidence: 50 // Default quality score
             }
           });
           logger.info('Interaction created directly in database', { interactionId: result.id });
@@ -77,7 +79,7 @@ router.post('/database',
         message: `${action} completed successfully`,
         data: {
           id: result.id,
-          createdAt: result.startTime || result.timestamp
+          createdAt: action === 'create_session' ? (result as any).startTime : new Date((result as any).timestamp ? Number((result as any).timestamp) : Date.now())
         }
       });
 

@@ -6,11 +6,11 @@ class DatabaseConnection {
 
   static getInstance(): PrismaClient {
     if (!DatabaseConnection.instance) {
-      // Configure DATABASE_URL with connection pool parameters if not already set
+      // Configure DATABASE_URL with PostgreSQL connection pool parameters
       const databaseUrl = process.env.DATABASE_URL;
       const enhancedDatabaseUrl = databaseUrl?.includes('connection_limit') 
         ? databaseUrl 
-        : `${databaseUrl}?connection_limit=25&pool_timeout=10&connect_timeout=20`;
+        : `${databaseUrl}?connection_limit=20&idle_timeout=600000&pool_timeout=10&connect_timeout=20`;
 
       DatabaseConnection.instance = new PrismaClient({
         log: ['error', 'warn', 'info'],
@@ -23,7 +23,8 @@ class DatabaseConnection {
 
       // Log connection pool configuration
       console.log('🗄️ PrismaClient initialized with enhanced connection pool:', {
-        connectionLimit: 25,
+        connectionLimit: 20,
+        idleTimeout: '10min',
         poolTimeout: 10,
         connectTimeout: 20,
         url: enhancedDatabaseUrl?.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') // Hide credentials
