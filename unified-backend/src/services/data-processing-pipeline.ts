@@ -331,6 +331,36 @@ export class DataProcessingPipeline extends EventEmitter {
       dataKeys: interactionData ? Object.keys(interactionData) : [],
       timestamp: new Date().toISOString()
     });
+
+    // 🔍 LOG: Detailed payload analysis
+    console.log('📊 RECEIVED INTERACTION PAYLOAD:', {
+      type: interactionData?.type,
+      hasFlattened: {
+        primarySelector: !!interactionData?.primarySelector,
+        selectorAlternatives: !!interactionData?.selectorAlternatives,
+        xpath: !!interactionData?.xpath,
+        cssPath: !!interactionData?.cssPath,
+        elementTag: !!interactionData?.elementTag,
+        elementText: !!interactionData?.elementText,
+        coordinates: !!interactionData?.coordinates,
+        modifiers: !!interactionData?.modifiers
+      },
+      hasEnhanced: {
+        metadata: !!interactionData?.metadata && typeof interactionData.metadata === 'object',
+        pageContext: !!interactionData?.pageContext && typeof interactionData.pageContext === 'object',
+        elementDetails: !!interactionData?.elementDetails && typeof interactionData.elementDetails === 'object',
+        contextData: !!interactionData?.contextData && typeof interactionData.contextData === 'object',
+        overlays: !!interactionData?.overlays && Array.isArray(interactionData.overlays),
+        action: !!interactionData?.action && typeof interactionData.action === 'object'
+      },
+      sampleData: {
+        selector: interactionData?.primarySelector,
+        element: interactionData?.elementTag,
+        coordinates: interactionData?.coordinates,
+        metadata: interactionData?.metadata ? Object.keys(interactionData.metadata) : null,
+        overlayCount: Array.isArray(interactionData?.overlays) ? interactionData.overlays.length : 'not array'
+      }
+    });
     
     try {
       // Step 1: Validate incoming interaction data

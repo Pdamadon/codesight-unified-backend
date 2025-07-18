@@ -514,9 +514,13 @@ class UnifiedBackgroundService {
     // Notify backend
     if (this.websocketConnection) {
       this.websocketConnection.send(JSON.stringify({
-        type: 'session_started',
+        type: 'session_start',
         sessionId,
-        tabId,
+        data: {
+          tabId,
+          url: session.url,
+          title: session.title
+        },
         timestamp: Date.now()
       }));
     }
@@ -543,10 +547,13 @@ class UnifiedBackgroundService {
     // Notify backend
     if (this.websocketConnection) {
       this.websocketConnection.send(JSON.stringify({
-        type: 'session_ended',
+        type: 'session_stop',
         sessionId: session.id,
-        tabId,
-        duration: session.duration,
+        data: {
+          tabId,
+          duration: session.duration,
+          eventCount: session.eventCount || 0
+        },
         timestamp: Date.now()
       }));
     }
@@ -607,15 +614,9 @@ class UnifiedBackgroundService {
       console.log('Background: Tab closed, cleaning up session', { tabId, sessionId: session.id });
       this.activeSessions.delete(tabId);
       
-      // Notify backend if connected
-      if (this.websocketConnection && this.websocketConnection.readyState === WebSocket.OPEN) {
-        this.websocketConnection.send(JSON.stringify({
-          type: 'session_tab_closed',
-          sessionId: session.id,
-          tabId,
-          timestamp: Date.now()
-        }));
-      }
+      // Skip automatic backend notification for tab closure to prevent race conditions
+      // Manual session management is preferred for proper database synchronization
+      console.log('Background: Session cleaned up locally (no backend notification for tab closure)');
     }
   }
   

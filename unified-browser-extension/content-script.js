@@ -261,14 +261,31 @@
       // Capture screenshot before state changes
       const screenshotPromise = this.captureScreenshot('click', timestamp);
       
-      // Generate comprehensive selectors
-      const selectors = this.generateMultipleSelectors(element);
+      // Generate comprehensive selectors (using existing methods)
+      const selectors = {
+        primary: this.generateCSSSelector(element),
+        alternatives: [this.generateCSSSelector(element)],
+        xpath: this.generateXPath(element),
+        cssPath: this.generateCSSSelector(element),
+        reliability: this.testSelectorReliability(this.generateCSSSelector(element))
+      };
       
       // Capture DOM context
-      const domContext = this.captureDOMContext(element);
+      const domContext = {
+        parents: this.getParentElementInfo(element) ? [this.getParentElementInfo(element)] : [],
+        ancestors: this.getAncestorChain(element),
+        siblings: this.getSiblingElements(element),
+        nearbyElements: this.findNearbyClickableElements(element, 100)
+      };
       
-      // Analyze element properties
-      const elementAnalysis = this.analyzeElement(element);
+      // Get element analysis (simple version)
+      const elementAnalysis = {
+        tagName: element.tagName.toLowerCase(),
+        text: this.getElementText(element),
+        value: element.value || null,
+        attributes: this.getElementAttributes(element),
+        boundingBox: this.getElementBoundingBox(element)
+      };
       
       // Capture page state before interaction
       const stateBefore = this.capturePageState();
@@ -360,6 +377,37 @@
         pageTitle: document.title,
         viewport: this.getViewportInfo()
       };
+
+      // 🔍 LOG: Show what data we're collecting
+      console.log('🎯 CLICK DATA COLLECTED:', {
+        type: interactionData.type,
+        timestamp: new Date(interactionData.timestamp).toISOString(),
+        element: {
+          tag: interactionData.elementTag,
+          text: interactionData.elementText?.substring(0, 50) + '...',
+          selector: interactionData.primarySelector
+        },
+        selectors: {
+          primary: interactionData.primarySelector,
+          alternatives: interactionData.selectorAlternatives?.length,
+          xpath: interactionData.xpath?.substring(0, 50) + '...',
+          cssPath: interactionData.cssPath?.substring(0, 50) + '...',
+          reliability: interactionData.selectorReliability
+        },
+        coordinates: interactionData.coordinates,
+        modifiers: interactionData.modifiers,
+        viewport: interactionData.viewport,
+        enhancedFields: {
+          hasMetadata: !!interactionData.metadata,
+          hasPageContext: !!interactionData.pageContext,
+          hasElementDetails: !!interactionData.elementDetails,
+          hasContextData: !!interactionData.contextData,
+          hasOverlays: !!interactionData.overlays,
+          hasAction: !!interactionData.action,
+          overlayCount: interactionData.overlays?.length || 0,
+          nearbyElementCount: interactionData.nearbyElements?.length || 0
+        }
+      });
 
       // Wait for screenshot
       const screenshot = await screenshotPromise;
@@ -2372,5 +2420,8 @@
 
   // Initialize the tracker
   window.UnifiedCodeSightTracker = new UnifiedCodeSightTracker();
+  
+  // 🔍 TEST: Immediate console log to verify script loading
+  console.log('🚀 CodeSight Enhanced Tracker Loaded!', new Date().toISOString());
 
 })();
