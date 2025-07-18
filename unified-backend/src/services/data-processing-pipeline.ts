@@ -392,7 +392,15 @@ export class DataProcessingPipeline extends EventEmitter {
             selectorReliability: JSON.stringify(interactionData.selectorReliability || {}),
             userIntent: interactionData.userIntent,
             userReasoning: interactionData.userReasoning,
-            visualCues: JSON.stringify(interactionData.visualCues || [])
+            visualCues: JSON.stringify(interactionData.visualCues || []),
+            
+            // Enhanced data for GPT-4o-mini training
+            metadata: interactionData.metadata || null,
+            pageContext: interactionData.pageContext || null,
+            elementDetails: interactionData.elementDetails || null,
+            contextData: interactionData.context || null,
+            overlays: interactionData.overlays || null,
+            action: interactionData.action || null
           }
         }), 'interaction_create'
       );

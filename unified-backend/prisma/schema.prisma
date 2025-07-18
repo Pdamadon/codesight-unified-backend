@@ -156,6 +156,14 @@ model Interaction {
   burstId           String?  // Burst capture identifier
   burstIndex        Int?     // Index within burst sequence
   
+  // Enhanced interaction data for GPT-4o-mini training
+  metadata          Json?    // Session metadata, user info, viewport details
+  pageContext       Json?    // DOM snapshot, HTML hash, network requests
+  elementDetails    Json?    // Tag, text, attributes, selectors, bounding box, styles
+  contextData       Json?    // Parent/ancestor chain, siblings, nearby clickables
+  overlays          Json?    // Active modals, overlays, cookie banners
+  action            Json?    // Structured action data for training
+  
   // Relationships
   session           UnifiedSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   relatedScreenshots Screenshot[]
