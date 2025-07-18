@@ -395,65 +395,20 @@ export class DataProcessingPipeline extends EventEmitter {
             sessionTime: interactionData.sessionTime,
             sequence: interactionData.sequence,
 
-            // Flattened selectors (no stringify)
-            primarySelector: interactionData.primarySelector,
-            selectorAlternatives: interactionData.selectorAlternatives,
-            xpath: interactionData.xpath,
-            cssPath: interactionData.cssPath,
-            selectorReliability: interactionData.selectorReliability,
+            // Enhanced structured data (6 JSON objects)
+            selectors: interactionData.selectors || {},
+            visual: interactionData.visual || {},
+            element: interactionData.element || {},
+            context: interactionData.context || {},
+            state: interactionData.state || {},
+            interaction: interactionData.interaction || {},
 
-            // Element details
-            elementTag: interactionData.elementTag,
-            elementText: interactionData.elementText,
-            elementValue: interactionData.elementValue,
-            elementAttributes: interactionData.elementAttributes,
-            boundingBox: interactionData.boundingBox,
-            isInViewport: interactionData.isInViewport,
-            percentVisible: interactionData.percentVisible,
+            // Quality and metadata
+            qualityScore: this.calculateInteractionQuality(interactionData),
+            confidence: interactionData.confidence || 0.8,
 
-            // Coordinates & modifiers
-            clientX: interactionData.coordinates.clientX,
-            clientY: interactionData.coordinates.clientY,
-            pageX: interactionData.coordinates.pageX,
-            pageY: interactionData.coordinates.pageY,
-            offsetX: interactionData.coordinates.offsetX,
-            offsetY: interactionData.coordinates.offsetY,
-            modifiers: interactionData.modifiers,
-
-            // Context arrays (no stringify)
-            parentElements: interactionData.parentElements,
-            siblingElements: interactionData.siblingElements,
-            nearbyElements: interactionData.nearbyElements,
-
-            // Page context & structure
-            pageContext: interactionData.pageContext,
-            pageStructure: interactionData.pageStructure,
-
-            // State snapshots
-            stateBefore: interactionData.stateBefore,
-            stateAfter: interactionData.stateAfter,
-            stateChanges: interactionData.stateChanges,
-
-            // Screenshots linkage
-            screenshotId: interactionData.screenshotId,
-
-            // Standard page info
-            url: interactionData.url,
-            pageTitle: interactionData.pageTitle,
-            viewport: interactionData.viewport,
-
-            // Quality and reliability
-            confidence: interactionData.confidence || 0.5,
-            userIntent: interactionData.userIntent,
-            userReasoning: interactionData.userReasoning,
-            visualCues: interactionData.visualCues || [],
-
-            // Enhanced GPT‑training fields (objects)
-            metadata: interactionData.metadata,
-            elementDetails: interactionData.elementDetails,
-            contextData: interactionData.contextData,
-            overlays: interactionData.overlays,
-            action: interactionData.action
+            // Legacy support - store old format if present for migration
+            legacyData: this.extractLegacyData(interactionData)
           }
         }), 'interaction_create'
       );
@@ -1357,6 +1312,117 @@ export class DataProcessingPipeline extends EventEmitter {
 
   private parallelProcessingStats(): any {
     return this.getParallelProcessingStats();
+  }
+
+  // Helper Methods for Enhanced Structure
+  private calculateInteractionQuality(interactionData: any): number {
+    let score = 0;
+    const maxScore = 100;
+
+    // Selectors quality (25 points)
+    if (interactionData.selectors?.primary) {
+      score += 10;
+      // Prefer ID/data attributes over generic selectors
+      if (interactionData.selectors.primary.includes('#') || interactionData.selectors.primary.includes('[data-')) {
+        score += 5;
+      }
+    }
+    if (interactionData.selectors?.alternatives?.length > 0) score += 5;
+    if (interactionData.selectors?.xpath) score += 3;
+    if (interactionData.selectors?.fullPath) score += 2;
+
+    // Visual data quality (20 points)
+    if (interactionData.visual?.boundingBox && Object.keys(interactionData.visual.boundingBox).length > 0) score += 8;
+    if (interactionData.visual?.viewport && Object.keys(interactionData.visual.viewport).length > 0) score += 4;
+    if (typeof interactionData.visual?.isInViewport === 'boolean') score += 3;
+    if (typeof interactionData.visual?.percentVisible === 'number') score += 3;
+    if (interactionData.visual?.screenshot) score += 2;
+
+    // Element data quality (25 points)
+    if (interactionData.element?.tagName) score += 5;
+    if (interactionData.element?.text && interactionData.element.text.trim().length > 0) score += 8;
+    if (interactionData.element?.attributes && Object.keys(interactionData.element.attributes).length > 0) score += 6;
+    if (interactionData.element?.computedStyles && Object.keys(interactionData.element.computedStyles).length > 0) score += 3;
+    if (typeof interactionData.element?.isInteractive === 'boolean') score += 2;
+    if (interactionData.element?.role) score += 1;
+
+    // Context data quality (20 points)
+    if (interactionData.context?.parentElements?.length > 0) score += 6;
+    if (interactionData.context?.siblings?.length > 0) score += 4;
+    if (interactionData.context?.nearbyElements?.length > 0) score += 6;
+    if (interactionData.context?.pageStructure && Object.keys(interactionData.context.pageStructure).length > 0) score += 4;
+
+    // State data quality (10 points)
+    if (interactionData.state?.url) score += 3;
+    if (interactionData.state?.pageTitle) score += 2;
+    if (interactionData.state?.before && Object.keys(interactionData.state.before).length > 0) score += 3;
+    if (interactionData.state?.activeElement) score += 2;
+
+    // Apply penalties for missing critical data
+    if (!interactionData.selectors?.primary) score -= 15;
+    if (!interactionData.element?.tagName) score -= 10;
+    if (!interactionData.state?.url) score -= 5;
+
+    return Math.max(0, Math.min(score, maxScore));
+  }
+
+  private extractLegacyData(interactionData: any): any | null {
+    // Check if this data contains flat fields (legacy format)
+    const hasLegacyFields = !!(
+      interactionData.primarySelector ||
+      interactionData.selectorAlternatives ||
+      interactionData.xpath ||
+      interactionData.cssPath ||
+      interactionData.elementTag ||
+      interactionData.elementText ||
+      interactionData.elementValue ||
+      interactionData.clientX ||
+      interactionData.clientY ||
+      interactionData.pageX ||
+      interactionData.pageY
+    );
+
+    if (!hasLegacyFields) {
+      return null; // No legacy data present
+    }
+
+    // Extract and store legacy flat structure for potential rollback
+    return {
+      primarySelector: interactionData.primarySelector,
+      selectorAlternatives: interactionData.selectorAlternatives,
+      xpath: interactionData.xpath,
+      cssPath: interactionData.cssPath,
+      elementTag: interactionData.elementTag,
+      elementText: interactionData.elementText,
+      elementValue: interactionData.elementValue,
+      elementAttributes: interactionData.elementAttributes,
+      clientX: interactionData.clientX,
+      clientY: interactionData.clientY,
+      pageX: interactionData.pageX,
+      pageY: interactionData.pageY,
+      offsetX: interactionData.offsetX,
+      offsetY: interactionData.offsetY,
+      modifiers: interactionData.modifiers,
+      boundingBox: interactionData.boundingBox,
+      viewport: interactionData.viewport,
+      isInViewport: interactionData.isInViewport,
+      isVisible: interactionData.isVisible,
+      percentVisible: interactionData.percentVisible,
+      url: interactionData.url,
+      pageTitle: interactionData.pageTitle,
+      pageStructure: interactionData.pageStructure,
+      parentElements: interactionData.parentElements,
+      siblingElements: interactionData.siblingElements,
+      nearbyElements: interactionData.nearbyElements,
+      stateBefore: interactionData.stateBefore,
+      stateAfter: interactionData.stateAfter,
+      stateChanges: interactionData.stateChanges,
+      selectorReliability: interactionData.selectorReliability,
+      userIntent: interactionData.userIntent,
+      userReasoning: interactionData.userReasoning,
+      visualCues: interactionData.visualCues,
+      confidence: interactionData.confidence
+    };
   }
 
   // Shutdown

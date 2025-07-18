@@ -185,13 +185,31 @@ export class QualityControlService {
       if (session.screenshots.length >= 3) score += 10;
     }
 
-    // Check for rich interaction data
-    const richInteractions = session.interactions?.filter((i: any) => 
-      i.elementText && i.primarySelector && i.url
-    ).length || 0;
+    // Check for rich interaction data (enhanced structure)
+    const richInteractions = session.interactions?.filter((i: any) => {
+      // Check enhanced structure first
+      if (i.selectors && i.element && i.state) {
+        const hasSelector = i.selectors.primary;
+        const hasElementText = i.element.text;
+        const hasUrl = i.state.url;
+        return hasSelector && hasElementText && hasUrl;
+      }
+      
+      // Fallback to legacy structure
+      return i.elementText && i.primarySelector && i.url;
+    }).length || 0;
     
     if (richInteractions > 0) {
       score += Math.min(20, richInteractions * 2);
+    }
+
+    // Bonus for enhanced structure usage
+    const enhancedInteractions = session.interactions?.filter((i: any) => 
+      i.selectors && i.visual && i.element && i.context && i.state && i.interaction
+    ).length || 0;
+    
+    if (enhancedInteractions > 0) {
+      score += Math.min(10, enhancedInteractions);
     }
 
     return Math.min(score, maxScore);
@@ -209,23 +227,30 @@ export class QualityControlService {
     let selectorCount = 0;
 
     session.interactions.forEach((interaction: any) => {
-      if (interaction.primarySelector) {
+      // Enhanced structure check
+      const primarySelector = interaction.selectors?.primary || interaction.primarySelector;
+      const alternatives = interaction.selectors?.alternatives || 
+        (interaction.selectorAlternatives ? 
+          (typeof interaction.selectorAlternatives === 'string' ? 
+            JSON.parse(interaction.selectorAlternatives) : interaction.selectorAlternatives) 
+          : []);
+
+      if (primarySelector) {
         selectorCount++;
         
         // Good selector patterns
-        if (interaction.primarySelector.includes('[data-')) selectorScore += 3;
-        else if (interaction.primarySelector.includes('#')) selectorScore += 2;
-        else if (interaction.primarySelector.includes('.')) selectorScore += 1;
+        if (primarySelector.includes('[data-')) selectorScore += 3;
+        else if (primarySelector.includes('#')) selectorScore += 2;
+        else if (primarySelector.includes('.')) selectorScore += 1;
         
         // Check for alternative selectors
-        if (interaction.selectorAlternatives) {
-          try {
-            const alternatives = JSON.parse(interaction.selectorAlternatives);
-            if (alternatives.length > 1) selectorScore += 2;
-          } catch (e) {
-            // Ignore parsing errors
-          }
+        if (alternatives && Array.isArray(alternatives) && alternatives.length > 1) {
+          selectorScore += 2;
         }
+        
+        // Enhanced structure bonus points
+        if (interaction.selectors?.xpath) selectorScore += 1;
+        if (interaction.selectors?.fullPath) selectorScore += 1;
       }
     });
 
@@ -252,23 +277,50 @@ export class QualityControlService {
     let accuracyPoints = 0;
     
     session.interactions.forEach((interaction: any) => {
+      // Enhanced structure checks first
+      const elementText = interaction.element?.text || interaction.elementText;
+      const coordinates = interaction.interaction?.coordinates || {
+        clientX: interaction.clientX,
+        clientY: interaction.clientY
+      };
+      const pageTitle = interaction.state?.pageTitle || interaction.pageTitle;
+      const viewport = interaction.visual?.viewport || interaction.viewport;
+      const boundingBox = interaction.visual?.boundingBox || interaction.boundingBox;
+
       // Points for having element text
-      if (interaction.elementText && interaction.elementText.trim().length > 0) {
+      if (elementText && elementText.trim().length > 0) {
         accuracyPoints += 2;
       }
       
       // Points for having coordinates
-      if (interaction.clientX && interaction.clientY) {
+      if (coordinates.clientX && coordinates.clientY) {
         accuracyPoints += 1;
       }
       
       // Points for having page context
-      if (interaction.pageTitle && interaction.pageTitle.trim().length > 0) {
+      if (pageTitle && pageTitle.trim().length > 0) {
         accuracyPoints += 1;
       }
       
       // Points for having viewport information
-      if (interaction.viewport) {
+      if (viewport) {
+        accuracyPoints += 1;
+      }
+
+      // Enhanced structure bonus points
+      if (interaction.element?.attributes && Object.keys(interaction.element.attributes).length > 0) {
+        accuracyPoints += 1;
+      }
+      
+      if (interaction.context?.parentElements?.length > 0) {
+        accuracyPoints += 1;
+      }
+      
+      if (interaction.visual?.isInViewport !== undefined) {
+        accuracyPoints += 1;
+      }
+      
+      if (boundingBox && Object.keys(boundingBox).length > 0) {
         accuracyPoints += 1;
       }
     });
@@ -311,8 +363,9 @@ export class QualityControlService {
     const domains = new Set(
       session.interactions
         .map((i: any) => {
+          const url = i.state?.url || i.url;
           try {
-            return new URL(i.url).hostname;
+            return new URL(url).hostname;
           } catch {
             return null;
           }
@@ -334,8 +387,9 @@ export class QualityControlService {
     if (!interactions || interactions.length === 0) return false;
     
     const validUrls = interactions.filter(i => {
+      const url = i.state?.url || i.url;
       try {
-        new URL(i.url);
+        new URL(url);
         return true;
       } catch {
         return false;
@@ -671,18 +725,33 @@ export class QualityControlService {
       else if (interaction.type === 'SCROLL') score += 10;
       else score += 15;
       
-      // Score based on selector quality
-      if (interaction.primarySelector && interaction.primarySelector.length > 0) {
+      // Score based on selector quality (enhanced structure first)
+      const primarySelector = interaction.selectors?.primary || interaction.primarySelector;
+      if (primarySelector && primarySelector.length > 0) {
         score += 20;
         // Prefer specific selectors
-        if (interaction.primarySelector.startsWith('#')) score += 10;
-        else if (interaction.primarySelector.includes('.')) score += 5;
+        if (primarySelector.startsWith('#')) score += 10;
+        else if (primarySelector.includes('[data-')) score += 8;
+        else if (primarySelector.includes('.')) score += 5;
+        
+        // Enhanced structure bonus
+        if (interaction.selectors?.alternatives?.length > 1) score += 5;
+        if (interaction.selectors?.xpath) score += 3;
+        if (interaction.selectors?.fullPath) score += 2;
       }
       
-      // Score based on confidence
-      if (interaction.confidence && interaction.confidence > 0.8) score += 15;
-      else if (interaction.confidence && interaction.confidence > 0.6) score += 10;
-      else if (interaction.confidence && interaction.confidence > 0.4) score += 5;
+      // Enhanced structure data quality bonus
+      if (interaction.element?.text && interaction.element.text.trim().length > 0) score += 8;
+      if (interaction.visual?.boundingBox && Object.keys(interaction.visual.boundingBox).length > 0) score += 5;
+      if (interaction.context?.parentElements?.length > 0) score += 5;
+      if (interaction.state?.url) score += 3;
+      if (interaction.visual?.isInViewport !== undefined) score += 2;
+      
+      // Score based on confidence or quality score
+      const confidenceScore = interaction.confidence || (interaction.qualityScore / 100) || 0;
+      if (confidenceScore > 0.8) score += 15;
+      else if (confidenceScore > 0.6) score += 10;
+      else if (confidenceScore > 0.4) score += 5;
       
       return Math.min(score, 100);
     } catch (error) {

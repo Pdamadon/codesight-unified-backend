@@ -97,74 +97,20 @@ model Interaction {
   sessionTime       Int      // Time since session start (ms)
   sequence          Int?     // Interaction sequence number
   
-  // Element identification with multiple selectors
-  primarySelector   String
-  selectorAlternatives Json  @default("[]") // Array of alternative selectors
-  xpath             String?
-  cssPath           String?
+  // Enhanced structured data (replaces all flat fields)
+  selectors         Json     // { primary, alternatives, xpath, fullPath }
+  visual            Json     // { screenshot, boundingBox, viewport, isInViewport, percentVisible }
+  element           Json     // { tagName, text, value, attributes, computedStyles, isInteractive, role }
+  context           Json     // { parentElements, siblings, nearbyElements, pageStructure }
+  state             Json     // { before, url, pageTitle, activeElement, after?, changes? }
+  interaction       Json     // { coordinates, modifiers, button }
   
-  // Element details
-  elementTag        String
-  elementText       String?
-  elementValue      String?
-  elementAttributes Json     @default("{}")
-  
-  // Interaction coordinates
-  clientX           Int?
-  clientY           Int?
-  pageX             Int?
-  pageY             Int?
-  offsetX           Int?        // Element-relative coordinates
-  offsetY           Int?        // Element-relative coordinates
-  
-  // Keyboard modifiers
-  modifiers         Json     @default("{}")  // Ctrl, Shift, Alt, Meta keys
-  
-  // Visual context
-  boundingBox       Json     // Element bounding box
-  viewport          Json     // Viewport dimensions and scroll
-  isInViewport      Boolean  @default(false)
-  isVisible         Boolean  @default(false)  // Element visibility
-  percentVisible    Float    @default(0)
-  
-  // Page context
-  url               String
-  pageTitle         String
-  pageStructure     Json     @default("{}")
-  
-  // DOM context
-  parentElements    Json     @default("[]")
-  siblingElements   Json     @default("[]")
-  nearbyElements    Json     @default("[]")
-  
-  // State changes
-  stateBefore       Json     @default("{}")
-  stateAfter        Json?
-  stateChanges      Json     @default("{}")
-  
-  // Quality and reliability
+  // Quality and metadata
+  qualityScore      Float    @default(0)
   confidence        Float    @default(0)
-  selectorReliability Json   @default("{}")
   
-  // User intent and psychology (from vision analysis)
-  userIntent        String?
-  userReasoning     String?
-  visualCues        Json     @default("[]")
-  
-  // Extension-specific data
-  screenshotId      String?  // Reference to related screenshot
-  context           Json     @default("{}")  // DOM context from extension
-  elementAnalysis   Json     @default("{}")  // Rich element analysis data
-  burstId           String?  // Burst capture identifier
-  burstIndex        Int?     // Index within burst sequence
-  
-  // Enhanced interaction data for GPT-4o-mini training
-  metadata          Json?    // Session metadata, user info, viewport details
-  pageContext       Json?    // DOM snapshot, HTML hash, network requests
-  elementDetails    Json?    // Tag, text, attributes, selectors, bounding box, styles
-  contextData       Json?    // Parent/ancestor chain, siblings, nearby clickables
-  overlays          Json?    // Active modals, overlays, cookie banners
-  action            Json?    // Structured action data for training
+  // Legacy support (temporary during migration)
+  legacyData        Json?    // Store old flat structure for rollback if needed
   
   // Relationships
   session           UnifiedSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -173,7 +119,7 @@ model Interaction {
   @@map("interactions")
   @@index([sessionId, timestamp])
   @@index([type])
-  @@index([url])
+  @@index([qualityScore])
 }
 
 // Screenshot data with metadata

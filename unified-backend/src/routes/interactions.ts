@@ -160,30 +160,118 @@ router.post('/', [
   body('sessionId').isUUID(),
   body('type').isIn(['CLICK', 'INPUT', 'SCROLL', 'NAVIGATION', 'HOVER', 'FOCUS', 'BLUR', 'FORM_SUBMIT', 'KEY_PRESS', 'DRAG', 'DROP', 'TOUCH']),
   body('timestamp').isInt({ min: 0 }),
-  body('primarySelector').isString().isLength({ min: 1 }),
-  body('elementTag').isString().isLength({ min: 1 }),
-  body('url').isURL(),
-  body('pageTitle').isString(),
+  // Enhanced structure validation - accept either new or legacy format
+  body('selectors').optional().isObject(),
+  body('visual').optional().isObject(),
+  body('element').optional().isObject(),
+  body('context').optional().isObject(),
+  body('state').optional().isObject(),
+  body('interaction').optional().isObject(),
+  // Legacy format validation (for backward compatibility)
+  body('primarySelector').optional().isString(),
+  body('elementTag').optional().isString(),
+  body('url').optional().isURL(),
+  body('pageTitle').optional().isString(),
   body('confidence').optional().isFloat({ min: 0, max: 1 })
 ], handleValidationErrors, async (req: Request, res: Response) => {
   try {
-    const interactionData = {
-      ...req.body,
-      timestamp: BigInt(req.body.timestamp),
-      selectorAlternatives: JSON.stringify(req.body.selectorAlternatives || []),
-      elementAttributes: JSON.stringify(req.body.elementAttributes || {}),
-      boundingBox: JSON.stringify(req.body.boundingBox || {}),
-      viewport: JSON.stringify(req.body.viewport || {}),
-      pageStructure: JSON.stringify(req.body.pageStructure || {}),
-      parentElements: req.body.parentElements || [],
-      siblingElements: req.body.siblingElements || [],
-      nearbyElements: req.body.nearbyElements || [],
-      stateBefore: JSON.stringify(req.body.stateBefore || {}),
-      stateAfter: JSON.stringify(req.body.stateAfter || {}),
-      stateChanges: JSON.stringify(req.body.stateChanges || {}),
-      selectorReliability: JSON.stringify(req.body.selectorReliability || {}),
-      visualCues: JSON.stringify(req.body.visualCues || [])
-    };
+    // Detect if this is enhanced or legacy format
+    const isEnhancedFormat = !!(req.body.selectors || req.body.visual || req.body.element || 
+                              req.body.context || req.body.state || req.body.interaction);
+    
+    let interactionData: any;
+    
+    if (isEnhancedFormat) {
+      // Enhanced structure format
+      interactionData = {
+        sessionId: req.body.sessionId,
+        type: req.body.type,
+        timestamp: BigInt(req.body.timestamp),
+        sessionTime: req.body.sessionTime || 0,
+        sequence: req.body.sequence,
+
+        // Enhanced structured data (6 JSON objects)
+        selectors: req.body.selectors || {},
+        visual: req.body.visual || {},
+        element: req.body.element || {},
+        context: req.body.context || {},
+        state: req.body.state || {},
+        interaction: req.body.interaction || {},
+
+        // Quality and metadata
+        qualityScore: req.body.qualityScore || 0,
+        confidence: req.body.confidence || 0.8,
+
+        // Store legacy data if any flat fields are present for migration
+        legacyData: extractLegacyFields(req.body)
+      };
+    } else {
+      // Legacy flat structure format - convert to enhanced format
+      interactionData = {
+        sessionId: req.body.sessionId,
+        type: req.body.type,
+        timestamp: BigInt(req.body.timestamp),
+        sessionTime: req.body.sessionTime || 0,
+        sequence: req.body.sequence,
+
+        // Convert flat fields to enhanced structure
+        selectors: {
+          primary: req.body.primarySelector || '',
+          alternatives: req.body.selectorAlternatives || [],
+          xpath: req.body.xpath || '',
+          fullPath: req.body.cssPath || ''
+        },
+        visual: {
+          boundingBox: req.body.boundingBox || {},
+          viewport: req.body.viewport || {},
+          isInViewport: req.body.isInViewport || false,
+          percentVisible: req.body.percentVisible || 0,
+          screenshot: req.body.screenshotId
+        },
+        element: {
+          tagName: req.body.elementTag || '',
+          text: req.body.elementText || '',
+          value: req.body.elementValue || '',
+          attributes: req.body.elementAttributes || {},
+          computedStyles: {},
+          isInteractive: true,
+          role: req.body.elementRole || ''
+        },
+        context: {
+          parentElements: req.body.parentElements || [],
+          siblings: req.body.siblingElements || [],
+          nearbyElements: req.body.nearbyElements || [],
+          pageStructure: req.body.pageStructure || {}
+        },
+        state: {
+          before: req.body.stateBefore || {},
+          url: req.body.url || '',
+          pageTitle: req.body.pageTitle || '',
+          activeElement: req.body.activeElement,
+          after: req.body.stateAfter,
+          changes: req.body.stateChanges
+        },
+        interaction: {
+          coordinates: {
+            clientX: req.body.clientX,
+            clientY: req.body.clientY,
+            pageX: req.body.pageX,
+            pageY: req.body.pageY,
+            offsetX: req.body.offsetX,
+            offsetY: req.body.offsetY
+          },
+          modifiers: req.body.modifiers || {},
+          button: req.body.button
+        },
+
+        // Quality and metadata
+        qualityScore: req.body.qualityScore || 0,
+        confidence: req.body.confidence || 0.8,
+
+        // Store original flat data for rollback
+        legacyData: req.body
+      };
+    }
 
     const interaction = await prisma.interaction.create({
       data: interactionData
@@ -192,7 +280,8 @@ router.post('/', [
     logger.info('Interaction created', {
       interactionId: interaction.id,
       sessionId: interaction.sessionId,
-      type: interaction.type
+      type: interaction.type,
+      format: isEnhancedFormat ? 'enhanced' : 'legacy'
     });
 
     // Convert BigInt timestamp back to number for response
@@ -215,6 +304,32 @@ router.post('/', [
     });
   }
 });
+
+// Helper function to extract legacy fields for migration
+function extractLegacyFields(body: any): any | null {
+  const legacyFields = [
+    'primarySelector', 'selectorAlternatives', 'xpath', 'cssPath', 'elementTag', 
+    'elementText', 'elementValue', 'elementAttributes', 'clientX', 'clientY', 
+    'pageX', 'pageY', 'offsetX', 'offsetY', 'modifiers', 'boundingBox', 
+    'viewport', 'isInViewport', 'isVisible', 'percentVisible', 'url', 
+    'pageTitle', 'pageStructure', 'parentElements', 'siblingElements', 
+    'nearbyElements', 'stateBefore', 'stateAfter', 'stateChanges', 
+    'selectorReliability', 'userIntent', 'userReasoning', 'visualCues'
+  ];
+  
+  const hasLegacyFields = legacyFields.some(field => body[field] !== undefined);
+  
+  if (!hasLegacyFields) return null;
+  
+  const legacy: any = {};
+  legacyFields.forEach(field => {
+    if (body[field] !== undefined) {
+      legacy[field] = body[field];
+    }
+  });
+  
+  return legacy;
+}
 
 // PUT /api/interactions/:id - Update interaction
 router.put('/:id', [
@@ -316,7 +431,16 @@ router.get('/session/:sessionId/timeline', [
         return acc;
       }, {} as Record<string, number>),
       averageConfidence: timeline.reduce((sum, interaction) => sum + interaction.confidence, 0) / timeline.length || 0,
-      pagesVisited: Array.from(new Set(timeline.map(interaction => interaction.url))).length
+      averageQualityScore: timeline.reduce((sum, interaction) => sum + (interaction.qualityScore || 0), 0) / timeline.length || 0,
+      pagesVisited: Array.from(new Set(timeline.map(interaction => {
+        // Extract URL from enhanced structure or legacy field
+        return (interaction.state as any)?.url || interaction.url;
+      }).filter(Boolean))).length,
+      enhancedStructureStats: {
+        enhancedFormat: timeline.filter(i => !!(i.selectors)).length,
+        legacyFormat: timeline.filter(i => !!(i.primarySelector) && !(i.selectors)).length,
+        migrated: timeline.filter(i => !!(i.selectors) && !!(i.primarySelector)).length
+      }
     };
 
     res.json({
@@ -356,44 +480,92 @@ router.get('/analyze/selectors', [
       where,
       select: {
         id: true,
+        selectors: true,
+        element: true,
+        state: true,
+        confidence: true,
+        qualityScore: true,
+        // Include legacy fields for backward compatibility
         primarySelector: true,
         selectorAlternatives: true,
         elementTag: true,
         url: true,
-        confidence: true,
         selectorReliability: true
       }
     });
 
-    // Analyze selector patterns
+    // Filter by url and elementTag after retrieval (due to JSON field complexity)
+    const filteredInteractions = interactions.filter(interaction => {
+      if (url) {
+        const interactionUrl = (interaction.state as any)?.url || interaction.url;
+        if (interactionUrl !== url) return false;
+      }
+      
+      if (elementTag) {
+        const interactionElementTag = (interaction.element as any)?.tagName || interaction.elementTag;
+        if (interactionElementTag !== elementTag) return false;
+      }
+      
+      return true;
+    });
+
+    // Analyze selector patterns for enhanced structure
     const selectorAnalysis = {
-      totalInteractions: interactions.length,
+      totalInteractions: filteredInteractions.length,
       selectorTypes: {} as Record<string, number>,
       reliabilityStats: {
         high: 0, // > 0.8
         medium: 0, // 0.5 - 0.8
         low: 0 // < 0.5
       },
-      commonPatterns: {} as Record<string, number>
+      commonPatterns: {} as Record<string, number>,
+      enhancedStructureStats: {
+        enhancedFormat: 0,
+        legacyFormat: 0,
+        migrated: 0
+      }
     };
 
-    interactions.forEach(interaction => {
-      // Analyze selector types
-      const selector = interaction.primarySelector;
-      if (selector.startsWith('#')) {
-        selectorAnalysis.selectorTypes['id'] = (selectorAnalysis.selectorTypes['id'] || 0) + 1;
-      } else if (selector.startsWith('.')) {
-        selectorAnalysis.selectorTypes['class'] = (selectorAnalysis.selectorTypes['class'] || 0) + 1;
-      } else if (selector.includes('[data-')) {
-        selectorAnalysis.selectorTypes['data-attribute'] = (selectorAnalysis.selectorTypes['data-attribute'] || 0) + 1;
-      } else if (selector.includes('[')) {
-        selectorAnalysis.selectorTypes['attribute'] = (selectorAnalysis.selectorTypes['attribute'] || 0) + 1;
+    filteredInteractions.forEach(interaction => {
+      // Determine if this is enhanced or legacy format
+      const isEnhanced = !!(interaction.selectors);
+      const isLegacy = !!(interaction.primarySelector);
+      
+      if (isEnhanced) {
+        selectorAnalysis.enhancedStructureStats.enhancedFormat++;
+        if (isLegacy) selectorAnalysis.enhancedStructureStats.migrated++;
       } else {
-        selectorAnalysis.selectorTypes['tag'] = (selectorAnalysis.selectorTypes['tag'] || 0) + 1;
+        selectorAnalysis.enhancedStructureStats.legacyFormat++;
       }
 
-      // Analyze reliability
-      const confidence = interaction.confidence;
+      // Get selector data (enhanced or legacy)
+      const selectorData = interaction.selectors as any;
+      const primarySelector = selectorData?.primary || interaction.primarySelector;
+      const elementTagName = (interaction.element as any)?.tagName || interaction.elementTag;
+
+      if (primarySelector) {
+        // Analyze selector types
+        if (primarySelector.startsWith('#')) {
+          selectorAnalysis.selectorTypes['id'] = (selectorAnalysis.selectorTypes['id'] || 0) + 1;
+        } else if (primarySelector.startsWith('.')) {
+          selectorAnalysis.selectorTypes['class'] = (selectorAnalysis.selectorTypes['class'] || 0) + 1;
+        } else if (primarySelector.includes('[data-')) {
+          selectorAnalysis.selectorTypes['data-attribute'] = (selectorAnalysis.selectorTypes['data-attribute'] || 0) + 1;
+        } else if (primarySelector.includes('[')) {
+          selectorAnalysis.selectorTypes['attribute'] = (selectorAnalysis.selectorTypes['attribute'] || 0) + 1;
+        } else {
+          selectorAnalysis.selectorTypes['tag'] = (selectorAnalysis.selectorTypes['tag'] || 0) + 1;
+        }
+
+        // Track common patterns
+        if (elementTagName) {
+          const pattern = `${elementTagName}:${primarySelector.split(/[#.\[\]]/)[0]}`;
+          selectorAnalysis.commonPatterns[pattern] = (selectorAnalysis.commonPatterns[pattern] || 0) + 1;
+        }
+      }
+
+      // Analyze reliability using confidence or qualityScore
+      const confidence = interaction.confidence || (interaction.qualityScore / 100);
       if (confidence > 0.8) {
         selectorAnalysis.reliabilityStats.high++;
       } else if (confidence > 0.5) {
@@ -401,10 +573,6 @@ router.get('/analyze/selectors', [
       } else {
         selectorAnalysis.reliabilityStats.low++;
       }
-
-      // Track common patterns
-      const pattern = `${interaction.elementTag}:${selector.split(/[#.\[\]]/)[0]}`;
-      selectorAnalysis.commonPatterns[pattern] = (selectorAnalysis.commonPatterns[pattern] || 0) + 1;
     });
 
     res.json({
