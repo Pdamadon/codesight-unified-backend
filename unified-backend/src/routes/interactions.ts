@@ -433,13 +433,13 @@ router.get('/session/:sessionId/timeline', [
       averageConfidence: timeline.reduce((sum, interaction) => sum + interaction.confidence, 0) / timeline.length || 0,
       averageQualityScore: timeline.reduce((sum, interaction) => sum + (interaction.qualityScore || 0), 0) / timeline.length || 0,
       pagesVisited: Array.from(new Set(timeline.map(interaction => {
-        // Extract URL from enhanced structure or legacy field
-        return (interaction.state as any)?.url || interaction.url;
+        // Extract URL from enhanced structure or legacy data
+        return (interaction.state as any)?.url || (interaction.legacyData as any)?.url;
       }).filter(Boolean))).length,
       enhancedStructureStats: {
         enhancedFormat: timeline.filter(i => !!(i.selectors)).length,
-        legacyFormat: timeline.filter(i => !!(i.primarySelector) && !(i.selectors)).length,
-        migrated: timeline.filter(i => !!(i.selectors) && !!(i.primarySelector)).length
+        legacyFormat: timeline.filter(i => !!(i.legacyData as any)?.primarySelector && !(i.selectors)).length,
+        migrated: timeline.filter(i => !!(i.selectors) && !!(i.legacyData as any)?.primarySelector).length
       }
     };
 
@@ -470,11 +470,9 @@ router.get('/analyze/selectors', [
   try {
     const { sessionId, url, elementTag } = req.query;
 
-    // Build filter conditions
+    // Build filter conditions (only sessionId can be filtered at DB level)
     const where: any = {};
     if (sessionId) where.sessionId = sessionId;
-    if (url) where.url = url;
-    if (elementTag) where.elementTag = elementTag;
 
     const interactions = await prisma.interaction.findMany({
       where,
@@ -485,24 +483,19 @@ router.get('/analyze/selectors', [
         state: true,
         confidence: true,
         qualityScore: true,
-        // Include legacy fields for backward compatibility
-        primarySelector: true,
-        selectorAlternatives: true,
-        elementTag: true,
-        url: true,
-        selectorReliability: true
+        legacyData: true
       }
     });
 
     // Filter by url and elementTag after retrieval (due to JSON field complexity)
     const filteredInteractions = interactions.filter(interaction => {
       if (url) {
-        const interactionUrl = (interaction.state as any)?.url || interaction.url;
+        const interactionUrl = (interaction.state as any)?.url || (interaction.legacyData as any)?.url;
         if (interactionUrl !== url) return false;
       }
       
       if (elementTag) {
-        const interactionElementTag = (interaction.element as any)?.tagName || interaction.elementTag;
+        const interactionElementTag = (interaction.element as any)?.tagName || (interaction.legacyData as any)?.elementTag;
         if (interactionElementTag !== elementTag) return false;
       }
       
@@ -529,7 +522,8 @@ router.get('/analyze/selectors', [
     filteredInteractions.forEach(interaction => {
       // Determine if this is enhanced or legacy format
       const isEnhanced = !!(interaction.selectors);
-      const isLegacy = !!(interaction.primarySelector);
+      const legacyData = interaction.legacyData as any;
+      const isLegacy = !!(legacyData?.primarySelector);
       
       if (isEnhanced) {
         selectorAnalysis.enhancedStructureStats.enhancedFormat++;
@@ -540,8 +534,8 @@ router.get('/analyze/selectors', [
 
       // Get selector data (enhanced or legacy)
       const selectorData = interaction.selectors as any;
-      const primarySelector = selectorData?.primary || interaction.primarySelector;
-      const elementTagName = (interaction.element as any)?.tagName || interaction.elementTag;
+      const primarySelector = selectorData?.primary || legacyData?.primarySelector;
+      const elementTagName = (interaction.element as any)?.tagName || legacyData?.elementTag;
 
       if (primarySelector) {
         // Analyze selector types

@@ -679,15 +679,27 @@ export class LifecycleManager {
       }
     });
 
-    // Anonymize interaction data
-    await this.prisma.interaction.updateMany({
+    // Anonymize interaction data by clearing sensitive context data
+    const interactions = await this.prisma.interaction.findMany({
       where: { sessionId: session.id },
-      data: {
-        userIntent: null,
-        userReasoning: null,
-        visualCues: JSON.stringify([])
-      }
+      select: { id: true, context: true }
     });
+
+    for (const interaction of interactions) {
+      const anonymizedContext = {
+        ...(interaction.context as any || {}),
+        visionAnalysis: null, // Remove vision analysis data
+        pageStructure: {}, // Clear page structure
+        userInsights: null // Remove any user insights
+      };
+
+      await this.prisma.interaction.update({
+        where: { id: interaction.id },
+        data: {
+          context: anonymizedContext
+        }
+      });
+    }
 
     this.logger.info("Session anonymized", { sessionId: session.id });
   }

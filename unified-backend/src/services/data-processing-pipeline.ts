@@ -781,13 +781,28 @@ export class DataProcessingPipeline extends EventEmitter {
       // Get the first analysis result
       const firstAnalysis = visionAnalysis[0];
       if (firstAnalysis) {
+        // Update the interaction's context with vision analysis results
+        const currentInteraction = await this.executeWithThrottling(() => 
+          this.prisma.interaction.findUnique({
+            where: { id: interactionId },
+            select: { context: true }
+          })
+        );
+
+        const updatedContext = {
+          ...(currentInteraction?.context as any || {}),
+          visionAnalysis: {
+            userIntent: firstAnalysis.userPsychology?.insights?.[0] || 'Unknown intent',
+            userReasoning: firstAnalysis.analysis || 'No reasoning available',
+            visualCues: firstAnalysis.userPsychology?.behaviorPredictions || []
+          }
+        };
+
         await this.executeWithThrottling(() => 
           this.prisma.interaction.update({
             where: { id: interactionId },
             data: {
-              userIntent: firstAnalysis.userPsychology?.insights?.[0] || 'Unknown intent',
-              userReasoning: firstAnalysis.analysis || 'No reasoning available',
-              visualCues: JSON.stringify(firstAnalysis.userPsychology?.behaviorPredictions || [])
+              context: updatedContext
             }
           })
         );

@@ -54,14 +54,46 @@ router.post('/database',
               type: data.type,
               timestamp: BigInt(data.timestamp || Date.now()),
               sessionTime: 0,
-              primarySelector: data.elementSelector,
-              elementText: data.elementText,
-              viewport: JSON.stringify(data.viewport || {}),
-              boundingBox: JSON.stringify(data.boundingBox || {}),
-              url: data.url || 'test-url',
-              pageTitle: data.pageTitle || 'Test Page',
-              elementTag: data.elementTag || 'unknown',
-              confidence: 50 // Default quality score
+              selectors: {
+                primary: data.elementSelector || 'test-selector',
+                alternatives: [],
+                xpath: '',
+                fullPath: ''
+              },
+              visual: {
+                viewport: data.viewport || {},
+                boundingBox: data.boundingBox || {},
+                isInViewport: true,
+                percentVisible: 100
+              },
+              element: {
+                tagName: data.elementTag || 'unknown',
+                text: data.elementText || '',
+                value: '',
+                attributes: {},
+                computedStyles: {},
+                isInteractive: true,
+                role: ''
+              },
+              context: {
+                parentElements: [],
+                siblings: [],
+                nearbyElements: [],
+                pageStructure: {}
+              },
+              state: {
+                before: {},
+                url: data.url || 'test-url',
+                pageTitle: data.pageTitle || 'Test Page',
+                activeElement: ''
+              },
+              interaction: {
+                coordinates: { clientX: 0, clientY: 0, pageX: 0, pageY: 0, offsetX: 0, offsetY: 0 },
+                modifiers: {},
+                button: 0
+              },
+              qualityScore: 50,
+              confidence: 0.5
             }
           });
           logger.info('Interaction created directly in database', { interactionId: result.id });
