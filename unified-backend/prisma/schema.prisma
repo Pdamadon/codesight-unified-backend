@@ -96,7 +96,6 @@ model Interaction {
   timestamp         BigInt   // Unix timestamp in milliseconds
   sessionTime       Int      // Time since session start (ms)
   sequence          Int?     // Interaction sequence number
-  modifiers         Json     @default("{}") // Keyboard modifiers (ctrl, shift, alt, meta)
   
   // Element identification with multiple selectors
   primarySelector   String
@@ -117,6 +116,9 @@ model Interaction {
   pageY             Int?
   offsetX           Int?        // Element-relative coordinates
   offsetY           Int?        // Element-relative coordinates
+  
+  // Keyboard modifiers
+  modifiers         Json     @default("{}")  // Ctrl, Shift, Alt, Meta keys
   
   // Visual context
   boundingBox       Json     // Element bounding box

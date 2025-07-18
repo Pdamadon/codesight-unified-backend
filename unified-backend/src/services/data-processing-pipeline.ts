@@ -362,45 +362,68 @@ export class DataProcessingPipeline extends EventEmitter {
             sessionId: interactionData.sessionId,
             type: interactionData.type,
             timestamp: BigInt(interactionData.timestamp),
-            sessionTime: interactionData.sessionTime || 0,
-            primarySelector: interactionData.primarySelector || interactionData.selector || 'unknown',
-            selectorAlternatives: JSON.stringify(interactionData.selectorAlternatives || []),
+            sessionTime: interactionData.sessionTime,
+            sequence: interactionData.sequence,
+
+            // Flattened selectors (no stringify)
+            primarySelector: interactionData.primarySelector,
+            selectorAlternatives: interactionData.selectorAlternatives,
             xpath: interactionData.xpath,
             cssPath: interactionData.cssPath,
-            elementTag: interactionData.elementTag || interactionData.element || 'unknown',
-            elementText: interactionData.elementText || interactionData.text,
-            elementValue: interactionData.elementValue || interactionData.value,
-            elementAttributes: JSON.stringify(interactionData.elementAttributes || {}),
-            clientX: interactionData.clientX || interactionData.coordinates?.clientX,
-            clientY: interactionData.clientY || interactionData.coordinates?.clientY,
-            pageX: interactionData.pageX || interactionData.coordinates?.pageX,
-            pageY: interactionData.pageY || interactionData.coordinates?.pageY,
-            boundingBox: JSON.stringify(interactionData.boundingBox || {}),
-            viewport: JSON.stringify(interactionData.viewport || {}),
-            isInViewport: interactionData.isInViewport || false,
-            percentVisible: interactionData.percentVisible || 0,
-            url: interactionData.url || 'unknown',
-            pageTitle: interactionData.pageTitle || '',
-            pageStructure: JSON.stringify(interactionData.pageStructure || {}),
-            parentElements: JSON.stringify(interactionData.parentElements || []),
-            siblingElements: JSON.stringify(interactionData.siblingElements || []),
-            nearbyElements: JSON.stringify(interactionData.nearbyElements || []),
-            stateBefore: JSON.stringify(interactionData.stateBefore || {}),
-            stateAfter: JSON.stringify(interactionData.stateAfter || {}),
-            stateChanges: JSON.stringify(interactionData.stateChanges || {}),
+            selectorReliability: interactionData.selectorReliability,
+
+            // Element details
+            elementTag: interactionData.elementTag,
+            elementText: interactionData.elementText,
+            elementValue: interactionData.elementValue,
+            elementAttributes: interactionData.elementAttributes,
+            boundingBox: interactionData.boundingBox,
+            isInViewport: interactionData.isInViewport,
+            percentVisible: interactionData.percentVisible,
+
+            // Coordinates & modifiers
+            clientX: interactionData.coordinates.clientX,
+            clientY: interactionData.coordinates.clientY,
+            pageX: interactionData.coordinates.pageX,
+            pageY: interactionData.coordinates.pageY,
+            offsetX: interactionData.coordinates.offsetX,
+            offsetY: interactionData.coordinates.offsetY,
+            modifiers: interactionData.modifiers,
+
+            // Context arrays (no stringify)
+            parentElements: interactionData.parentElements,
+            siblingElements: interactionData.siblingElements,
+            nearbyElements: interactionData.nearbyElements,
+
+            // Page context & structure
+            pageContext: interactionData.pageContext,
+            pageStructure: interactionData.pageStructure,
+
+            // State snapshots
+            stateBefore: interactionData.stateBefore,
+            stateAfter: interactionData.stateAfter,
+            stateChanges: interactionData.stateChanges,
+
+            // Screenshots linkage
+            screenshotId: interactionData.screenshotId,
+
+            // Standard page info
+            url: interactionData.url,
+            pageTitle: interactionData.pageTitle,
+            viewport: interactionData.viewport,
+
+            // Quality and reliability
             confidence: interactionData.confidence || 0.5,
-            selectorReliability: JSON.stringify(interactionData.selectorReliability || {}),
             userIntent: interactionData.userIntent,
             userReasoning: interactionData.userReasoning,
-            visualCues: JSON.stringify(interactionData.visualCues || []),
-            
-            // Enhanced data for GPT-4o-mini training
-            metadata: interactionData.metadata || null,
-            pageContext: interactionData.pageContext || null,
-            elementDetails: interactionData.elementDetails || null,
-            contextData: interactionData.context || null,
-            overlays: interactionData.overlays || null,
-            action: interactionData.action || null
+            visualCues: interactionData.visualCues || [],
+
+            // Enhanced GPT‑training fields (objects)
+            metadata: interactionData.metadata,
+            elementDetails: interactionData.elementDetails,
+            contextData: interactionData.contextData,
+            overlays: interactionData.overlays,
+            action: interactionData.action
           }
         }), 'interaction_create'
       );
