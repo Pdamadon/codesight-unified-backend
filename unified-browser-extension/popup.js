@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const errorDiv = document.getElementById('error');
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const downloadControls = document.getElementById('downloadControls');
   const settingsLink = document.getElementById('settingsLink');
   
   // Status elements
@@ -67,6 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       startBtn.disabled = true;
       stopBtn.disabled = false;
+      downloadControls.style.display = 'block';
     } else {
       trackingStatusEl.textContent = 'Inactive';
       trackingStatusEl.className = 'status-value status-inactive';
@@ -78,6 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       startBtn.disabled = false;
       stopBtn.disabled = true;
+      downloadControls.style.display = 'none';
     }
   }
   
@@ -157,6 +161,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       stopBtn.disabled = false;
     }
   });
+
+  // Download session data
+  downloadBtn.addEventListener('click', async () => {
+    try {
+      errorDiv.style.display = 'none';
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Downloading...';
+      
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      // Get session data from content script
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'GET_SESSION_DATA'
+      });
+      
+      if (response && response.success && response.data) {
+        downloadSessionAsJSON(response.data);
+        downloadBtn.textContent = 'Downloaded!';
+        setTimeout(() => {
+          downloadBtn.textContent = 'Download Session Data';
+        }, 2000);
+      } else {
+        throw new Error('No session data available');
+      }
+    } catch (error) {
+      showError('Failed to download session data: ' + error.message);
+    } finally {
+      downloadBtn.disabled = false;
+    }
+  });
   
   // Settings link
   settingsLink.addEventListener('click', (e) => {
@@ -177,6 +211,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     contentDiv.style.display = 'block';
   }
   
+  // Download session data as JSON
+  function downloadSessionAsJSON(sessionData) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `codesight-session-${sessionData.sessionId || 'unknown'}-${timestamp}.json`;
+    
+    const dataStr = JSON.stringify(sessionData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('Session data downloaded:', filename);
+  }
+
   // Show session summary
   function showSummary(data) {
     // Could show a modal or notification with session summary

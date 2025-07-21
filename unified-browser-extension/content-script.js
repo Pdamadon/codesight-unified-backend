@@ -89,6 +89,11 @@
             sendResponse(this.getStatus());
             break;
             
+          case 'GET_SESSION_DATA':
+            const sessionData = this.getSessionData();
+            sendResponse({ success: true, data: sessionData });
+            break;
+            
           case 'UPDATE_CONFIG':
             this.updateConfig(message.config);
             sendResponse({ success: true });
@@ -97,11 +102,6 @@
           case 'CAPTURE_SCREENSHOT':
             const screenshot = await this.captureScreenshot(message.trigger);
             sendResponse({ success: true, screenshot });
-            break;
-            
-          case 'GET_SESSION_DATA':
-            const sessionData = await this.getSessionData();
-            sendResponse({ success: true, data: sessionData });
             break;
 
           case 'ping':
@@ -261,31 +261,14 @@
       // Capture screenshot before state changes
       const screenshotPromise = this.captureScreenshot('click', timestamp);
       
-      // Generate comprehensive selectors (using existing methods)
-      const selectors = {
-        primary: this.generateCSSSelector(element),
-        alternatives: [this.generateCSSSelector(element)],
-        xpath: this.generateXPath(element),
-        cssPath: this.generateCSSSelector(element),
-        reliability: this.testSelectorReliability(this.generateCSSSelector(element))
-      };
+      // Generate enhanced multi-selector strategy with reliability scoring
+      const selectors = this.generateEnhancedSelectors(element);
       
-      // Capture DOM context
-      const domContext = {
-        parents: this.getParentElementInfo(element) ? [this.getParentElementInfo(element)] : [],
-        ancestors: this.getAncestorChain(element),
-        siblings: this.getSiblingElements(element),
-        nearbyElements: this.findNearbyClickableElements(element, 100)
-      };
+      // Capture enhanced DOM context matching reference model
+      const domContext = this.captureEnhancedDOMContext(element);
       
-      // Get element analysis (simple version)
-      const elementAnalysis = {
-        tagName: element.tagName.toLowerCase(),
-        text: this.getElementText(element),
-        value: element.value || null,
-        attributes: this.getElementAttributes(element),
-        boundingBox: this.getElementBoundingBox(element)
-      };
+      // Get comprehensive element analysis
+      const elementAnalysis = this.analyzeElementEnhanced(element);
       
       // Capture page state before interaction
       const stateBefore = this.capturePageState();
@@ -296,28 +279,85 @@
         sessionTime: timestamp - this.startTime,
         sequence: ++this.interactionSequence,
 
-        // 1) Flattened selectors → top‑level fields
+        // 1) Enhanced selectors (Group 1: Selectors)
+        selectors: {
+          primary: selectors.primary,
+          alternatives: selectors.alternatives,
+          xpath: selectors.xpath,
+          cssPath: selectors.cssPath,
+          selectorReliability: selectors.selectorReliability
+        },
+
+        // Backward compatibility - keep existing flattened fields
         primarySelector: selectors.primary,
         selectorAlternatives: selectors.alternatives,
         xpath: selectors.xpath,
         cssPath: selectors.cssPath,
-        selectorReliability: selectors.reliability,
+        selectorReliability: selectors.selectorReliability,
 
-        // 2) Element details as real objects
-        elementTag: element.tagName.toLowerCase(),
-        elementText: this.getElementText(element),
-        elementValue: element.value || null,
-        elementAttributes: this.getElementAttributes(element),
-        boundingBox: this.getElementBoundingBox(element),
-        isInViewport: this.isElementInViewport(element),
-        percentVisible: this.testSelectorReliability(selectors.primary),
+        // 2) Enhanced visual context (Group 2: Visual)
+        visual: {
+          boundingBox: elementAnalysis.boundingBox,
+          viewport: this.getViewportInfo(),
+          isInViewport: elementAnalysis.isInViewport,
+          percentVisible: elementAnalysis.percentVisible,
+          screenshot: null // Will be set after screenshot capture
+        },
 
-        // 3) Surrounding context as arrays
-        parentElements: domContext.parents,
+        // 3) Enhanced element analysis (Group 3: Element)
+        element: elementAnalysis,
+
+        // Backward compatibility - keep existing flattened fields
+        elementTag: elementAnalysis.tagName,
+        elementText: elementAnalysis.text,
+        elementValue: elementAnalysis.value,
+        elementAttributes: elementAnalysis.attributes,
+        boundingBox: elementAnalysis.boundingBox,
+        isInViewport: elementAnalysis.isInViewport,
+        percentVisible: elementAnalysis.percentVisible,
+
+        // 4) Enhanced DOM context (Group 4: Context)
+        context: {
+          parentElements: domContext.parentElements,
+          siblings: domContext.siblings,
+          nearbyElements: domContext.nearbyElements,
+          pageStructure: domContext.pageStructure
+        },
+
+        // Backward compatibility - keep existing flattened fields
+        parentElements: domContext.parentElements,
         siblingElements: domContext.siblings,
         nearbyElements: domContext.nearbyElements,
 
-        // 4) Metadata & pageContext as objects
+        // 5) Enhanced state tracking (Group 5: State)
+        state: {
+          before: stateBefore,
+          after: null, // Will be captured after delay
+          changes: null // Will be calculated after state capture
+        },
+
+        // 6) Enhanced interaction metadata (Group 6: Interaction)
+        interaction: {
+          coordinates: {
+            clientX: event.clientX,
+            clientY: event.clientY,
+            pageX: event.pageX,
+            pageY: event.pageY,
+            offsetX: event.offsetX,
+            offsetY: event.offsetY
+          },
+          modifiers: {
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            altKey: event.altKey,
+            metaKey: event.metaKey
+          },
+          timestamp: timestamp,
+          sessionTime: timestamp - this.startTime,
+          sequence: this.interactionSequence
+        },
+
+        // Backward compatibility - legacy fields
         metadata: {
           sessionId: this.sessionId,
           userId: 'anon-user',
@@ -383,20 +423,44 @@
         type: interactionData.type,
         timestamp: new Date(interactionData.timestamp).toISOString(),
         element: {
-          tag: interactionData.elementTag,
-          text: interactionData.elementText?.substring(0, 50) + '...',
-          selector: interactionData.primarySelector
+          tag: interactionData.element?.tagName,
+          text: interactionData.element?.text?.substring(0, 50) + '...',
+          selector: interactionData.selectors?.primary,
+          isInteractive: interactionData.element?.isInteractive,
+          percentVisible: interactionData.element?.percentVisible,
+          attributeCount: Object.keys(interactionData.element?.attributes || {}).length
         },
         selectors: {
-          primary: interactionData.primarySelector,
-          alternatives: interactionData.selectorAlternatives?.length,
-          xpath: interactionData.xpath?.substring(0, 50) + '...',
-          cssPath: interactionData.cssPath?.substring(0, 50) + '...',
-          reliability: interactionData.selectorReliability
+          primary: interactionData.selectors?.primary,
+          alternativeCount: interactionData.selectors?.alternatives?.length,
+          topReliability: interactionData.selectors?.selectorReliability?.[interactionData.selectors.primary],
+          xpath: interactionData.selectors?.xpath?.substring(0, 50) + '...',
+          cssPath: interactionData.selectors?.cssPath?.substring(0, 50) + '...'
         },
-        coordinates: interactionData.coordinates,
-        modifiers: interactionData.modifiers,
-        viewport: interactionData.viewport,
+        visual: {
+          viewport: interactionData.visual?.viewport,
+          isInViewport: interactionData.visual?.isInViewport,
+          percentVisible: interactionData.visual?.percentVisible,
+          hasScreenshot: !!interactionData.visual?.screenshot
+        },
+        interaction: {
+          coordinates: !!interactionData.interaction?.coordinates,
+          modifiers: !!interactionData.interaction?.modifiers,
+          timestamp: interactionData.interaction?.timestamp,
+          sessionTime: interactionData.interaction?.sessionTime,
+          sequence: interactionData.interaction?.sequence
+        },
+        state: {
+          hasBefore: !!interactionData.state?.before,
+          hasAfter: !!interactionData.state?.after,
+          hasChanges: !!interactionData.state?.changes
+        },
+        context: {
+          parentCount: interactionData.context?.parentElements?.length || 0,
+          siblingCount: interactionData.context?.siblings?.length || 0,
+          nearbyElementCount: interactionData.context?.nearbyElements?.length || 0,
+          hasPageStructure: !!interactionData.context?.pageStructure
+        },
         enhancedFields: {
           hasMetadata: !!interactionData.metadata,
           hasPageContext: !!interactionData.pageContext,
@@ -404,27 +468,55 @@
           hasContextData: !!interactionData.contextData,
           hasOverlays: !!interactionData.overlays,
           hasAction: !!interactionData.action,
-          overlayCount: interactionData.overlays?.length || 0,
-          nearbyElementCount: interactionData.nearbyElements?.length || 0
+          overlayCount: interactionData.overlays?.length || 0
         }
       });
 
-      // Wait for screenshot
+      // Wait for screenshot and link to visual context
       const screenshot = await screenshotPromise;
       if (screenshot) {
         interactionData.screenshotId = screenshot.id;
+        interactionData.visual.screenshot = screenshot.id;
       }
 
-      // Capture state after a delay to see changes
+      // Capture state after a delay to see changes (reference model: 1000ms)
       setTimeout(() => {
-        interactionData.stateAfter = this.capturePageState();
-        interactionData.stateChanges = this.detectStateChanges(
-          interactionData.stateBefore,
-          interactionData.stateAfter
-        );
+        const stateAfter = this.capturePageState();
+        const stateChanges = this.detectStateChanges(stateBefore, stateAfter);
+        
+        // Update enhanced state structure
+        interactionData.state.after = stateAfter;
+        interactionData.state.changes = stateChanges;
+        
+        // Backward compatibility
+        interactionData.stateAfter = stateAfter;
+        interactionData.stateChanges = stateChanges;
         
         // Update the stored event
         this.updateEvent(interactionData);
+        
+        console.log('Enhanced: State changes detected:', {
+          hasChanges: Object.keys(stateChanges).length > 0,
+          changeTypes: Object.keys(stateChanges),
+          urlChanged: !!stateChanges.urlChanged,
+          titleChanged: !!stateChanges.titleChanged,
+          scrollChanged: !!stateChanges.scrollChanged,
+          details: {
+            urlChange: stateChanges.urlChanged ? {
+              from: stateChanges.urlChanged.from?.substring(0, 50) + '...',
+              to: stateChanges.urlChanged.to?.substring(0, 50) + '...',
+              type: stateChanges.urlChanged.type
+            } : null,
+            titleChange: stateChanges.titleChanged ? {
+              from: stateChanges.titleChanged.from?.substring(0, 30) + '...',
+              to: stateChanges.titleChanged.to?.substring(0, 30) + '...'
+            } : null,
+            scrollChange: stateChanges.scrollChanged ? {
+              delta: stateChanges.scrollChanged.delta,
+              direction: stateChanges.scrollChanged.direction
+            } : null
+          }
+        });
       }, 1000);
 
       this.captureEvent(interactionData);
@@ -747,6 +839,179 @@
       return names.join(' > ');
     }
 
+    // Enhanced selector generation with priority-based multi-selector strategy
+    generateEnhancedSelectors(element) {
+      const selectors = {
+        primary: null,
+        alternatives: [],
+        xpath: null,
+        cssPath: null,
+        selectorReliability: {}
+      };
+
+      // Priority 1: ID selector (highest reliability)
+      if (element.id && typeof element.id === 'string' && element.id.trim()) {
+        const idSelector = `#${CSS.escape(element.id)}`;
+        selectors.primary = idSelector;
+        selectors.alternatives.push(idSelector);
+        selectors.selectorReliability[idSelector] = this.testSelectorReliability(idSelector);
+      }
+
+      // Priority 2: Data attributes (test-friendly, high reliability)
+      const dataAttrs = ['data-testid', 'data-test', 'data-cy', 'data-qa', 'data-automation'];
+      for (const attr of dataAttrs) {
+        const value = element.getAttribute(attr);
+        if (value && value.trim()) {
+          const selector = `[${attr}="${CSS.escape(value)}"]`;
+          if (!selectors.primary) selectors.primary = selector;
+          selectors.alternatives.push(selector);
+          selectors.selectorReliability[selector] = this.testSelectorReliability(selector);
+        }
+      }
+
+      // Priority 3: ARIA attributes (accessibility-based, good reliability)
+      const ariaLabel = element.getAttribute('aria-label');
+      if (ariaLabel && ariaLabel.trim()) {
+        const selector = `[aria-label="${CSS.escape(ariaLabel)}"]`;
+        if (!selectors.primary) selectors.primary = selector;
+        selectors.alternatives.push(selector);
+        selectors.selectorReliability[selector] = this.testSelectorReliability(selector);
+      }
+
+      // Priority 4: Name attribute (for form elements)
+      const name = element.getAttribute('name');
+      if (name && name.trim()) {
+        const selector = `[name="${CSS.escape(name)}"]`;
+        if (!selectors.primary) selectors.primary = selector;
+        selectors.alternatives.push(selector);
+        selectors.selectorReliability[selector] = this.testSelectorReliability(selector);
+      }
+
+      // Priority 5: Role + text combination (semantic, medium reliability)
+      const role = element.getAttribute('role');
+      const text = this.getElementText(element);
+      if (role && text && text.length < 50) {
+        // Use contains selector for partial text match
+        const selector = `[role="${role}"]:contains("${CSS.escape(text.substring(0, 30))}")`;
+        selectors.alternatives.push(selector);
+        // Note: :contains is not standard CSS, so lower reliability
+        selectors.selectorReliability[selector] = 0.6;
+      }
+
+      // Priority 6: Class-based selector (stable classes only)
+      if (element.className && typeof element.className === 'string') {
+        const stableClasses = element.className.split(' ')
+          .filter(c => c.trim() && !this.isUnstableClass(c))
+          .slice(0, 3); // Limit to prevent overly complex selectors
+        
+        if (stableClasses.length > 0) {
+          const selector = '.' + stableClasses.map(c => CSS.escape(c)).join('.');
+          if (!selectors.primary) selectors.primary = selector;
+          selectors.alternatives.push(selector);
+          selectors.selectorReliability[selector] = this.testSelectorReliability(selector);
+        }
+      }
+
+      // Priority 7: Tag + attributes combination (fallback)
+      const tagSelector = this.buildEnhancedTagSelector(element);
+      if (!selectors.primary) selectors.primary = tagSelector;
+      selectors.alternatives.push(tagSelector);
+      selectors.selectorReliability[tagSelector] = this.testSelectorReliability(tagSelector);
+
+      // Generate XPath (robust fallback)
+      selectors.xpath = this.generateXPath(element);
+      selectors.selectorReliability[selectors.xpath] = 0.7;
+
+      // Generate full CSS path (last resort)
+      selectors.cssPath = this.generateFullCSSPath(element);
+      selectors.selectorReliability[selectors.cssPath] = 0.4;
+
+      // Remove duplicates and sort by reliability
+      selectors.alternatives = [...new Set(selectors.alternatives)]
+        .sort((a, b) => (selectors.selectorReliability[b] || 0) - (selectors.selectorReliability[a] || 0))
+        .slice(0, 5); // Keep top 5 alternatives
+
+      console.log('Enhanced selectors generated:', {
+        primary: selectors.primary,
+        alternativeCount: selectors.alternatives.length,
+        topReliability: selectors.selectorReliability[selectors.primary],
+        alternatives: selectors.alternatives.map(s => ({
+          selector: s.substring(0, 50) + '...',
+          reliability: selectors.selectorReliability[s]
+        }))
+      });
+
+      return selectors;
+    }
+
+    buildEnhancedTagSelector(element) {
+      let selector = element.tagName.toLowerCase();
+      
+      // Add type for input elements
+      if (element.type) {
+        selector += `[type="${CSS.escape(element.type)}"]`;
+      }
+      
+      // Add role if present
+      const role = element.getAttribute('role');
+      if (role) {
+        selector += `[role="${CSS.escape(role)}"]`;
+      }
+
+      // Add href for links (first 50 chars to avoid overly long selectors)
+      if (element.tagName.toLowerCase() === 'a' && element.href) {
+        const href = element.getAttribute('href');
+        if (href && href.length < 100) {
+          selector += `[href="${CSS.escape(href)}"]`;
+        }
+      }
+
+      // Add value for inputs (but mask sensitive inputs)
+      if (element.tagName.toLowerCase() === 'input' && element.value && !this.isSensitiveInput(element)) {
+        const value = element.value.substring(0, 20); // Limit length
+        selector += `[value="${CSS.escape(value)}"]`;
+      }
+      
+      return selector;
+    }
+
+    generateFullCSSPath(element) {
+      const names = [];
+      let current = element;
+      
+      while (current.parentNode && current !== document.body) {
+        if (current.id) {
+          names.unshift('#' + CSS.escape(current.id));
+          break;
+        } else {
+          let tagName = current.nodeName.toLowerCase();
+          
+          if (current.className && typeof current.className === 'string') {
+            const stableClasses = current.className.split(' ')
+              .filter(c => c.trim() && !this.isUnstableClass(c))
+              .slice(0, 2); // Limit to prevent complexity
+            if (stableClasses.length > 0) {
+              tagName += '.' + stableClasses.map(c => CSS.escape(c)).join('.');
+            }
+          }
+          
+          const siblings = Array.from(current.parentNode.children);
+          const sameTagSiblings = siblings.filter(sibling => 
+            sibling.nodeName === current.nodeName
+          );
+          
+          if (sameTagSiblings.length > 1) {
+            const index = sameTagSiblings.indexOf(current) + 1;
+            tagName += `:nth-of-type(${index})`;
+          }
+          
+          names.unshift(tagName);
+          current = current.parentNode;
+        }
+      }
+      return names.join(' > ');
+    }
+
     // DOM context capture
     captureDOMContext(element) {
       const context = {
@@ -794,6 +1059,105 @@
       context.nearbyElements = this.findNearbyInteractiveElements(element);
 
       return context;
+    }
+
+    // Enhanced DOM context capture matching reference model (Group 4: Context)
+    captureEnhancedDOMContext(element) {
+      const context = {
+        parentElements: [],
+        siblings: [],
+        nearbyElements: [],
+        pageStructure: this.analyzePageStructure()
+      };
+
+      // Capture parent hierarchy (up to 5 levels) with enhanced data
+      let parent = element.parentElement;
+      let depth = 0;
+      while (parent && depth < 5) {
+        context.parentElements.push({
+          tagName: parent.tagName.toLowerCase(),
+          id: parent.id || null,
+          className: this.getStableClasses(parent),
+          role: parent.getAttribute('role'),
+          selector: this.generateEnhancedSelectors(parent).primary,
+          text: this.getElementTextEnhanced(parent).substring(0, 50),
+          level: depth + 1
+        });
+        parent = parent.parentElement;
+        depth++;
+      }
+
+      // Capture siblings with enhanced data
+      if (element.parentElement) {
+        const siblings = Array.from(element.parentElement.children);
+        const elementIndex = siblings.indexOf(element);
+        
+        // Get 2 siblings before and after (reference model pattern)
+        for (let i = Math.max(0, elementIndex - 2); i <= Math.min(siblings.length - 1, elementIndex + 2); i++) {
+          if (i !== elementIndex) {
+            const sibling = siblings[i];
+            context.siblings.push({
+              position: i < elementIndex ? 'before' : 'after',
+              distance: Math.abs(i - elementIndex),
+              tagName: sibling.tagName.toLowerCase(),
+              text: this.getElementTextEnhanced(sibling).substring(0, 50),
+              selector: this.generateEnhancedSelectors(sibling).primary,
+              isInteractive: this.isInteractiveElement(sibling),
+              boundingBox: this.getBoundingBox(sibling)
+            });
+          }
+        }
+      }
+
+      // Capture nearby clickable elements within 100px radius (reference model spec)
+      context.nearbyElements = this.findNearbyClickableElementsEnhanced(element, 100);
+
+      return context;
+    }
+
+    // Enhanced nearby elements detection matching reference model
+    findNearbyClickableElementsEnhanced(targetElement, radius = 100) {
+      const nearby = [];
+      const targetRect = targetElement.getBoundingClientRect();
+      const targetCenter = {
+        x: targetRect.left + targetRect.width / 2,
+        y: targetRect.top + targetRect.height / 2
+      };
+
+      const interactiveSelectors = 'a, button, input, select, textarea, [role="button"], [onclick], [data-clickable], [tabindex]:not([tabindex="-1"])';
+      const candidates = document.querySelectorAll(interactiveSelectors);
+
+      candidates.forEach(element => {
+        if (element === targetElement) return;
+        
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        
+        const center = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+
+        const distance = Math.sqrt(
+          Math.pow(center.x - targetCenter.x, 2) +
+          Math.pow(center.y - targetCenter.y, 2)
+        );
+
+        if (distance <= radius) {
+          nearby.push({
+            selector: this.generateEnhancedSelectors(element).primary,
+            tagName: element.tagName.toLowerCase(),
+            text: this.getElementTextEnhanced(element).substring(0, 30),
+            distance: Math.round(distance),
+            direction: this.getRelativeDirection(targetCenter, center),
+            isVisible: this.isElementVisible(element),
+            isInteractive: this.isInteractiveElement(element)
+          });
+        }
+      });
+
+      // Sort by distance and return closest 10 (reference model spec)
+      return nearby.sort((a, b) => a.distance - b.distance).slice(0, 10);
     }
 
     findNearbyInteractiveElements(targetElement, radius = 150) {
@@ -869,6 +1233,113 @@
         role: element.getAttribute('role') || this.inferElementRole(element),
         tabIndex: element.tabIndex
       };
+    }
+
+    // Enhanced element analysis matching reference model (Group 3: Element)
+    analyzeElementEnhanced(element) {
+      const computed = window.getComputedStyle(element);
+      
+      return {
+        // Basic element properties
+        tagName: element.tagName.toLowerCase(),
+        text: this.getElementTextEnhanced(element),
+        value: this.isSensitiveInput(element) ? '[PROTECTED]' : (element.value || null),
+        attributes: this.getAllElementAttributes(element),
+        
+        // Visual and positioning
+        boundingBox: this.getBoundingBox(element),
+        isVisible: this.isElementVisible(element),
+        isInViewport: this.isElementInViewport(element),
+        percentVisible: this.getElementVisibility(element),
+        
+        // Comprehensive computed styles (matching reference model)
+        computedStyles: {
+          display: computed.display,
+          visibility: computed.visibility,
+          position: computed.position,
+          zIndex: computed.zIndex,
+          width: computed.width,
+          height: computed.height,
+          padding: computed.padding,
+          margin: computed.margin,
+          backgroundColor: computed.backgroundColor,
+          color: computed.color,
+          fontSize: computed.fontSize,
+          cursor: computed.cursor,
+          pointerEvents: computed.pointerEvents,
+          opacity: computed.opacity,
+          transform: computed.transform,
+          transition: computed.transition
+        },
+        
+        // Interaction and accessibility
+        isInteractive: this.isInteractiveElement(element),
+        role: element.getAttribute('role') || this.inferElementRole(element),
+        tabIndex: element.tabIndex,
+        
+        // Additional properties from reference model
+        hasClickHandler: !!(element.onclick || element.getAttribute('onclick')),
+        ariaLabel: element.getAttribute('aria-label'),
+        title: element.title,
+        alt: element.alt,
+        placeholder: element.placeholder
+      };
+    }
+
+    // Enhanced text extraction with fallbacks (matching reference model)
+    getElementTextEnhanced(element) {
+      if (!element) return '';
+      
+      // Get direct text content, not including children
+      const textNodes = [];
+      for (let node of element.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          textNodes.push(node.textContent.trim());
+        }
+      }
+      
+      let text = textNodes.join(' ').trim();
+      
+      // Fallback to full text content if no direct text
+      if (!text) {
+        text = element.textContent?.trim() || '';
+      }
+      
+      // Also check common attributes (matching reference model priority)
+      if (!text) {
+        text = element.value || 
+               element.placeholder || 
+               element.alt || 
+               element.title || 
+               element.getAttribute('aria-label') || '';
+      }
+      
+      // Limit length to prevent huge payloads
+      return text.length > 100 ? text.substring(0, 100) + '...' : text;
+    }
+
+    // Get all element attributes (comprehensive)
+    getAllElementAttributes(element) {
+      const attrs = {};
+      for (let attr of element.attributes) {
+        attrs[attr.name] = attr.value;
+      }
+      return attrs;
+    }
+
+    // Enhanced element visibility calculation (matching reference model)
+    getElementVisibility(element) {
+      const rect = element.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+      const visibleWidth = Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0);
+      
+      const visibleArea = Math.max(0, visibleHeight) * Math.max(0, visibleWidth);
+      const totalArea = rect.height * rect.width;
+      
+      return totalArea > 0 ? Math.round((visibleArea / totalArea) * 100) : 0;
     }
 
     getRelevantAttributes(element) {
@@ -1222,23 +1693,41 @@
     detectStateChanges(stateBefore, stateAfter) {
       const changes = {};
       
+      // Enhanced URL change detection (matching reference model)
       if (stateBefore.url !== stateAfter.url) {
-        changes.urlChanged = true;
+        changes.urlChanged = {
+          from: stateBefore.url,
+          to: stateAfter.url,
+          type: this.detectNavigationType(stateBefore.url, stateAfter.url)
+        };
+        // Backward compatibility
         changes.newUrl = stateAfter.url;
       }
       
+      // Enhanced title change detection  
       if (stateBefore.title !== stateAfter.title) {
-        changes.titleChanged = true;
+        changes.titleChanged = {
+          from: stateBefore.title,
+          to: stateAfter.title
+        };
+        // Backward compatibility
         changes.newTitle = stateAfter.title;
       }
       
+      // Enhanced scroll change detection (matching reference model)  
       const scrollDiff = {
         x: Math.abs(stateAfter.scrollPosition.x - stateBefore.scrollPosition.x),
         y: Math.abs(stateAfter.scrollPosition.y - stateBefore.scrollPosition.y)
       };
       
       if (scrollDiff.x > 10 || scrollDiff.y > 10) {
-        changes.scrollChanged = true;
+        changes.scrollChanged = {
+          from: stateBefore.scrollPosition.y,
+          to: stateAfter.scrollPosition.y,
+          delta: stateAfter.scrollPosition.y - stateBefore.scrollPosition.y,
+          direction: stateAfter.scrollPosition.y > stateBefore.scrollPosition.y ? 'down' : 'up'
+        };
+        // Backward compatibility
         changes.scrollDiff = scrollDiff;
       }
       
@@ -2066,7 +2555,7 @@
       // Multiple event listeners to catch all navigation scenarios
       window.addEventListener('beforeunload', saveBeforeUnload);
       window.addEventListener('pagehide', saveBeforeUnload);
-      window.addEventListener('unload', saveBeforeUnload);
+      // Note: unload event removed due to permissions policy violation
       
       // Also save state periodically during tracking
       if (this.statePreservationInterval) {
@@ -2415,6 +2904,98 @@
           data: this.events[idx]
         });
       }
+    }
+
+    // Get complete session data for download
+    getSessionData() {
+      const duration = this.isTracking ? Date.now() - this.startTime : 0;
+      
+      return {
+        sessionId: this.sessionId,
+        isTracking: this.isTracking,
+        startTime: this.startTime,
+        duration: duration,
+        currentUrl: window.location.href,
+        
+        // Enhanced interaction data
+        events: this.events,
+        eventCount: this.events.length,
+        
+        // Screenshots
+        screenshots: this.screenshots,
+        screenshotCount: this.screenshots.length,
+        
+        // Session metadata
+        config: this.config,
+        
+        // Quality metrics
+        quality: this.calculateQualityScore(),
+        
+        // Page context
+        pageContext: {
+          title: document.title,
+          url: window.location.href,
+          timestamp: Date.now(),
+          viewport: this.getViewportInfo(),
+          userAgent: navigator.userAgent
+        },
+        
+        // Data structure info
+        dataStructure: {
+          enhancedDataGroups: 6,
+          version: '2.0',
+          features: [
+            'multi-selector-generation',
+            'enhanced-element-analysis', 
+            'visual-context-collection',
+            'dom-hierarchy-mapping',
+            'state-change-detection',
+            'detailed-interaction-metadata'
+          ]
+        }
+      };
+    }
+
+    // Calculate session quality score
+    calculateQualityScore() {
+      if (this.events.length === 0) return 0;
+      
+      let score = 0;
+      let totalChecks = 0;
+      
+      // Check for enhanced data completeness
+      this.events.forEach(event => {
+        totalChecks++;
+        
+        // Check for selector data
+        if (event.selectors && event.selectors.primary) score += 20;
+        
+        // Check for element analysis
+        if (event.element && event.element.tag) score += 20;
+        
+        // Check for visual context
+        if (event.visual && event.visual.boundingBox) score += 20;
+        
+        // Check for DOM context
+        if (event.context && event.context.parentElements) score += 20;
+        
+        // Check for interaction metadata
+        if (event.interaction && event.interaction.coordinates) score += 20;
+      });
+      
+      return totalChecks > 0 ? Math.round(score / totalChecks) : 0;
+    }
+
+    // Get current tracking status
+    getStatus() {
+      return {
+        isTracking: this.isTracking,
+        sessionId: this.sessionId,
+        eventCount: this.events.length,
+        screenshotCount: this.screenshots.length,
+        duration: this.isTracking ? Date.now() - this.startTime : 0,
+        quality: this.calculateQualityScore()
+      };
     }
   }
 
