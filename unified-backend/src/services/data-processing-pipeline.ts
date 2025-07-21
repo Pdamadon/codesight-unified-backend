@@ -559,137 +559,14 @@ export class DataProcessingPipeline extends EventEmitter {
         interactionData.validationErrors = validation.errors;
       }
 
-      // Step 1.5: Route enhanced data to unified sessions or flat data to interactions
-      const isEnhancedData = this.isEnhanced6GroupData(interactionData);
-      
-      if (isEnhancedData) {
-        this.logger.info('🔄 Routing enhanced 6-group data to unified session', {
-          jobId,
-          sessionId: interactionData.sessionId,
-          interactionType: interactionData.type
-        });
-        
-        return await this.processEnhancedInteraction(interactionData, jobId);
-      }
-
-      // Step 2: Create flat interaction record (legacy path)
-      this.logger.info('💾 Storing interaction in database', {
+      // All interaction data is now enhanced 6-group data - process through unified session path only
+      this.logger.info('🔄 Processing enhanced 6-group interaction data', {
         jobId,
         sessionId: interactionData.sessionId,
-        interactionType: interactionData.type,
-        timestamp: interactionData.timestamp
+        interactionType: interactionData.type
       });
       
-      const interaction = await this.executeWithBatching(() => 
-        this.prisma.interaction.create({
-          data: {
-            sessionId: interactionData.sessionId,
-            type: interactionData.type,
-            timestamp: BigInt(interactionData.timestamp),
-            sessionTime: interactionData.sessionTime,
-            sequence: interactionData.sequence,
-
-            // Store legacy flat data in new JSON schema format
-            selectors: {
-              primary: interactionData.primarySelector,
-              alternatives: interactionData.selectorAlternatives,
-              xpath: interactionData.xpath,
-              cssPath: interactionData.cssPath,
-              reliability: interactionData.selectorReliability
-            },
-            element: {
-              tag: interactionData.elementTag,
-              text: interactionData.elementText,
-              value: interactionData.elementValue,
-              attributes: interactionData.elementAttributes
-            },
-            visual: {
-              boundingBox: interactionData.boundingBox,
-              isInViewport: interactionData.isInViewport,
-              percentVisible: interactionData.percentVisible,
-              coordinates: interactionData.coordinates,
-              viewport: interactionData.viewport
-            },
-            context: {
-              url: interactionData.url,
-              pageTitle: interactionData.pageTitle,
-              pageContext: interactionData.pageContext,
-              pageStructure: interactionData.pageStructure,
-              parentElements: interactionData.parentElements,
-              siblingElements: interactionData.siblingElements,
-              nearbyElements: interactionData.nearbyElements
-            },
-            state: {
-              before: interactionData.stateBefore,
-              after: interactionData.stateAfter,
-              changes: interactionData.stateChanges
-            },
-            interaction: {
-              modifiers: interactionData.modifiers,
-              screenshotId: interactionData.screenshotId,
-              confidence: interactionData.confidence || 0.5,
-              userIntent: interactionData.userIntent,
-              userReasoning: interactionData.userReasoning,
-              visualCues: interactionData.visualCues || []
-            },
-
-            // Legacy data for backward compatibility
-            legacyData: {
-              metadata: interactionData.metadata,
-              elementDetails: interactionData.elementDetails,
-              contextData: interactionData.contextData,
-              overlays: interactionData.overlays,
-              action: interactionData.action
-            }
-          }
-        }), 'interaction_create'
-      );
-
-      this.logger.info('✅ Interaction stored in database successfully', {
-        jobId,
-        interactionId: interaction.id,
-        sessionId: interaction.sessionId,
-        interactionType: interaction.type
-      });
-
-      // Calculate quality score
-      const qualityScore = await this.qualityControl.scoreInteraction(interaction);
-
-      // Update interaction with quality score
-      await this.executeWithBatching(() => 
-        this.prisma.interaction.update({
-          where: { id: interaction.id },
-          data: { confidence: qualityScore }
-        }), 'interaction_update'
-      );
-
-      // Queue for enhanced processing if high quality
-      if (qualityScore > 0.7) {
-        this.queueJob({
-          id: uuidv4(),
-          sessionId: interactionData.sessionId,
-          type: 'interaction',
-          status: 'pending',
-          data: { interactionId: interaction.id },
-          priority: 2,
-          createdAt: new Date(),
-          retryCount: 0,
-          maxRetries: 3
-        });
-      }
-
-      this.logger.info('Interaction processed', {
-        interactionId: interaction.id,
-        sessionId: interactionData.sessionId,
-        qualityScore
-      });
-
-      return {
-        id: interaction.id,
-        status: 'success',
-        qualityScore,
-        processingTime: Date.now() - interactionData.timestamp
-      };
+      return await this.processEnhancedInteraction(interactionData, jobId);
 
     } catch (error) {
       this.logger.error('Failed to process interaction', error, {
