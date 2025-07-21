@@ -120,13 +120,34 @@ export class QualityControlService {
   }
 
   private async getSessionWithData(sessionId: string): Promise<any> {
-    return await this.prisma.unifiedSession.findUnique({
+    const session = await this.prisma.unifiedSession.findUnique({
       where: { id: sessionId },
       include: {
         interactions: true,
         screenshots: true
       }
     });
+
+    if (!session) return null;
+
+    // Convert enhanced interactions from JSON to interaction-like objects
+    const enhancedInteractions = Array.isArray(session.enhancedInteractions) 
+      ? session.enhancedInteractions as any[]
+      : [];
+    
+    // Normalize interactions from both sources
+    const allInteractions = [
+      // Legacy flat interactions
+      ...session.interactions.map(this.normalizeInteraction),
+      // Enhanced JSON interactions  
+      ...enhancedInteractions.map(this.normalizeEnhancedInteraction)
+    ].sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Replace session.interactions with normalized data
+    return {
+      ...session,
+      interactions: allInteractions
+    };
   }
 
   private async calculateQualityMetrics(session: any): Promise<QualityMetrics> {
@@ -195,6 +216,83 @@ export class QualityControlService {
     }
 
     return Math.min(score, maxScore);
+  }
+
+  // Normalization methods for different interaction formats
+  private normalizeInteraction(interaction: any): any {
+    // For legacy flat interactions stored in interactions table
+    return {
+      id: interaction.id,
+      type: interaction.type,
+      timestamp: Number(interaction.timestamp),
+      // Extract data from JSON fields
+      url: typeof interaction.context === 'object' && interaction.context?.url 
+        ? interaction.context.url 
+        : null,
+      elementText: typeof interaction.element === 'object' && interaction.element?.text
+        ? interaction.element.text
+        : null,
+      elementTag: typeof interaction.element === 'object' && interaction.element?.tag
+        ? interaction.element.tag
+        : null,
+      primarySelector: typeof interaction.selectors === 'object' && interaction.selectors?.primary
+        ? interaction.selectors.primary
+        : null,
+      selectorAlternatives: typeof interaction.selectors === 'object' && interaction.selectors?.alternatives
+        ? JSON.stringify(interaction.selectors.alternatives)
+        : null,
+      clientX: typeof interaction.visual === 'object' && interaction.visual?.clientX
+        ? interaction.visual.clientX
+        : null,
+      clientY: typeof interaction.visual === 'object' && interaction.visual?.clientY
+        ? interaction.visual.clientY
+        : null,
+      pageTitle: typeof interaction.context === 'object' && interaction.context?.pageTitle
+        ? interaction.context.pageTitle
+        : null,
+      viewport: typeof interaction.visual === 'object' && interaction.visual?.viewport
+        ? JSON.stringify(interaction.visual.viewport)
+        : null,
+      // Keep original structure for compatibility
+      selectors: interaction.selectors,
+      element: interaction.element,
+      context: interaction.context,
+      visual: interaction.visual,
+      state: interaction.state,
+      interaction: interaction.interaction
+    };
+  }
+
+  private normalizeEnhancedInteraction(enhanced: any): any {
+    // For enhanced interactions stored in unified sessions JSON
+    return {
+      id: enhanced.id,
+      type: enhanced.type,
+      timestamp: enhanced.timestamp,
+      // Extract commonly used fields from 6-group structure
+      url: enhanced.context?.url || null,
+      elementText: enhanced.element?.text || null,
+      elementTag: enhanced.element?.tag || null,
+      primarySelector: enhanced.selectors?.primary || null,
+      selectorAlternatives: enhanced.selectors?.alternatives ? JSON.stringify(enhanced.selectors.alternatives) : null,
+      clientX: enhanced.visual?.clientX || null,
+      clientY: enhanced.visual?.clientY || null,
+      pageTitle: enhanced.context?.pageTitle || null,
+      viewport: enhanced.visual?.viewport ? JSON.stringify(enhanced.visual.viewport) : null,
+      // Keep the enhanced structure
+      selectors: enhanced.selectors,
+      element: enhanced.element,
+      context: enhanced.context,
+      visual: enhanced.visual,
+      state: enhanced.state,
+      interaction: enhanced.interaction,
+      // Enhanced training data
+      metadata: enhanced.metadata,
+      elementDetails: enhanced.elementDetails,
+      contextData: enhanced.contextData,
+      overlays: enhanced.overlays,
+      action: enhanced.action
+    };
   }
 
   private calculateReliability(session: any): number {
