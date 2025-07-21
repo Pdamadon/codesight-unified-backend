@@ -226,7 +226,11 @@ export class DataProcessingPipeline extends EventEmitter {
             userAgent: data.userAgent,
             ipAddress: data.ipAddress,
             status: 'ACTIVE',
-            processingStatus: 'PENDING'
+            processingStatus: 'PENDING',
+            // Initialize enhanced interaction storage
+            enhancedInteractions: [],
+            interactionCount: 0,
+            version: 1
           },
           update: {
             // Update session if it already exists (in case of duplicate start messages)
@@ -320,6 +324,183 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   // Interaction Processing
+  // Helper method to detect enhanced 6-group data structure
+  private isEnhanced6GroupData(interactionData: any): boolean {
+    const enhancedFields = ['metadata', 'elementDetails', 'contextData', 'overlays', 'action'];
+    const hasEnhancedFields = enhancedFields.some(field => 
+      interactionData[field] && typeof interactionData[field] === 'object'
+    );
+    
+    this.logger.debug('Enhanced data detection', {
+      sessionId: interactionData?.sessionId,
+      hasEnhancedFields,
+      enhancedFieldsPresent: enhancedFields.filter(field => 
+        interactionData[field] && typeof interactionData[field] === 'object'
+      )
+    });
+    
+    return hasEnhancedFields;
+  }
+
+  // Enhanced interaction processing with optimistic locking
+  private async processEnhancedInteraction(interactionData: any, jobId: string): Promise<ProcessingResult> {
+    const maxRetries = 3;
+    let retryCount = 0;
+    
+    while (retryCount < maxRetries) {
+      try {
+        // Get current session with version for optimistic locking
+        const currentSession = await this.executeWithThrottling(() =>
+          this.prisma.unifiedSession.findUnique({
+            where: { id: interactionData.sessionId },
+            select: { 
+              version: true, 
+              enhancedInteractions: true, 
+              interactionCount: true 
+            }
+          })
+        );
+
+        if (!currentSession) {
+          throw new Error(`Session ${interactionData.sessionId} not found`);
+        }
+
+        // Create enhanced interaction object for JSON storage
+        const enhancedInteraction = {
+          id: uuidv4(),
+          type: interactionData.type,
+          timestamp: interactionData.timestamp,
+          sessionTime: interactionData.sessionTime,
+          sequence: interactionData.sequence,
+          
+          // 6-group enhanced data structure
+          selectors: {
+            primary: interactionData.primarySelector,
+            alternatives: interactionData.selectorAlternatives,
+            xpath: interactionData.xpath,
+            cssPath: interactionData.cssPath,
+            reliability: interactionData.selectorReliability
+          },
+          visual: {
+            coordinates: interactionData.coordinates,
+            boundingBox: interactionData.boundingBox,
+            isInViewport: interactionData.isInViewport,
+            percentVisible: interactionData.percentVisible,
+            viewport: interactionData.viewport
+          },
+          element: {
+            tag: interactionData.elementTag,
+            text: interactionData.elementText,
+            value: interactionData.elementValue,
+            attributes: interactionData.elementAttributes,
+            parentElements: interactionData.parentElements,
+            siblingElements: interactionData.siblingElements,
+            nearbyElements: interactionData.nearbyElements
+          },
+          context: {
+            url: interactionData.url,
+            pageTitle: interactionData.pageTitle,
+            pageContext: interactionData.pageContext,
+            pageStructure: interactionData.pageStructure
+          },
+          state: {
+            before: interactionData.stateBefore,
+            after: interactionData.stateAfter,
+            changes: interactionData.stateChanges
+          },
+          interaction: {
+            modifiers: interactionData.modifiers,
+            confidence: interactionData.confidence || 0.5,
+            userIntent: interactionData.userIntent,
+            userReasoning: interactionData.userReasoning,
+            visualCues: interactionData.visualCues,
+            screenshotId: interactionData.screenshotId
+          },
+          
+          // Enhanced training data fields
+          metadata: interactionData.metadata,
+          elementDetails: interactionData.elementDetails,
+          contextData: interactionData.contextData,
+          overlays: interactionData.overlays,
+          action: interactionData.action
+        };
+
+        // Prepare updated interactions array
+        const currentInteractions = Array.isArray(currentSession.enhancedInteractions) 
+          ? currentSession.enhancedInteractions as any[] 
+          : [];
+        const updatedInteractions = [...currentInteractions, enhancedInteraction];
+
+        // Update session with optimistic locking
+        const updatedSession = await this.executeWithThrottling(() =>
+          this.prisma.unifiedSession.update({
+            where: { 
+              id: interactionData.sessionId,
+              version: currentSession.version // Optimistic lock
+            },
+            data: {
+              enhancedInteractions: updatedInteractions,
+              lastInteractionTime: new Date(interactionData.timestamp),
+              interactionCount: currentSession.interactionCount + 1,
+              version: currentSession.version + 1
+            }
+          })
+        );
+
+        this.logger.info('✅ Enhanced interaction stored in unified session', {
+          jobId,
+          interactionId: enhancedInteraction.id,
+          sessionId: interactionData.sessionId,
+          interactionCount: updatedSession.interactionCount,
+          version: updatedSession.version
+        });
+
+        // Calculate quality score for the enhanced interaction
+        const qualityScore = await this.qualityControl.scoreInteraction({
+          ...enhancedInteraction,
+          id: enhancedInteraction.id,
+          sessionId: interactionData.sessionId
+        });
+
+        return {
+          id: enhancedInteraction.id,
+          status: 'success',
+          qualityScore,
+          data: {
+            stored: 'unified_session',
+            interactionCount: updatedSession.interactionCount,
+            version: updatedSession.version
+          }
+        };
+
+      } catch (error: any) {
+        // Check for optimistic locking conflict (Prisma error P2025)
+        if (error.code === 'P2025' && retryCount < maxRetries - 1) {
+          retryCount++;
+          this.logger.warn('Optimistic lock conflict, retrying', {
+            jobId,
+            sessionId: interactionData.sessionId,
+            retryCount,
+            maxRetries
+          });
+          // Small delay before retry
+          await new Promise(resolve => setTimeout(resolve, 50 * retryCount));
+          continue;
+        }
+
+        this.logger.error('Failed to process enhanced interaction', {
+          jobId,
+          sessionId: interactionData.sessionId,
+          retryCount,
+          error: error.message
+        });
+        throw error;
+      }
+    }
+
+    throw new Error(`Failed to process enhanced interaction after ${maxRetries} retries`);
+  }
+
   async processInteraction(interactionData: any): Promise<ProcessingResult> {
     const jobId = uuidv4();
     
@@ -378,7 +559,20 @@ export class DataProcessingPipeline extends EventEmitter {
         interactionData.validationErrors = validation.errors;
       }
 
-      // Step 2: Create interaction record
+      // Step 1.5: Route enhanced data to unified sessions or flat data to interactions
+      const isEnhancedData = this.isEnhanced6GroupData(interactionData);
+      
+      if (isEnhancedData) {
+        this.logger.info('🔄 Routing enhanced 6-group data to unified session', {
+          jobId,
+          sessionId: interactionData.sessionId,
+          interactionType: interactionData.type
+        });
+        
+        return await this.processEnhancedInteraction(interactionData, jobId);
+      }
+
+      // Step 2: Create flat interaction record (legacy path)
       this.logger.info('💾 Storing interaction in database', {
         jobId,
         sessionId: interactionData.sessionId,
