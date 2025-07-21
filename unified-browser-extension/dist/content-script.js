@@ -2658,9 +2658,16 @@
         }
         
         if (current.className) {
-          const classes = current.className.split(' ').filter(c => c.trim());
-          if (classes.length > 0) {
-            selector += `.${classes.join('.')}`;
+          // Handle both regular HTML elements (string) and SVG elements (object)
+          const classValue = typeof current.className === 'string' 
+            ? current.className 
+            : current.className.baseVal || current.className.toString();
+            
+          if (classValue && typeof classValue === 'string') {
+            const classes = classValue.split(' ').filter(c => c.trim());
+            if (classes.length > 0) {
+              selector += `.${classes.join('.')}`;
+            }
           }
         }
         

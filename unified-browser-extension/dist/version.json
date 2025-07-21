@@ -1,7 +1,7 @@
 {
   "version": "2.0.0",
-  "build": "20250721145822",
-  "buildDate": "Mon Jul 21 14:58:22 UTC 2025",
+  "build": "20250721170024",
+  "buildDate": "Mon Jul 21 17:00:24 UTC 2025",
   "backend": "wss://gentle-vision-production.up.railway.app/ws",
   "features": [
     "real-time-websocket",

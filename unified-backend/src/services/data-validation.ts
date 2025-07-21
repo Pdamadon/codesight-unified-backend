@@ -718,20 +718,62 @@ export class DataValidationService {
         throw new Error(`Session ${sessionId} not found`);
       }
 
-      // Normalize interactions from both legacy and enhanced sources
+      // Process only enhanced interactions from JSON field (legacy interactions table no longer used)
+      this.logger.info("DEBUG: Raw session data structure", {
+        sessionId,
+        hasEnhancedInteractions: session.enhancedInteractions !== null && session.enhancedInteractions !== undefined,
+        enhancedInteractionsType: typeof session.enhancedInteractions,
+        enhancedInteractionsIsArray: Array.isArray(session.enhancedInteractions),
+        enhancedInteractionsLength: Array.isArray(session.enhancedInteractions) ? session.enhancedInteractions.length : 'N/A',
+        legacyInteractionsLength: session.interactions ? session.interactions.length : 'N/A',
+        screenshotsLength: session.screenshots ? session.screenshots.length : 'N/A'
+      });
+
       const enhancedInteractions = Array.isArray(session.enhancedInteractions) 
         ? session.enhancedInteractions as any[]
         : [];
       
-      // Ensure interactions is an array before normalization
-      const legacyInteractions = Array.isArray(session.interactions) ? session.interactions : [];
+      this.logger.info("DEBUG: Enhanced interactions processing", {
+        sessionId,
+        enhancedCount: enhancedInteractions.length,
+        sampleData: enhancedInteractions.length > 0 ? {
+          firstItem: {
+            id: enhancedInteractions[0]?.id,
+            type: enhancedInteractions[0]?.type,
+            hasContext: !!enhancedInteractions[0]?.context,
+            hasElement: !!enhancedInteractions[0]?.element,
+            hasSelectors: !!enhancedInteractions[0]?.selectors
+          }
+        } : 'none'
+      });
       
-      const allInteractions = [
-        // Legacy flat interactions
-        ...legacyInteractions.map(this.normalizeInteraction),
-        // Enhanced JSON interactions  
-        ...enhancedInteractions.map(this.normalizeEnhancedInteraction)
-      ].sort((a, b) => a.timestamp - b.timestamp);
+      let allInteractions;
+      try {
+        allInteractions = enhancedInteractions
+          .map(this.normalizeEnhancedInteraction)
+          .sort((a, b) => a.timestamp - b.timestamp);
+        
+        this.logger.info("DEBUG: Normalization successful", {
+          sessionId,
+          normalizedCount: allInteractions.length,
+          isArray: Array.isArray(allInteractions),
+          sampleNormalized: allInteractions.length > 0 ? {
+            id: allInteractions[0]?.id,
+            type: allInteractions[0]?.type,
+            timestamp: allInteractions[0]?.timestamp,
+            hasUrl: !!allInteractions[0]?.url,
+            hasElementText: !!allInteractions[0]?.elementText,
+            hasPrimarySelector: !!allInteractions[0]?.primarySelector
+          } : 'none'
+        });
+      } catch (error) {
+        this.logger.error("DEBUG: Normalization failed", {
+          sessionId,
+          error: error.message,
+          enhancedInteractionsCount: enhancedInteractions.length
+        });
+        allInteractions = [];
+      }
       
       // Replace session.interactions with normalized data for validation
       const normalizedSession = {
@@ -869,8 +911,34 @@ export class DataValidationService {
         switch (ruleId) {
           case 'interaction_structure':
           case 'selector_quality':
-            // Use the normalized interactions from the session parameter (not the original session)
+            // Use the normalized interactions from the session parameter (already normalized)
             data = session.interactions || [];
+            
+            this.logger.info(`DEBUG: Validation rule ${ruleId} data preparation`, {
+              ruleId,
+              sessionId: session.id,
+              dataIsArray: Array.isArray(data),
+              dataType: typeof data,
+              dataLength: Array.isArray(data) ? data.length : 'N/A',
+              hasForEach: typeof data.forEach === 'function',
+              dataConstructor: data ? data.constructor.name : 'null/undefined',
+              sampleItem: Array.isArray(data) && data.length > 0 ? {
+                type: data[0]?.type,
+                hasTimestamp: !!data[0]?.timestamp,
+                hasPrimarySelector: !!data[0]?.primarySelector
+              } : 'none'
+            });
+            
+            // Double-check that interactions is an array
+            if (!Array.isArray(data)) {
+              this.logger.error(`Validation rule ${ruleId} received non-array interactions`, {
+                ruleId,
+                dataType: typeof data,
+                sessionId: session.id,
+                dataValue: data
+              });
+              data = [];
+            }
             break;
           case 'screenshot_structure':
             data = session.screenshots || [];
@@ -1203,38 +1271,7 @@ export class DataValidationService {
     return results;
   }
 
-  // Normalization methods for different interaction formats
-  private normalizeInteraction(interaction: any): any {
-    // For legacy flat interactions stored in interactions table
-    return {
-      id: interaction.id,
-      type: interaction.type,
-      timestamp: Number(interaction.timestamp),
-      // Extract data from JSON fields
-      url: typeof interaction.context === 'object' && interaction.context?.url 
-        ? interaction.context.url 
-        : null,
-      elementText: typeof interaction.element === 'object' && interaction.element?.text
-        ? interaction.element.text
-        : null,
-      elementTag: typeof interaction.element === 'object' && interaction.element?.tag
-        ? interaction.element.tag
-        : null,
-      primarySelector: typeof interaction.selectors === 'object' && interaction.selectors?.primary
-        ? interaction.selectors.primary
-        : null,
-      selectorAlternatives: typeof interaction.selectors === 'object' && interaction.selectors?.alternatives
-        ? JSON.stringify(interaction.selectors.alternatives)
-        : null,
-      // Keep original structure for compatibility
-      selectors: interaction.selectors,
-      element: interaction.element,
-      context: interaction.context,
-      visual: interaction.visual,
-      state: interaction.state,
-      interaction: interaction.interaction
-    };
-  }
+  // Normalization method for enhanced interactions (only source now that legacy table writes are removed)
 
   private normalizeEnhancedInteraction(enhanced: any): any {
     // For enhanced interactions stored in unified sessions JSON
