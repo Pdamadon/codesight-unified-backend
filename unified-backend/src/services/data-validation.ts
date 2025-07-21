@@ -457,6 +457,65 @@ export class DataValidationService {
     });
 
     // Consistency Validation Rules
+    // Single interaction validation rule (for stream validation)
+    this.addValidationRule({
+      id: 'single_interaction_structure',
+      name: 'Single Interaction Structure',
+      description: 'Validates individual interaction data structure',
+      category: 'structural',
+      severity: 'major',
+      enabled: true,
+      weight: 7,
+      validator: (interaction: any) => {
+        const errors: ValidationError[] = [];
+        const warnings: ValidationWarning[] = [];
+        let score = 100;
+
+        if (!interaction.type) {
+          errors.push({
+            ruleId: 'single_interaction_structure',
+            severity: 'major',
+            message: 'Interaction missing type',
+            field: 'type',
+            category: 'structural',
+            suggestion: 'Set interaction type (CLICK, INPUT, etc.)'
+          });
+          score -= 30;
+        }
+
+        if (!interaction.timestamp) {
+          errors.push({
+            ruleId: 'single_interaction_structure',
+            severity: 'major',
+            message: 'Interaction missing timestamp',
+            field: 'timestamp',
+            category: 'structural',
+            suggestion: 'Include timestamp for the interaction'
+          });
+          score -= 30;
+        }
+
+        // Check for selector quality on individual interaction
+        if (!interaction.primarySelector && !interaction.elementTag) {
+          warnings.push({
+            ruleId: 'single_interaction_structure',
+            message: 'Interaction missing element identification',
+            field: 'primarySelector',
+            category: 'structural',
+            suggestion: 'Include primarySelector or elementTag'
+          });
+          score -= 20;
+        }
+
+        return {
+          isValid: errors.filter(e => e.severity === 'critical').length === 0,
+          score: Math.max(0, score),
+          errors,
+          warnings
+        };
+      }
+    });
+
     this.addValidationRule({
       id: 'timestamp_consistency',
       name: 'Timestamp Consistency Check',
@@ -719,61 +778,13 @@ export class DataValidationService {
       }
 
       // Process only enhanced interactions from JSON field (legacy interactions table no longer used)
-      this.logger.info("DEBUG: Raw session data structure", {
-        sessionId,
-        hasEnhancedInteractions: session.enhancedInteractions !== null && session.enhancedInteractions !== undefined,
-        enhancedInteractionsType: typeof session.enhancedInteractions,
-        enhancedInteractionsIsArray: Array.isArray(session.enhancedInteractions),
-        enhancedInteractionsLength: Array.isArray(session.enhancedInteractions) ? session.enhancedInteractions.length : 'N/A',
-        legacyInteractionsLength: session.interactions ? session.interactions.length : 'N/A',
-        screenshotsLength: session.screenshots ? session.screenshots.length : 'N/A'
-      });
-
       const enhancedInteractions = Array.isArray(session.enhancedInteractions) 
         ? session.enhancedInteractions as any[]
         : [];
       
-      this.logger.info("DEBUG: Enhanced interactions processing", {
-        sessionId,
-        enhancedCount: enhancedInteractions.length,
-        sampleData: enhancedInteractions.length > 0 ? {
-          firstItem: {
-            id: enhancedInteractions[0]?.id,
-            type: enhancedInteractions[0]?.type,
-            hasContext: !!enhancedInteractions[0]?.context,
-            hasElement: !!enhancedInteractions[0]?.element,
-            hasSelectors: !!enhancedInteractions[0]?.selectors
-          }
-        } : 'none'
-      });
-      
-      let allInteractions;
-      try {
-        allInteractions = enhancedInteractions
-          .map(this.normalizeEnhancedInteraction)
-          .sort((a, b) => a.timestamp - b.timestamp);
-        
-        this.logger.info("DEBUG: Normalization successful", {
-          sessionId,
-          normalizedCount: allInteractions.length,
-          isArray: Array.isArray(allInteractions),
-          sampleNormalized: allInteractions.length > 0 ? {
-            id: allInteractions[0]?.id,
-            type: allInteractions[0]?.type,
-            timestamp: allInteractions[0]?.timestamp,
-            hasUrl: !!allInteractions[0]?.url,
-            hasElementText: !!allInteractions[0]?.elementText,
-            hasPrimarySelector: !!allInteractions[0]?.primarySelector
-          } : 'none'
-        });
-      } catch (error) {
-        this.logger.error("DEBUG: Normalization failed", {
-          sessionId,
-          error: getErrorMessage(error),
-          enhancedInteractionsCount: enhancedInteractions.length
-        });
-        allInteractions = [];
-      }
+      const allInteractions = enhancedInteractions
+        .map(this.normalizeEnhancedInteraction)
+        .sort((a, b) => a.timestamp - b.timestamp);
       
       // Replace session.interactions with normalized data for validation
       const normalizedSession = {
@@ -913,32 +924,6 @@ export class DataValidationService {
           case 'selector_quality':
             // Use the normalized interactions from the session parameter (already normalized)
             data = session.interactions || [];
-            
-            this.logger.info(`DEBUG: Validation rule ${ruleId} data preparation`, {
-              ruleId,
-              sessionId: session.id,
-              dataIsArray: Array.isArray(data),
-              dataType: typeof data,
-              dataLength: Array.isArray(data) ? data.length : 'N/A',
-              hasForEach: typeof data.forEach === 'function',
-              dataConstructor: data ? data.constructor.name : 'null/undefined',
-              sampleItem: Array.isArray(data) && data.length > 0 ? {
-                type: data[0]?.type,
-                hasTimestamp: !!data[0]?.timestamp,
-                hasPrimarySelector: !!data[0]?.primarySelector
-              } : 'none'
-            });
-            
-            // Double-check that interactions is an array
-            if (!Array.isArray(data)) {
-              this.logger.error(`Validation rule ${ruleId} received non-array interactions`, {
-                ruleId,
-                dataType: typeof data,
-                sessionId: session.id,
-                dataValue: data
-              });
-              data = [];
-            }
             break;
           case 'screenshot_structure':
             data = session.screenshots || [];
@@ -1141,9 +1126,10 @@ export class DataValidationService {
 
     switch (dataType) {
       case 'interaction':
+        // For individual interactions, only use rules that work on single interactions
+        // NOT selector_quality which requires an array of interactions
         relevantRules.push(
-          this.validationRules.get('interaction_structure')!,
-          this.validationRules.get('selector_quality')!,
+          this.validationRules.get('single_interaction_structure')!,
           this.businessRules.get('privacy_compliance')!
         );
         break;
