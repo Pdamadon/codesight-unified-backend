@@ -1114,9 +1114,9 @@ export class DataProcessingPipeline extends EventEmitter {
     await this.updateProcessingStatus(sessionId, 'ENHANCING');
     await this.enhanceSessionContext(sessionId);
 
-    // Step 3: Psychology Insights Extraction
-    await this.updateProcessingStatus(sessionId, 'PSYCHOLOGY_ANALYSIS');
-    await this.extractPsychologyInsights(sessionId);
+    // Step 3: Psychology Insights Extraction - SKIPPED FOR NOW
+    // await this.updateProcessingStatus(sessionId, 'PSYCHOLOGY_ANALYSIS');
+    // await this.extractPsychologyInsights(sessionId);
 
     // Step 4: Training Data Generation
     await this.updateProcessingStatus(sessionId, 'TRAINING');

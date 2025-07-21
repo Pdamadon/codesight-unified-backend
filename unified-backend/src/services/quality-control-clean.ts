@@ -695,6 +695,9 @@ export class QualityControlService {
     try {
       const validation = await this.validateSessionQuality(sessionId);
       
+      // Update session with quality scores
+      await this.updateSessionWithQualityScores(sessionId, validation);
+      
       return {
         sessionId,
         overallScore: validation.score,
@@ -714,5 +717,69 @@ export class QualityControlService {
         assessedAt: new Date()
       };
     }
+  }
+
+  private async updateSessionWithQualityScores(sessionId: string, validation: ValidationResult): Promise<void> {
+    try {
+      // Get detailed metrics for session update
+      const detailedMetrics = await this.getDetailedQualityMetrics(sessionId);
+      
+      await this.prisma.unifiedSession.update({
+        where: { id: sessionId },
+        data: {
+          qualityScore: validation.score,
+          completeness: detailedMetrics.completeness,
+          reliability: detailedMetrics.reliability,
+          trainingValue: this.calculateTrainingValue(detailedMetrics)
+        }
+      });
+
+      this.logger.info('Session updated with quality scores', {
+        sessionId,
+        qualityScore: validation.score,
+        completeness: detailedMetrics.completeness,
+        reliability: detailedMetrics.reliability
+      });
+
+    } catch (error) {
+      this.logger.error('Failed to update session with quality scores', error, { sessionId });
+      throw error;
+    }
+  }
+
+  private async getDetailedQualityMetrics(sessionId: string): Promise<QualityMetrics> {
+    // Get session data for quality calculation
+    const session = await this.prisma.unifiedSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        interactions: true,
+        screenshots: true
+      }
+    });
+
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found for quality metrics`);
+    }
+
+    return this.calculateQualityMetrics(session);
+  }
+
+  private calculateTrainingValue(metrics: QualityMetrics): number {
+    // Calculate training value based on quality metrics
+    // Higher quality data is more valuable for AI training
+    const weights = {
+      completeness: 0.3,
+      reliability: 0.3, 
+      accuracy: 0.2,
+      consistency: 0.2
+    };
+
+    const trainingValue = 
+      metrics.completeness * weights.completeness +
+      metrics.reliability * weights.reliability +
+      metrics.accuracy * weights.accuracy +
+      metrics.consistency * weights.consistency;
+
+    return Math.min(Math.max(trainingValue, 0), 100);
   }
 }
