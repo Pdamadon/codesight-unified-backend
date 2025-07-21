@@ -718,8 +718,26 @@ export class DataValidationService {
         throw new Error(`Session ${sessionId} not found`);
       }
 
+      // Normalize interactions from both legacy and enhanced sources
+      const enhancedInteractions = Array.isArray(session.enhancedInteractions) 
+        ? session.enhancedInteractions as any[]
+        : [];
+      
+      const allInteractions = [
+        // Legacy flat interactions
+        ...session.interactions.map(this.normalizeInteraction),
+        // Enhanced JSON interactions  
+        ...enhancedInteractions.map(this.normalizeEnhancedInteraction)
+      ].sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Replace session.interactions with normalized data for validation
+      const normalizedSession = {
+        ...session,
+        interactions: allInteractions
+      };
+
       // Execute all validation rules
-      const validationResults = await this.executeValidationRules(session);
+      const validationResults = await this.executeValidationRules(normalizedSession);
       const businessResults = await this.executeBusinessRules(session);
 
       // Combine results
@@ -1179,6 +1197,67 @@ export class DataValidationService {
     });
 
     return results;
+  }
+
+  // Normalization methods for different interaction formats
+  private normalizeInteraction(interaction: any): any {
+    // For legacy flat interactions stored in interactions table
+    return {
+      id: interaction.id,
+      type: interaction.type,
+      timestamp: Number(interaction.timestamp),
+      // Extract data from JSON fields
+      url: typeof interaction.context === 'object' && interaction.context?.url 
+        ? interaction.context.url 
+        : null,
+      elementText: typeof interaction.element === 'object' && interaction.element?.text
+        ? interaction.element.text
+        : null,
+      elementTag: typeof interaction.element === 'object' && interaction.element?.tag
+        ? interaction.element.tag
+        : null,
+      primarySelector: typeof interaction.selectors === 'object' && interaction.selectors?.primary
+        ? interaction.selectors.primary
+        : null,
+      selectorAlternatives: typeof interaction.selectors === 'object' && interaction.selectors?.alternatives
+        ? JSON.stringify(interaction.selectors.alternatives)
+        : null,
+      // Keep original structure for compatibility
+      selectors: interaction.selectors,
+      element: interaction.element,
+      context: interaction.context,
+      visual: interaction.visual,
+      state: interaction.state,
+      interaction: interaction.interaction
+    };
+  }
+
+  private normalizeEnhancedInteraction(enhanced: any): any {
+    // For enhanced interactions stored in unified sessions JSON
+    return {
+      id: enhanced.id,
+      type: enhanced.type,
+      timestamp: enhanced.timestamp,
+      // Extract commonly used fields from 6-group structure
+      url: enhanced.context?.url || null,
+      elementText: enhanced.element?.text || null,
+      elementTag: enhanced.element?.tag || null,
+      primarySelector: enhanced.selectors?.primary || null,
+      selectorAlternatives: enhanced.selectors?.alternatives ? JSON.stringify(enhanced.selectors.alternatives) : null,
+      // Keep the enhanced structure
+      selectors: enhanced.selectors,
+      element: enhanced.element,
+      context: enhanced.context,
+      visual: enhanced.visual,
+      state: enhanced.state,
+      interaction: enhanced.interaction,
+      // Enhanced training data
+      metadata: enhanced.metadata,
+      elementDetails: enhanced.elementDetails,
+      contextData: enhanced.contextData,
+      overlays: enhanced.overlays,
+      action: enhanced.action
+    };
   }
 
   // Custom rule management
