@@ -723,9 +723,12 @@ export class DataValidationService {
         ? session.enhancedInteractions as any[]
         : [];
       
+      // Ensure interactions is an array before normalization
+      const legacyInteractions = Array.isArray(session.interactions) ? session.interactions : [];
+      
       const allInteractions = [
         // Legacy flat interactions
-        ...session.interactions.map(this.normalizeInteraction),
+        ...legacyInteractions.map(this.normalizeInteraction),
         // Enhanced JSON interactions  
         ...enhancedInteractions.map(this.normalizeEnhancedInteraction)
       ].sort((a, b) => a.timestamp - b.timestamp);
@@ -738,7 +741,7 @@ export class DataValidationService {
 
       // Execute all validation rules
       const validationResults = await this.executeValidationRules(normalizedSession);
-      const businessResults = await this.executeBusinessRules(session);
+      const businessResults = await this.executeBusinessRules(normalizedSession);
 
       // Combine results
       const allErrors = [...validationResults.errors, ...businessResults.errors];
@@ -862,10 +865,11 @@ export class DataValidationService {
 
       try {
         let data;
-        // Determine what data to pass to the validator
+        // Determine what data to pass to the validator  
         switch (ruleId) {
           case 'interaction_structure':
           case 'selector_quality':
+            // Use the normalized interactions from the session parameter (not the original session)
             data = session.interactions || [];
             break;
           case 'screenshot_structure':
