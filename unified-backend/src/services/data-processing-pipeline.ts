@@ -589,65 +589,58 @@ export class DataProcessingPipeline extends EventEmitter {
             sessionTime: interactionData.sessionTime,
             sequence: interactionData.sequence,
 
-            // Flattened selectors (no stringify)
-            primarySelector: interactionData.primarySelector,
-            selectorAlternatives: interactionData.selectorAlternatives,
-            xpath: interactionData.xpath,
-            cssPath: interactionData.cssPath,
-            selectorReliability: interactionData.selectorReliability,
+            // Store legacy flat data in new JSON schema format
+            selectors: {
+              primary: interactionData.primarySelector,
+              alternatives: interactionData.selectorAlternatives,
+              xpath: interactionData.xpath,
+              cssPath: interactionData.cssPath,
+              reliability: interactionData.selectorReliability
+            },
+            element: {
+              tag: interactionData.elementTag,
+              text: interactionData.elementText,
+              value: interactionData.elementValue,
+              attributes: interactionData.elementAttributes
+            },
+            visual: {
+              boundingBox: interactionData.boundingBox,
+              isInViewport: interactionData.isInViewport,
+              percentVisible: interactionData.percentVisible,
+              coordinates: interactionData.coordinates,
+              viewport: interactionData.viewport
+            },
+            context: {
+              url: interactionData.url,
+              pageTitle: interactionData.pageTitle,
+              pageContext: interactionData.pageContext,
+              pageStructure: interactionData.pageStructure,
+              parentElements: interactionData.parentElements,
+              siblingElements: interactionData.siblingElements,
+              nearbyElements: interactionData.nearbyElements
+            },
+            state: {
+              before: interactionData.stateBefore,
+              after: interactionData.stateAfter,
+              changes: interactionData.stateChanges
+            },
+            interaction: {
+              modifiers: interactionData.modifiers,
+              screenshotId: interactionData.screenshotId,
+              confidence: interactionData.confidence || 0.5,
+              userIntent: interactionData.userIntent,
+              userReasoning: interactionData.userReasoning,
+              visualCues: interactionData.visualCues || []
+            },
 
-            // Element details
-            elementTag: interactionData.elementTag,
-            elementText: interactionData.elementText,
-            elementValue: interactionData.elementValue,
-            elementAttributes: interactionData.elementAttributes,
-            boundingBox: interactionData.boundingBox,
-            isInViewport: interactionData.isInViewport,
-            percentVisible: interactionData.percentVisible,
-
-            // Coordinates & modifiers
-            clientX: interactionData.coordinates.clientX,
-            clientY: interactionData.coordinates.clientY,
-            pageX: interactionData.coordinates.pageX,
-            pageY: interactionData.coordinates.pageY,
-            offsetX: interactionData.coordinates.offsetX,
-            offsetY: interactionData.coordinates.offsetY,
-            modifiers: interactionData.modifiers,
-
-            // Context arrays (no stringify)
-            parentElements: interactionData.parentElements,
-            siblingElements: interactionData.siblingElements,
-            nearbyElements: interactionData.nearbyElements,
-
-            // Page context & structure
-            pageContext: interactionData.pageContext,
-            pageStructure: interactionData.pageStructure,
-
-            // State snapshots
-            stateBefore: interactionData.stateBefore,
-            stateAfter: interactionData.stateAfter,
-            stateChanges: interactionData.stateChanges,
-
-            // Screenshots linkage
-            screenshotId: interactionData.screenshotId,
-
-            // Standard page info
-            url: interactionData.url,
-            pageTitle: interactionData.pageTitle,
-            viewport: interactionData.viewport,
-
-            // Quality and reliability
-            confidence: interactionData.confidence || 0.5,
-            userIntent: interactionData.userIntent,
-            userReasoning: interactionData.userReasoning,
-            visualCues: interactionData.visualCues || [],
-
-            // Enhanced GPT‑training fields (objects)
-            metadata: interactionData.metadata,
-            elementDetails: interactionData.elementDetails,
-            contextData: interactionData.contextData,
-            overlays: interactionData.overlays,
-            action: interactionData.action
+            // Legacy data for backward compatibility
+            legacyData: {
+              metadata: interactionData.metadata,
+              elementDetails: interactionData.elementDetails,
+              contextData: interactionData.contextData,
+              overlays: interactionData.overlays,
+              action: interactionData.action
+            }
           }
         }), 'interaction_create'
       );
@@ -1020,16 +1013,33 @@ export class DataProcessingPipeline extends EventEmitter {
       // Get the first analysis result
       const firstAnalysis = visionAnalysis[0];
       if (firstAnalysis) {
-        await this.executeWithThrottling(() => 
-          this.prisma.interaction.update({
+        // Get current interaction data and update the JSON fields
+        const currentInteraction = await this.executeWithThrottling(() =>
+          this.prisma.interaction.findUnique({
             where: { id: interactionId },
-            data: {
-              userIntent: firstAnalysis.userPsychology?.insights?.[0] || 'Unknown intent',
-              userReasoning: firstAnalysis.analysis || 'No reasoning available',
-              visualCues: JSON.stringify(firstAnalysis.userPsychology?.behaviorPredictions || [])
-            }
+            select: { interaction: true }
           })
         );
+
+        if (currentInteraction) {
+          const currentInteractionData = typeof currentInteraction.interaction === 'object' 
+            ? currentInteraction.interaction as any 
+            : {};
+
+          await this.executeWithThrottling(() => 
+            this.prisma.interaction.update({
+              where: { id: interactionId },
+              data: {
+                interaction: {
+                  ...currentInteractionData,
+                  userIntent: firstAnalysis.userPsychology?.insights?.[0] || 'Unknown intent',
+                  userReasoning: firstAnalysis.analysis || 'No reasoning available',
+                  visualCues: firstAnalysis.userPsychology?.behaviorPredictions || []
+                }
+              }
+            })
+          );
+        }
       }
     }
 

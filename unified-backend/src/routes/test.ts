@@ -54,13 +54,29 @@ router.post('/database',
               type: data.type,
               timestamp: BigInt(data.timestamp || Date.now()),
               sessionTime: 0,
-              primarySelector: data.elementSelector,
-              elementText: data.elementText,
-              viewport: JSON.stringify(data.viewport || {}),
-              boundingBox: JSON.stringify(data.boundingBox || {}),
-              url: data.url || 'test-url',
-              pageTitle: data.pageTitle || 'Test Page',
-              elementTag: data.elementTag || 'unknown',
+              // Store in new JSON format
+              selectors: {
+                primary: data.elementSelector
+              },
+              element: {
+                tag: data.elementTag || 'unknown',
+                text: data.elementText
+              },
+              context: {
+                url: data.url || 'test-url',
+                pageTitle: data.pageTitle || 'Test Page'
+              },
+              visual: {
+                viewport: data.viewport || {},
+                boundingBox: data.boundingBox || {}
+              },
+              state: {
+                before: {},
+                after: {}
+              },
+              interaction: {
+                confidence: 0.5
+              },
               confidence: 50 // Default quality score
             }
           });

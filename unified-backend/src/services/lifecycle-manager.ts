@@ -679,15 +679,29 @@ export class LifecycleManager {
       }
     });
 
-    // Anonymize interaction data
-    await this.prisma.interaction.updateMany({
+    // Anonymize interaction data - update JSON fields
+    const interactions = await this.prisma.interaction.findMany({
       where: { sessionId: session.id },
-      data: {
-        userIntent: null,
-        userReasoning: null,
-        visualCues: JSON.stringify([])
-      }
+      select: { id: true, interaction: true }
     });
+
+    for (const interaction of interactions) {
+      const currentData = typeof interaction.interaction === 'object' 
+        ? interaction.interaction as any 
+        : {};
+      
+      await this.prisma.interaction.update({
+        where: { id: interaction.id },
+        data: {
+          interaction: {
+            ...currentData,
+            userIntent: null,
+            userReasoning: null,
+            visualCues: []
+          }
+        }
+      });
+    }
 
     this.logger.info("Session anonymized", { sessionId: session.id });
   }

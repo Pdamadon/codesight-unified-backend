@@ -316,7 +316,11 @@ router.get('/session/:sessionId/timeline', [
         return acc;
       }, {} as Record<string, number>),
       averageConfidence: timeline.reduce((sum, interaction) => sum + interaction.confidence, 0) / timeline.length || 0,
-      pagesVisited: Array.from(new Set(timeline.map(interaction => interaction.url))).length
+      pagesVisited: Array.from(new Set(timeline.map(interaction => 
+        typeof interaction.context === 'object' && interaction.context && 'url' in interaction.context 
+          ? interaction.context.url as string 
+          : 'unknown'
+      ))).length
     };
 
     res.json({
@@ -349,19 +353,20 @@ router.get('/analyze/selectors', [
     // Build filter conditions
     const where: any = {};
     if (sessionId) where.sessionId = sessionId;
-    if (url) where.url = url;
-    if (elementTag) where.elementTag = elementTag;
+    // Note: url and elementTag are now stored in JSON fields, so we skip these filters for now
+    // if (url) where.url = url;
+    // if (elementTag) where.elementTag = elementTag;
 
     const interactions = await prisma.interaction.findMany({
       where,
       select: {
         id: true,
-        primarySelector: true,
-        selectorAlternatives: true,
-        elementTag: true,
-        url: true,
+        selectors: true,
+        element: true,
+        context: true,
         confidence: true,
-        selectorReliability: true
+        type: true,
+        timestamp: true
       }
     });
 
@@ -378,8 +383,9 @@ router.get('/analyze/selectors', [
     };
 
     interactions.forEach(interaction => {
-      // Analyze selector types
-      const selector = interaction.primarySelector;
+      // Analyze selector types from JSON fields
+      const selectorData = typeof interaction.selectors === 'object' && interaction.selectors ? interaction.selectors as any : null;
+      const selector = selectorData?.primary || '';
       if (selector.startsWith('#')) {
         selectorAnalysis.selectorTypes['id'] = (selectorAnalysis.selectorTypes['id'] || 0) + 1;
       } else if (selector.startsWith('.')) {
@@ -403,7 +409,9 @@ router.get('/analyze/selectors', [
       }
 
       // Track common patterns
-      const pattern = `${interaction.elementTag}:${selector.split(/[#.\[\]]/)[0]}`;
+      const elementData = typeof interaction.element === 'object' && interaction.element ? interaction.element as any : null;
+      const elementTag = elementData?.tag || 'unknown';
+      const pattern = `${elementTag}:${selector.split(/[#.\[\]]/)[0]}`;
       selectorAnalysis.commonPatterns[pattern] = (selectorAnalysis.commonPatterns[pattern] || 0) + 1;
     });
 
