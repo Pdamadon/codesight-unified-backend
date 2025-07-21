@@ -769,7 +769,7 @@ export class DataValidationService {
       } catch (error) {
         this.logger.error("DEBUG: Normalization failed", {
           sessionId,
-          error: error.message,
+          error: getErrorMessage(error),
           enhancedInteractionsCount: enhancedInteractions.length
         });
         allInteractions = [];
