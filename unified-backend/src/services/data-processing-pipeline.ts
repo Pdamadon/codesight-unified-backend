@@ -611,24 +611,25 @@ export class DataProcessingPipeline extends EventEmitter {
       }
 
       // Step 2: Compress and upload screenshot
+      const safeEventType = screenshotData.eventType || screenshotData.trigger || 'auto-capture';
       const compressionResult = await this.storageManager.compressAndUploadScreenshot(
         screenshotData.dataUrl,
         screenshotData.sessionId,
-        screenshotData.eventType
+        safeEventType
       );
 
-      // Create screenshot record
+      // Create screenshot record with proper defaults for missing fields
       const screenshot = await this.executeWithBatching(() => 
         this.prisma.screenshot.create({
           data: {
             sessionId: screenshotData.sessionId,
-            interactionId: screenshotData.interactionId,
+            interactionId: screenshotData.interactionId || null,
             timestamp: BigInt(screenshotData.timestamp),
-            eventType: screenshotData.eventType,
+            eventType: safeEventType,
             s3Key: compressionResult.s3Key,
             compressed: true,
             format: compressionResult.format,
-            fileSize: compressionResult.fileSize,
+            fileSize: compressionResult.fileSize || 0,
             viewport: JSON.stringify(screenshotData.viewport || {}),
             quality: compressionResult.quality || 0
           }

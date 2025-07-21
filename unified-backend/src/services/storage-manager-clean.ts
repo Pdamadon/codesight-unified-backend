@@ -365,7 +365,8 @@ export class StorageManager {
       // For now, we'll simulate compression (in real implementation, use Sharp or similar)
       // const compressedBuffer = await sharp(imageBuffer).webp({ quality: 80 }).toBuffer();
       const compressedSize = Math.round(imageBuffer.length * 0.7); // Simulate 30% compression
-      const s3Key = `screenshots/${sessionId}/${Date.now()}-${eventType}.webp`;
+      const safeEventType = eventType || 'auto-capture';
+      const s3Key = `screenshots/${sessionId}/${Date.now()}-${safeEventType}.webp`;
 
       return {
         s3Key,

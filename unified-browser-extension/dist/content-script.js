@@ -2743,9 +2743,14 @@
       const parent = element.parentElement;
       if (!parent) return null;
       
+      // Handle both HTML and SVG className properly
+      const classValue = typeof parent.className === 'string' 
+        ? parent.className 
+        : parent.className.baseVal || parent.className.toString();
+      
       return {
         tag: parent.tagName.toLowerCase(),
-        classes: parent.className.split(' ').filter(c => c.trim()),
+        classes: classValue ? classValue.split(' ').filter(c => c.trim()) : [],
         id: parent.id || null,
         css_selector: this.generateCSSSelector(parent)
       };
@@ -2756,9 +2761,14 @@
       let current = element.parentElement;
       
       while (current && current !== document.body && ancestors.length < 10) {
+        // Handle both HTML and SVG className properly
+        const classValue = typeof current.className === 'string' 
+          ? current.className 
+          : current.className.baseVal || current.className.toString();
+        
         ancestors.push({
           tag: current.tagName.toLowerCase(),
-          classes: current.className.split(' ').filter(c => c.trim()),
+          classes: classValue ? classValue.split(' ').filter(c => c.trim()) : [],
           id: current.id || null,
           css_selector: this.generateCSSSelector(current)
         });
