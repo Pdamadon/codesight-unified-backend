@@ -1109,7 +1109,6 @@ export class DataProcessingPipeline extends EventEmitter {
       this.prisma.unifiedSession.findUnique({
         where: { id: sessionId },
         include: {
-          interactions: true,
           screenshots: true
         }
       })

@@ -367,9 +367,10 @@ Focus on psychological insights that would help understand the user's shopping m
       - Price Sensitivity: ${sessionData.userPsychology?.priceSensitivity || 50}/100`
     });
 
-    // Add interaction-based messages
-    if (sessionData.interactions) {
-      for (const interaction of sessionData.interactions.slice(0, 10)) { // Limit for token efficiency
+    // Add interaction-based messages from enhanced interactions JSON
+    const enhancedInteractions = sessionData.enhancedInteractions || [];
+    if (enhancedInteractions.length > 0) {
+      for (const interaction of enhancedInteractions.slice(0, 10)) { // Limit for token efficiency
         messages.push({
           role: "user",
           content: `I ${interaction.type} on "${interaction.elementText || interaction.primarySelector}" at ${interaction.url}`
@@ -398,7 +399,11 @@ Focus on psychological insights that would help understand the user's shopping m
   private calculateTrainingValue(sessionData: any): number {
     let value = 50; // baseline
     
-    if (sessionData.interactions?.length > 5) value += 20;
+    // Use enhanced interactions from JSON field
+    const enhancedInteractions = sessionData.enhancedInteractions || [];
+    if (enhancedInteractions.length > 5) value += 20;
+    
+    // Screenshots are already properly accessible via session.screenshots
     if (sessionData.screenshots?.length > 3) value += 15;
     if (sessionData.userPsychology?.confidence > 70) value += 15;
     if (sessionData.qualityScore > 80) value += 20;
@@ -409,7 +414,9 @@ Focus on psychological insights that would help understand the user's shopping m
   private calculateComplexity(sessionData: any): number {
     let complexity = 30; // baseline
     
-    if (sessionData.interactions?.length > 10) complexity += 25;
+    // Use enhanced interactions from JSON field
+    const enhancedInteractions = sessionData.enhancedInteractions || [];
+    if (enhancedInteractions.length > 10) complexity += 25;
     if (sessionData.pageStructure?.complexity > 0.7) complexity += 20;
     if (sessionData.navigationStrategy?.efficiency < 0.5) complexity += 15;
     
