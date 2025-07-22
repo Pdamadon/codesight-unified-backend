@@ -685,6 +685,13 @@ export class DataProcessingPipeline extends EventEmitter {
   async completeSession(sessionId: string, completionData: any): Promise<any> {
     const processingId = uuidv4();
     
+    console.log('🚨🚨🚨 PIPELINE DEBUG: completeSession() ENTRY POINT 🚨🚨🚨');
+    console.log('📍 Location: DataProcessingPipeline.completeSession()');
+    console.log('🆔 SessionID:', sessionId);
+    console.log('🆔 ProcessingID:', processingId);
+    console.log('📊 Completion data keys:', completionData ? Object.keys(completionData) : 'no data');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    
     this.logger.info('🏁 DataProcessingPipeline.completeSession() called', {
       processingId,
       sessionId,
@@ -693,6 +700,8 @@ export class DataProcessingPipeline extends EventEmitter {
     });
     
     try {
+      console.log('🔍 PIPELINE DEBUG: About to update session status to PROCESSING/VALIDATING');
+      
       // Update session status
       await this.executeWithThrottling(() => 
         this.prisma.unifiedSession.update({
@@ -704,8 +713,19 @@ export class DataProcessingPipeline extends EventEmitter {
           }
         })
       );
+      
+      console.log('✅ PIPELINE DEBUG: Session status updated successfully');
 
       // Queue comprehensive processing job
+      console.log('🔄 PIPELINE DEBUG: About to queue job for session completion');
+      console.log('📋 Job details:', {
+        id: processingId,
+        sessionId,
+        type: 'session_complete',
+        status: 'pending',
+        priority: 1
+      });
+      
       this.queueJob({
         id: processingId,
         sessionId,
@@ -717,6 +737,8 @@ export class DataProcessingPipeline extends EventEmitter {
         retryCount: 0,
         maxRetries: 3
       });
+      
+      console.log('✅ PIPELINE DEBUG: Job queued successfully, should trigger processJob() next');
 
       const estimatedSteps = [
         'Data Validation',
@@ -780,17 +802,35 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async processJobs(): Promise<void> {
-    if (this.activeJobs.size >= this.maxConcurrentJobs) return;
+    console.log('🔄 PIPELINE DEBUG: processJobs() called, checking queue...');
+    console.log('📊 Queue length:', this.jobQueue.length);
+    console.log('📊 Active jobs:', this.activeJobs.size);
+    console.log('📊 Max concurrent:', this.maxConcurrentJobs);
+    
+    if (this.activeJobs.size >= this.maxConcurrentJobs) {
+      console.log('⏸️  PIPELINE DEBUG: Max concurrent jobs reached, skipping processing');
+      return;
+    }
     
     const availableSlots = this.maxConcurrentJobs - this.activeJobs.size;
     const jobsToProcess = this.jobQueue.splice(0, availableSlots);
     
+    console.log('🎯 PIPELINE DEBUG: Processing', jobsToProcess.length, 'jobs');
+    
     for (const job of jobsToProcess) {
+      console.log('🚀 PIPELINE DEBUG: Starting job:', job.id, 'type:', job.type);
       this.processJob(job);
     }
   }
 
   private async processJob(job: ProcessingJob): Promise<void> {
+    console.log('🎯🎯🎯 PIPELINE DEBUG: processJob() CALLED 🎯🎯🎯');
+    console.log('📍 Location: DataProcessingPipeline.processJob()');
+    console.log('🆔 JobID:', job.id);
+    console.log('📊 Job Type:', job.type);
+    console.log('🆔 SessionID:', job.sessionId);
+    console.log('⏰ Job created:', job.createdAt);
+    
     job.status = 'processing';
     job.startedAt = new Date();
     this.activeJobs.set(job.id, job);
@@ -803,16 +843,23 @@ export class DataProcessingPipeline extends EventEmitter {
 
     try {
       let result: any;
+      
+      console.log('🔄 PIPELINE DEBUG: About to switch on job type:', job.type);
 
       switch (job.type) {
         case 'interaction':
+          console.log('🔄 PIPELINE DEBUG: Processing interaction job');
           result = await this.enhanceInteraction(job.data.interactionId);
           break;
         case 'screenshot':
+          console.log('🔄 PIPELINE DEBUG: Processing screenshot job');
           result = await this.analyzeScreenshot(job.data.screenshotId);
           break;
         case 'session_complete':
+          console.log('🎯 PIPELINE DEBUG: Processing session_complete job - THIS IS THE BIG ONE!');
+          console.log('🆔 About to call processCompleteSession for:', job.sessionId);
           result = await this.processCompleteSession(job.sessionId, job.data);
+          console.log('✅ PIPELINE DEBUG: processCompleteSession completed');
           break;
         case 'quality_check':
           result = await this.performQualityCheck(job.sessionId);
@@ -954,9 +1001,22 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async processCompleteSession(sessionId: string, data: any): Promise<any> {
+    console.log('🚀🚀🚀 PIPELINE DEBUG: processCompleteSession() ENTRY 🚀🚀🚀');
+    console.log('📍 Location: DataProcessingPipeline.processCompleteSession()');
+    console.log('🆔 SessionID:', sessionId);
+    console.log('📊 Data keys:', data ? Object.keys(data) : 'no data');
+    console.log('⏰ Starting at:', new Date().toISOString());
+    
     // Step 1: Comprehensive Data Validation
+    console.log('🔍 PIPELINE DEBUG: Step 1 - Starting Data Validation');
     await this.updateProcessingStatus(sessionId, 'VALIDATING');
+    console.log('✅ PIPELINE DEBUG: Status updated to VALIDATING, calling dataValidation.validateSession()');
     const validationResult = await this.dataValidation.validateSession(sessionId);
+    console.log('✅ PIPELINE DEBUG: Data validation completed, result:', {
+      isValid: validationResult.isValid,
+      score: validationResult.overallScore,
+      errorCount: validationResult.errors.length
+    });
     
     if (!validationResult.isValid) {
       this.logger.warn('Session validation failed', {
@@ -986,26 +1046,39 @@ export class DataProcessingPipeline extends EventEmitter {
     }
 
     // Step 2: Quality Assessment
+    console.log('🔍 PIPELINE DEBUG: Step 2 - Starting Quality Assessment');
     const qualityReport = await this.qualityControl.assessSession(sessionId);
+    console.log('✅ PIPELINE DEBUG: Quality assessment completed, score:', qualityReport.overallScore);
 
-    // Step 2: Context Enhancement
+    // Step 3: Context Enhancement
+    console.log('🔍 PIPELINE DEBUG: Step 3 - Starting Context Enhancement');
     await this.updateProcessingStatus(sessionId, 'ENHANCING');
+    console.log('✅ PIPELINE DEBUG: Status updated to ENHANCING, calling enhanceSessionContext()');
     await this.enhanceSessionContext(sessionId);
+    console.log('✅ PIPELINE DEBUG: Context enhancement completed');
 
     // Step 3: Psychology Insights Extraction - SKIPPED FOR NOW
     // await this.updateProcessingStatus(sessionId, 'PSYCHOLOGY_ANALYSIS');
     // await this.extractPsychologyInsights(sessionId);
 
     // Step 4: Training Data Generation
+    console.log('🔍 PIPELINE DEBUG: Step 4 - Starting Training Data Generation');
     await this.updateProcessingStatus(sessionId, 'TRAINING');
+    console.log('✅ PIPELINE DEBUG: Status updated to TRAINING, calling generateTrainingData()');
     const trainingData = await this.generateTrainingData(sessionId);
+    console.log('✅ PIPELINE DEBUG: Training data generation completed');
 
-    // Step 4: Archive Creation
+    // Step 5: Archive Creation
+    console.log('🔍 PIPELINE DEBUG: Step 5 - Starting Archive Creation');
     await this.updateProcessingStatus(sessionId, 'ARCHIVING');
+    console.log('✅ PIPELINE DEBUG: Status updated to ARCHIVING, calling createSessionArchive()');
     const archive = await this.storageManager.createSessionArchive(sessionId);
+    console.log('✅ PIPELINE DEBUG: Archive creation completed');
 
-    // Step 5: Complete
+    // Step 6: Complete
+    console.log('🔍 PIPELINE DEBUG: Step 6 - Completing Session');
     await this.updateProcessingStatus(sessionId, 'COMPLETED');
+    console.log('✅ PIPELINE DEBUG: Status updated to COMPLETED, doing final database update');
     await this.executeWithThrottling(() => 
       this.prisma.unifiedSession.update({
         where: { id: sessionId },
