@@ -924,9 +924,19 @@ export class ContextEnhancementService {
   // Save enhanced context to database
   private async saveEnhancedContext(context: EnhancedContext): Promise<void> {
     try {
-      await this.prisma.contextEnhancement.create({
-        data: {
+      await this.prisma.contextEnhancement.upsert({
+        where: { sessionId: context.sessionId },
+        create: {
           sessionId: context.sessionId,
+          pageStructure: JSON.stringify(context.pageStructure),
+          userIntent: JSON.stringify(context.userIntent),
+          navigationPattern: JSON.stringify(context.navigationPattern),
+          shoppingBehavior: JSON.stringify(context.shoppingBehavior),
+          contextualInsights: JSON.stringify(context.contextualInsights),
+          trainingValue: context.trainingValue,
+          processingTimestamp: context.processingTimestamp,
+        },
+        update: {
           pageStructure: JSON.stringify(context.pageStructure),
           userIntent: JSON.stringify(context.userIntent),
           navigationPattern: JSON.stringify(context.navigationPattern),
