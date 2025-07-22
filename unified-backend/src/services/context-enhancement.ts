@@ -201,9 +201,6 @@ export class ContextEnhancementService {
       const session = await this.prisma.unifiedSession.findUnique({
         where: { id: sessionId },
         include: {
-          interactions: {
-            orderBy: { timestamp: "asc" },
-          },
           screenshots: true,
         },
       });

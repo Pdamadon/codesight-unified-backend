@@ -123,7 +123,6 @@ export class QualityControlService {
     const session = await this.prisma.unifiedSession.findUnique({
       where: { id: sessionId },
       include: {
-        interactions: true,
         screenshots: true
       }
     });
@@ -850,7 +849,6 @@ export class QualityControlService {
     const session = await this.prisma.unifiedSession.findUnique({
       where: { id: sessionId },
       include: {
-        interactions: true,
         screenshots: true
       }
     });
