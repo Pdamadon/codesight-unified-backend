@@ -1068,12 +1068,12 @@ export class DataProcessingPipeline extends EventEmitter {
     const trainingData = await this.generateTrainingData(sessionId);
     console.log('✅ PIPELINE DEBUG: Training data generation completed');
 
-    // Step 5: Archive Creation
-    console.log('🔍 PIPELINE DEBUG: Step 5 - Starting Archive Creation');
-    await this.updateProcessingStatus(sessionId, 'ARCHIVING');
-    console.log('✅ PIPELINE DEBUG: Status updated to ARCHIVING, calling createSessionArchive()');
-    const archive = await this.storageManager.createSessionArchive(sessionId);
-    console.log('✅ PIPELINE DEBUG: Archive creation completed');
+    // Step 5: Archive Creation - TEMPORARILY DISABLED
+    console.log('🔍 PIPELINE DEBUG: Step 5 - Skipping Archive Creation (temporarily disabled)');
+    // await this.updateProcessingStatus(sessionId, 'ARCHIVING');
+    // console.log('✅ PIPELINE DEBUG: Status updated to ARCHIVING, calling createSessionArchive()');
+    // const archive = await this.storageManager.createSessionArchive(sessionId);
+    // console.log('✅ PIPELINE DEBUG: Archive creation completed');
 
     // Step 6: Complete
     console.log('🔍 PIPELINE DEBUG: Step 6 - Completing Session');
@@ -1087,7 +1087,7 @@ export class DataProcessingPipeline extends EventEmitter {
           qualityScore: qualityReport.overallScore,
           completeness: qualityReport.completenessScore,
           reliability: qualityReport.reliabilityScore,
-          archiveUrl: archive.s3Key,
+          archiveUrl: null, // Archive temporarily disabled
           trainingFileId: trainingData.openaiFileId
         }
       })
@@ -1096,7 +1096,7 @@ export class DataProcessingPipeline extends EventEmitter {
     return {
       qualityReport,
       trainingData,
-      archive
+      archive: null // Archive temporarily disabled
     };
   }
 
