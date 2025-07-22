@@ -1,6 +1,6 @@
 import { PrismaClient, TaskType, TaskDifficulty, TaskAvailability, TaskAssignmentStatus } from '@prisma/client';
 import { Logger } from '../utils/logger';
-import { OpenAIIntegrationService } from './openai-integration-clean';
+import { OpenAITaskService } from './openai-task-service';
 
 export interface GeneratedTask {
   id: string;
@@ -35,12 +35,12 @@ export interface TaskAssignment {
 export class TaskGenerationService {
   private prisma: PrismaClient;
   private logger: Logger;
-  private openaiService: OpenAIIntegrationService;
+  private openaiTaskService: OpenAITaskService;
 
-  constructor(prisma: PrismaClient, openaiService: OpenAIIntegrationService) {
+  constructor(prisma: PrismaClient) {
     this.prisma = prisma;
     this.logger = new Logger('TaskGenerationService');
-    this.openaiService = openaiService;
+    this.openaiTaskService = new OpenAITaskService();
   }
 
   // Generate contextual task using OpenAI based on website and user level
@@ -77,7 +77,7 @@ export class TaskGenerationService {
     this.logger.info('Calling OpenAI service for task generation', { promptLength: prompt.length });
     
     // Call OpenAI to generate the task
-    const openAIResponse = await this.openaiService.generateTaskContent(prompt);
+    const openAIResponse = await this.openaiTaskService.generateTask(prompt);
     
     this.logger.info('OpenAI response received', { responseLength: openAIResponse.length });
     

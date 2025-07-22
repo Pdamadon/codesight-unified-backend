@@ -1210,45 +1210,6 @@ Focus on psychological insights that would help understand the user's shopping m
     return await this.analyzeScreenshots(screenshots);
   }
 
-  // Generate task content using OpenAI
-  async generateTaskContent(prompt: string): Promise<string> {
-    try {
-      this.logger.info("Generating task content with OpenAI", { 
-        promptLength: prompt.length,
-        hasApiKey: !!process.env.OPENAI_API_KEY 
-      });
-
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional AI fine-tuner aimed at collecting training data for an autonomous shopping agent. Generate realistic shopping tasks that humans will complete to train the AI. Focus on Seattle-area relevant shopping scenarios. Always return valid JSON format."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-        response_format: { type: "json_object" }
-      });
-
-      const content = response.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error("No content returned from OpenAI");
-      }
-
-      this.logger.info("Task content generated successfully", { responseLength: content.length });
-      return content;
-
-    } catch (error) {
-      this.logger.error("Task content generation failed", error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`OpenAI task generation failed: ${errorMessage}`);
-    }
-  }
 
   // Health check method for server monitoring
   async healthCheck(): Promise<string> {

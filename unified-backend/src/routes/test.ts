@@ -3,7 +3,6 @@ import { body, validationResult, query } from 'express-validator';
 import { prisma } from '../lib/database';
 import { Logger } from '../utils/logger';
 import { TaskGenerationService } from '../services/task-generation';
-import { OpenAIIntegrationService } from '../services/openai-integration-clean';
 
 const router = Router();
 const logger = new Logger('TestRoutes');
@@ -183,8 +182,7 @@ router.get('/task/random', async (req: Request, res: Response) => {
     
     const randomWebsite = websites[Math.floor(Math.random() * websites.length)];
     
-    const openaiService = new OpenAIIntegrationService();
-    const taskService = new TaskGenerationService(prisma, openaiService);
+    const taskService = new TaskGenerationService(prisma);
     
     logger.info('Generating test task', { website: randomWebsite, difficulty, category, sessionId });
     
