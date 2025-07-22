@@ -196,13 +196,28 @@ export class UnifiedWebSocketServer {
   }
 
   private async handleMessage(clientId: string, data: any): Promise<void> {
+    console.log('🚨🚨🚨 WEBSOCKET DEBUG: RAW MESSAGE RECEIVED 🚨🚨🚨');
+    console.log('📍 Location: WebSocketServer.handleMessage()');
+    console.log('🎯 clientId:', clientId);
+    console.log('📦 raw data (first 500 chars):', data.toString().substring(0, 500));
+    
     const client = this.clients.get(clientId);
-    if (!client) return;
+    if (!client) {
+      console.log('❌ CLIENT NOT FOUND FOR MESSAGE');
+      return;
+    }
 
     client.lastActivity = new Date();
 
     try {
       const message: WebSocketMessage = JSON.parse(data.toString());
+      
+      console.log('✅ PARSED MESSAGE SUCCESSFULLY:', {
+        type: message.type,
+        sessionId: message.sessionId,
+        hasData: !!message.data,
+        dataSize: message.data ? JSON.stringify(message.data).length : 0
+      });
       
       this.logger.info('Received WebSocket message', {
         clientId,
@@ -344,6 +359,12 @@ export class UnifiedWebSocketServer {
 
   // Process individual message
   private async processMessage(clientId: string, message: WebSocketMessage): Promise<void> {
+    console.log('🚨🚨🚨 WEBSOCKET DEBUG: processMessage() ROUTING 🚨🚨🚨');
+    console.log('📍 Location: WebSocketServer.processMessage()');
+    console.log('🎯 clientId:', clientId);
+    console.log('🏷️ message.type:', message.type);
+    console.log('📦 message.sessionId:', message.sessionId);
+    
     switch (message.type) {
       case 'session_start':
         await this.handleSessionStart(clientId, message);
@@ -492,19 +513,29 @@ export class UnifiedWebSocketServer {
   }
 
   private async handleSessionStop(clientId: string, message: WebSocketMessage): Promise<void> {
+    console.log('🚨🚨🚨 WEBSOCKET DEBUG: handleSessionStop() ENTRY POINT 🚨🚨🚨');
+    console.log('📍 Location: WebSocketServer.handleSessionStop()');
+    console.log('🎯 clientId:', clientId);
+    console.log('📦 message.sessionId:', message.sessionId);
+    
     const client = this.clients.get(clientId);
     if (!client || !client.authenticated) {
+      console.log('❌ CLIENT AUTH CHECK FAILED for session stop');
       this.sendError(clientId, 'Not authenticated');
       return;
     }
 
     const sessionId = message.sessionId || client.sessionId;
     if (!sessionId) {
+      console.log('❌ NO SESSION ID for session stop');
       this.sendError(clientId, 'No active session');
       return;
     }
 
     try {
+      console.log('🔄 CALLING DATA PROCESSING PIPELINE - stopSession()');
+      console.log('📊 sessionId being stopped:', sessionId);
+      
       // Update session status
       await this.dataProcessingPipeline.stopSession(sessionId);
 
@@ -518,6 +549,22 @@ export class UnifiedWebSocketServer {
       }
 
       client.sessionId = undefined;
+      
+      console.log('🔄 AUTO-TRIGGERING SESSION COMPLETION PROCESSING');
+      console.log('📊 About to call completeSession() for sessionId:', sessionId);
+
+      // 🎯 THE FIX: Automatically trigger session completion processing
+      try {
+        const completionResult = await this.dataProcessingPipeline.completeSession(sessionId, {
+          summary: 'Session completed via stop command',
+          finalQualityCheck: true,
+          autoCompleted: true
+        });
+        console.log('✅ AUTO-COMPLETION TRIGGERED SUCCESSFULLY:', JSON.stringify(completionResult, null, 2));
+      } catch (completionError) {
+        console.error('❌ AUTO-COMPLETION FAILED:', completionError);
+        // Don't fail the session stop, just log the completion error
+      }
 
       this.sendToClient(clientId, {
         type: 'session_stopped',
@@ -528,13 +575,14 @@ export class UnifiedWebSocketServer {
         timestamp: Date.now()
       });
 
-      this.logger.info('Session stopped', {
+      this.logger.info('Session stopped and completion processing triggered', {
         sessionId,
         clientId
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ SESSION STOP FAILED:', errorMessage);
       this.logger.error('Failed to stop session', {
         sessionId,
         clientId,
@@ -545,8 +593,18 @@ export class UnifiedWebSocketServer {
   }
 
   private async handleInteractionEvent(clientId: string, message: WebSocketMessage): Promise<void> {
+    console.log('🚨🚨🚨 WEBSOCKET DEBUG: handleInteractionEvent() ENTRY POINT 🚨🚨🚨');
+    console.log('📍 Location: WebSocketServer.handleInteractionEvent()');
+    console.log('🎯 clientId:', clientId);
+    console.log('📦 message.data:', JSON.stringify(message.data, null, 2));
+    
     const client = this.clients.get(clientId);
     if (!client || !client.authenticated || !client.sessionId) {
+      console.log('❌ CLIENT AUTH CHECK FAILED:', {
+        clientExists: !!client,
+        authenticated: client?.authenticated,
+        sessionId: client?.sessionId
+      });
       this.sendError(clientId, 'No active session');
       return;
     }
@@ -558,9 +616,14 @@ export class UnifiedWebSocketServer {
         timestamp: message.timestamp || Date.now(),
         clientId
       };
+      
+      console.log('🔄 CALLING DATA PROCESSING PIPELINE - processInteraction()');
+      console.log('📊 interactionData being sent to pipeline:', JSON.stringify(interactionData, null, 2));
 
       // Process interaction through pipeline
       const result = await this.dataProcessingPipeline.processInteraction(interactionData);
+      
+      console.log('✅ PIPELINE RETURNED RESULT:', JSON.stringify(result, null, 2));
 
       // Send processing result back to client
       this.sendToClient(clientId, {
@@ -638,18 +701,34 @@ export class UnifiedWebSocketServer {
   }
 
   private async handleSessionComplete(clientId: string, message: WebSocketMessage): Promise<void> {
+    console.log('🚨🚨🚨 WEBSOCKET DEBUG: handleSessionComplete() ENTRY POINT 🚨🚨🚨');
+    console.log('📍 Location: WebSocketServer.handleSessionComplete()');
+    console.log('🎯 clientId:', clientId);
+    console.log('📦 message.data:', JSON.stringify(message.data, null, 2));
+    
     const client = this.clients.get(clientId);
     if (!client || !client.authenticated || !client.sessionId) {
+      console.log('❌ CLIENT AUTH CHECK FAILED for session complete:', {
+        clientExists: !!client,
+        authenticated: client?.authenticated,
+        sessionId: client?.sessionId
+      });
       this.sendError(clientId, 'No active session');
       return;
     }
 
     try {
+      console.log('🔄 CALLING DATA PROCESSING PIPELINE - completeSession()');
+      console.log('📊 sessionId:', client.sessionId);
+      console.log('📊 completionData:', JSON.stringify(message.data, null, 2));
+      
       // Trigger complete session processing
       const result = await this.dataProcessingPipeline.completeSession(
         client.sessionId,
         message.data
       );
+      
+      console.log('✅ SESSION COMPLETION PIPELINE RETURNED:', JSON.stringify(result, null, 2));
 
       this.sendToClient(clientId, {
         type: 'session_processing_started',
