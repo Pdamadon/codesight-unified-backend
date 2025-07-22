@@ -641,7 +641,31 @@ Focus on psychological insights that would help understand the user's shopping m
       });
     }
 
-    return examples;
+    // 🎯 QUALITY FILTERING: Return only high-value examples to prevent overtraining
+    const highValueExamples = [
+      examples[0],  // Site-specific pattern (always valuable)
+      examples[11], // Business context integration (task context)
+      examples[12], // Structured environment + action format 
+      examples[13], // Task-directed interaction
+    ];
+    
+    // Add spatial context if meaningful nearby elements exist
+    if (nearbyText && nearby.length >= 2) {
+      highValueExamples.push(examples[1]); // Spatial relationships
+    }
+    
+    // Add selector reliability if high confidence
+    const bestSelectorConfidence = interaction.selectors?.reliability?.[bestSelector] || 0;
+    if (bestSelectorConfidence > 0.8 && backupSelectors.length > 0) {
+      highValueExamples.push(examples[9]); // Selector reliability strategies
+    }
+    
+    // Add modal context if present
+    if (overlays.length > 0) {
+      highValueExamples.push(examples[4]); // Modal/overlay context
+    }
+    
+    return highValueExamples.filter(Boolean); // Remove any undefined examples
   }
 
   // Create sequence-based training examples
