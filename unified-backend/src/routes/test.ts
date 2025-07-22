@@ -226,6 +226,10 @@ router.get('/openai-debug', async (req: Request, res: Response) => {
   try {
     logger.info('Testing OpenAI connectivity');
     
+    // Test 0: Check if TaskGenerationService logs work
+    const taskService = new TaskGenerationService(prisma);
+    logger.info('TaskGenerationService created successfully');
+    
     // Test 1: Check if API key exists
     const hasApiKey = !!process.env.OPENAI_API_KEY;
     const apiKeyLength = process.env.OPENAI_API_KEY?.length || 0;

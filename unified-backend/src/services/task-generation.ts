@@ -49,19 +49,26 @@ export class TaskGenerationService {
     const siteContext = await this.analyzeSiteCapabilities(website);
     
     try {
-      this.logger.info('Generating AI-powered task', { website, userLevel, category });
+      this.logger.info('🚀 STARTING AI-powered task generation', { website, userLevel, category, timestamp: Date.now() });
 
       const task = await this.generateTaskWithOpenAI(website, siteContext, userLevel, category);
+      
+      this.logger.info('✅ AI task generation SUCCESS', { taskId: task.id, title: task.title });
       
       // Store task in database for tracking
       await this.storeTask(task);
       
       return task;
     } catch (error) {
-      this.logger.error('AI task generation failed', { website, error });
+      this.logger.error('❌ AI task generation FAILED - falling back to templates', { 
+        website, 
+        error: error instanceof Error ? error.message : String(error),
+        errorName: error instanceof Error ? error.name : 'UnknownError'
+      });
       // Fallback to template-based generation if OpenAI fails
       const fallbackTask = await this.createContextualTask(website, siteContext, userLevel, category);
       await this.storeTask(fallbackTask);
+      this.logger.info('📝 Using template fallback task', { taskId: fallbackTask.id, title: fallbackTask.title });
       return fallbackTask;
     }
   }
