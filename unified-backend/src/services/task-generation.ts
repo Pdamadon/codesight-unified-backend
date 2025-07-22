@@ -136,7 +136,7 @@ export class TaskGenerationService {
     };
 
     // Check for Seattle-specific sites first, then general
-    return seattleSpecificSites[hostname] || (siteCapabilities as any)[hostname] || {
+    return (seattleSpecificSites as any)[hostname] || (siteCapabilities as any)[hostname] || {
       categories: ['general', 'shopping', 'navigation'],
       features: ['browse', 'search', 'interact'],
       complexity: ['basic_navigation', 'simple_interaction']

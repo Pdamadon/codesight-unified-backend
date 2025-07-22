@@ -1242,7 +1242,8 @@ Focus on psychological insights that would help understand the user's shopping m
 
     } catch (error) {
       this.logger.error("Task content generation failed", error);
-      throw new Error(`OpenAI task generation failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`OpenAI task generation failed: ${errorMessage}`);
     }
   }
 
