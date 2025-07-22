@@ -29,7 +29,7 @@ router.get('/generate', [
     
     const prisma = req.app.locals.prisma as PrismaClient;
     const openaiService = req.app.locals.openaiService as OpenAIIntegrationService;
-    const taskService = new TaskGenerationService(prisma, openaiService);
+    const taskService = new TaskGenerationService(prisma);
     
     logger.info('Generating task', { website, userLevel, category, sessionId });
     
@@ -73,7 +73,7 @@ router.get('/session/:sessionId', [
     
     const prisma = req.app.locals.prisma as PrismaClient;
     const openaiService = req.app.locals.openaiService as OpenAIIntegrationService;
-    const taskService = new TaskGenerationService(prisma, openaiService);
+    const taskService = new TaskGenerationService(prisma);
     
     const result = await taskService.getSessionTask(sessionId);
     
@@ -112,7 +112,7 @@ router.post('/session/:sessionId/status', [
     
     const prisma = req.app.locals.prisma as PrismaClient;
     const openaiService = req.app.locals.openaiService as OpenAIIntegrationService;
-    const taskService = new TaskGenerationService(prisma, openaiService);
+    const taskService = new TaskGenerationService(prisma);
     
     await taskService.updateTaskStatus(sessionId, status, automationSequence, completionTime);
     
@@ -153,7 +153,7 @@ router.get('/random', [
     
     const prisma = req.app.locals.prisma as PrismaClient;
     const openaiService = req.app.locals.openaiService as OpenAIIntegrationService;
-    const taskService = new TaskGenerationService(prisma, openaiService);
+    const taskService = new TaskGenerationService(prisma);
     
     const task = await taskService.generateTask(
       randomWebsite, 

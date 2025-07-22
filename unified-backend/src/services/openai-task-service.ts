@@ -69,9 +69,10 @@ export class OpenAITaskService {
       return content;
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error("OpenAI task generation failed", {
-        error: error instanceof Error ? error.message : String(error),
-        errorType: error.constructor.name,
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
         timestamp: new Date().toISOString()
       });
       throw error;
@@ -84,8 +85,7 @@ export class OpenAITaskService {
       const response = await this.openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: "Hello" }],
-        max_tokens: 5,
-        timeout: 10000
+        max_tokens: 5
       });
       return !!response.choices[0]?.message?.content;
     } catch {
