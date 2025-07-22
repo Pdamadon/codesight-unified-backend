@@ -238,8 +238,18 @@ router.get('/openai-debug', async (req: Request, res: Response) => {
       const service = new OpenAITaskService();
       serviceCreated = true;
       
-      // Test 3: Try health check
-      const healthCheckResult = await service.healthCheck();
+      // Test 3: Try health check with detailed error
+      let healthCheckResult = false;
+      let healthCheckError = null;
+      try {
+        healthCheckResult = await service.healthCheck();
+      } catch (healthError) {
+        healthCheckError = healthError instanceof Error ? {
+          message: healthError.message,
+          name: healthError.name,
+          stack: healthError.stack?.split('\n')[0] // Just first line
+        } : String(healthError);
+      }
       
       res.json({
         success: true,
@@ -248,6 +258,7 @@ router.get('/openai-debug', async (req: Request, res: Response) => {
           apiKeyLength,
           serviceCreated,
           healthCheckResult,
+          healthCheckError,
           timestamp: new Date().toISOString()
         }
       });
