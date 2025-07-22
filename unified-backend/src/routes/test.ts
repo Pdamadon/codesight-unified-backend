@@ -166,4 +166,48 @@ router.get('/database', async (req: Request, res: Response) => {
   }
 });
 
+// Test task generation endpoint (bypasses auth)
+router.get('/task/random', async (req: Request, res: Response) => {
+  try {
+    const { difficulty = 'beginner', category } = req.query;
+    
+    // Random popular e-commerce sites
+    const websites = [
+      'https://www.amazon.com',
+      'https://www.nike.com', 
+      'https://www.uniqlo.com',
+      'https://www.target.com'
+    ];
+    
+    const randomWebsite = websites[Math.floor(Math.random() * websites.length)];
+    
+    const openaiService = new OpenAIIntegrationService();
+    const taskService = new TaskGenerationService(prisma, openaiService);
+    
+    logger.info('Generating test task', { website: randomWebsite, difficulty, category });
+    
+    const task = await taskService.generateTask(
+      randomWebsite, 
+      difficulty as string, 
+      category as string
+    );
+    
+    res.json({
+      success: true,
+      task,
+      message: 'Test task generated successfully'
+    });
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Test task generation failed', { error: errorMessage });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate test task',
+      message: errorMessage
+    });
+  }
+});
+
 export default router;
