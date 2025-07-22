@@ -641,31 +641,59 @@ Focus on psychological insights that would help understand the user's shopping m
       });
     }
 
-    // 🎯 QUALITY FILTERING: Return only high-value examples to prevent overtraining
-    const highValueExamples = [
-      examples[0],  // Site-specific pattern (always valuable)
-      examples[11], // Business context integration (task context)
-      examples[12], // Structured environment + action format 
-      examples[13], // Task-directed interaction
-    ];
+    // 🎯 ADVANCED QUALITY FILTERING: Intelligent selection based on multiple criteria
+    const qualityMetrics = this.calculateQualityMetrics(interaction, taskContext, hostname);
     
-    // Add spatial context if meaningful nearby elements exist
-    if (nearbyText && nearby.length >= 2) {
-      highValueExamples.push(examples[1]); // Spatial relationships
+    // Core examples - always include if quality threshold met
+    const coreExamples = [];
+    
+    // Site-specific pattern (always valuable)
+    coreExamples.push(examples[0]);
+    
+    // Task context (only if meaningful task present)
+    if (taskContext && qualityMetrics.hasValidTask) {
+      coreExamples.push(examples[11]); // Business context integration
+      coreExamples.push(examples[13]); // Task-directed interaction
     }
     
-    // Add selector reliability if high confidence
-    const bestSelectorConfidence = interaction.selectors?.reliability?.[bestSelector] || 0;
-    if (bestSelectorConfidence > 0.8 && backupSelectors.length > 0) {
-      highValueExamples.push(examples[9]); // Selector reliability strategies
+    // Structured format (always valuable for consistency)
+    coreExamples.push(examples[12]);
+    
+    // High-value conditional examples
+    const conditionalExamples = [];
+    
+    // Spatial context - only if rich and meaningful
+    if (qualityMetrics.spatialQuality >= 0.7) {
+      conditionalExamples.push({example: examples[1], priority: qualityMetrics.spatialQuality});
     }
     
-    // Add modal context if present
-    if (overlays.length > 0) {
-      highValueExamples.push(examples[4]); // Modal/overlay context
+    // DOM hierarchy - only if complex enough to be informative  
+    if (qualityMetrics.domComplexity >= 0.6) {
+      conditionalExamples.push({example: examples[2], priority: qualityMetrics.domComplexity});
     }
     
-    return highValueExamples.filter(Boolean); // Remove any undefined examples
+    // Selector reliability - only if high confidence with good fallbacks
+    if (qualityMetrics.selectorQuality >= 0.8) {
+      conditionalExamples.push({example: examples[9], priority: qualityMetrics.selectorQuality});
+    }
+    
+    // Modal/overlay context - only if meaningful interaction
+    if (qualityMetrics.modalRelevance >= 0.7) {
+      conditionalExamples.push({example: examples[4], priority: qualityMetrics.modalRelevance});
+    }
+    
+    // User journey context - only if clear stage identification
+    if (qualityMetrics.journeyClarity >= 0.6) {
+      conditionalExamples.push({example: examples[6], priority: qualityMetrics.journeyClarity});
+    }
+    
+    // Sort conditional examples by priority and take top 3
+    const topConditional = conditionalExamples
+      .sort((a, b) => b.priority - a.priority)
+      .slice(0, 3)
+      .map(item => item.example);
+    
+    return [...coreExamples, ...topConditional].filter(Boolean);
   }
 
   // Create sequence-based training examples
@@ -901,6 +929,96 @@ Focus on psychological insights that would help understand the user's shopping m
       color: urlParams.get('color'),
       price: urlParams.get('price'),
       category: urlParams.get('category')
+    };
+  }
+
+  // Calculate comprehensive quality metrics for training data filtering
+  private calculateQualityMetrics(interaction: any, taskContext: any, hostname: string): any {
+    const nearby = interaction.element?.nearbyElements || [];
+    const parentElements = interaction.element?.parentElements || [];
+    const selectors = interaction.selectors || {};
+    const overlays = interaction.overlays || [];
+    const elementText = interaction.element?.text || '';
+    const elementAttributes = interaction.element?.attributes || {};
+    
+    // 1. Spatial Quality - richness of nearby element context
+    let spatialQuality = 0;
+    if (nearby.length >= 2) spatialQuality += 0.4;
+    if (nearby.length >= 3) spatialQuality += 0.2;
+    if (nearby.some((el: any) => el.isInteractive)) spatialQuality += 0.2;
+    if (nearby.some((el: any) => el.distance < 100)) spatialQuality += 0.2; // Close proximity
+    
+    // 2. DOM Complexity - informative hierarchy
+    let domComplexity = 0;
+    if (parentElements.length >= 3) domComplexity += 0.3;
+    if (parentElements.some((p: any) => p.className?.includes('container'))) domComplexity += 0.2;
+    if (parentElements.some((p: any) => p.tagName === 'section' || p.tagName === 'main')) domComplexity += 0.3;
+    if (interaction.element?.siblingElements?.length > 0) domComplexity += 0.2;
+    
+    // 3. Selector Quality - reliability and fallback options
+    const primaryReliability = selectors.reliability?.[selectors.primary] || 0;
+    const hasDataTestId = selectors.primary?.includes('data-testid') || false;
+    const hasGoodFallbacks = (selectors.alternatives?.length || 0) >= 2;
+    
+    let selectorQuality = primaryReliability;
+    if (hasDataTestId) selectorQuality = Math.max(selectorQuality, 0.9); // data-testid is highly reliable
+    if (hasGoodFallbacks) selectorQuality += 0.1;
+    
+    // 4. Modal Relevance - meaningfulness of modal interactions
+    let modalRelevance = 0;
+    if (overlays.length > 0) {
+      modalRelevance += 0.4; // Has modal
+      if (overlays[0].css_selector?.includes('confirmation') || 
+          overlays[0].css_selector?.includes('cart')) modalRelevance += 0.3; // Important modal type
+      if (elementText.includes('checkout') || elementText.includes('cart')) modalRelevance += 0.3; // Conversion action
+    }
+    
+    // 5. Journey Clarity - clear user journey stage identification
+    let journeyClarity = 0;
+    const url = interaction.context?.url || '';
+    if (url.includes('/cart') || url.includes('/checkout')) journeyClarity += 0.4;
+    if (url.includes('/product') || url.match(/\/t\//)) journeyClarity += 0.3;
+    if (elementText.toLowerCase().includes('add to cart') || 
+        elementText.toLowerCase().includes('checkout')) journeyClarity += 0.3;
+    
+    // 6. Task Validity - meaningful task context
+    let hasValidTask = false;
+    if (taskContext) {
+      hasValidTask = !!(taskContext.description && 
+                       taskContext.steps && 
+                       taskContext.successCriteria);
+    }
+    
+    // 7. Business Value - conversion/revenue relevance
+    let businessValue = 0;
+    if (elementText.toLowerCase().includes('buy') || 
+        elementText.toLowerCase().includes('purchase') ||
+        elementText.toLowerCase().includes('checkout')) businessValue += 0.5;
+    if (elementText.toLowerCase().includes('cart') || 
+        elementText.toLowerCase().includes('bag')) businessValue += 0.3;
+    if (url.includes('product') || url.includes('cart')) businessValue += 0.2;
+    
+    // 8. Site-Specific Value - unique patterns worth learning
+    let siteValue = 0;
+    if (hostname.includes('nike.com') && hasDataTestId) siteValue += 0.4; // Nike data-testid pattern
+    if (hostname.includes('amazon.com') && selectors.primary?.includes('#')) siteValue += 0.4; // Amazon ID pattern
+    if (elementAttributes.class?.includes('nds-btn')) siteValue += 0.3; // Nike design system
+    
+    return {
+      spatialQuality: Math.min(1.0, spatialQuality),
+      domComplexity: Math.min(1.0, domComplexity),
+      selectorQuality: Math.min(1.0, selectorQuality),
+      modalRelevance: Math.min(1.0, modalRelevance),
+      journeyClarity: Math.min(1.0, journeyClarity),
+      hasValidTask,
+      businessValue: Math.min(1.0, businessValue),
+      siteValue: Math.min(1.0, siteValue),
+      
+      // Overall quality score
+      overallQuality: Math.min(1.0, 
+        (spatialQuality + domComplexity + selectorQuality + modalRelevance + 
+         journeyClarity + businessValue + siteValue) / 7
+      )
     };
   }
 
