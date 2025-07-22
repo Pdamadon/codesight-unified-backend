@@ -615,8 +615,10 @@ Focus on psychological insights that would help understand the user's shopping m
 
     // 🆕 Example 12: Structured environment + action format (ChatGPT style)
     const environmentSnapshot = this.createEnvironmentSnapshot(interaction, hostname);
+    const userDirection = this.formatUserDirection(taskContext);
+    
     examples.push({
-      input: `ENVIRONMENT: ${JSON.stringify(environmentSnapshot)}\nINTENT: ${taskContext?.description || 'User interaction'}`,
+      input: `ENVIRONMENT: ${JSON.stringify(environmentSnapshot)}\nUSER GOAL: ${userDirection.goal}\nCURRENT STEP: ${userDirection.currentStep}\nINTENT: ${taskContext?.description || 'User interaction'}`,
       output: JSON.stringify({
         action: actionType,
         selector: bestSelector,
@@ -625,10 +627,19 @@ Focus on psychological insights that would help understand the user's shopping m
         context: {
           site: hostname,
           stage: userJourneyStage,
-          spatial: nearbyText
+          spatial: nearbyText,
+          taskProgress: userDirection.progress
         }
       })
     });
+
+    // 🆕 Example 13: Task-directed interaction with full user context
+    if (taskContext) {
+      examples.push({
+        input: `USER TASK: "${taskContext.title}" - GOAL: "${taskContext.description}" - WEBSITE: ${hostname} - ACTION NEEDED: ${actionType} "${elementText}"`,
+        output: `${playwrightAction} // Task: ${taskContext.title} | Step: ${userDirection.currentStep} | Goal: ${taskContext.description}`
+      });
+    }
 
     return examples;
   }
@@ -866,6 +877,31 @@ Focus on psychological insights that would help understand the user's shopping m
       color: urlParams.get('color'),
       price: urlParams.get('price'),
       category: urlParams.get('category')
+    };
+  }
+
+  // Format user task direction and progress
+  private formatUserDirection(taskContext: any): any {
+    if (!taskContext) {
+      return {
+        goal: 'Complete website interaction',
+        currentStep: 'Unknown step',
+        progress: 'Unknown'
+      };
+    }
+
+    const steps = taskContext.steps || [];
+    const currentStepIndex = Math.min(steps.length - 1, Math.max(0, steps.length - 1)); // Default to last step
+    
+    return {
+      goal: taskContext.description || taskContext.title,
+      currentStep: steps[currentStepIndex] || 'Complete task',
+      totalSteps: steps.length,
+      progress: `Step ${currentStepIndex + 1} of ${steps.length}`,
+      successCriteria: taskContext.successCriteria || [],
+      taskType: taskContext.type,
+      difficulty: taskContext.difficulty,
+      estimatedTime: taskContext.estimatedTime
     };
   }
 
