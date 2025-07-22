@@ -12,6 +12,7 @@ interface PageStructureAnalysis {
     | "checkout"
     | "other";
   framework: string[];
+  ecommercePlatform: string[];
   hasNavigation: boolean;
   hasSearch: boolean;
   hasFilters: boolean;
@@ -326,7 +327,7 @@ export class ContextEnhancementService {
       /page|next|previous|more/i.test(elementTexts) ||
       /pagination/i.test(selectors);
 
-    // Detect framework
+    // Detect frontend framework
     const frameworks: string[] = [];
     if (selectors.includes("data-react") || selectors.includes("[data-react"))
       frameworks.push("React");
@@ -336,6 +337,37 @@ export class ContextEnhancementService {
       frameworks.push("Vue");
     if (selectors.includes("data-test") || selectors.includes("data-cy"))
       frameworks.push("Testing Framework");
+
+    // Detect e-commerce platform
+    const ecommercePlatforms: string[] = [];
+    if (selectors.includes("shopify") || elementTexts.includes("shopify") || 
+        interactions.some((i: any) => i.url?.includes("myshopify.com"))) {
+      ecommercePlatforms.push("Shopify");
+    }
+    if (selectors.includes("woocommerce") || elementTexts.includes("woocommerce")) {
+      ecommercePlatforms.push("WooCommerce");
+    }
+    if (selectors.includes("magento") || elementTexts.includes("magento")) {
+      ecommercePlatforms.push("Magento");
+    }
+    if (selectors.includes("bigcommerce") || elementTexts.includes("bigcommerce")) {
+      ecommercePlatforms.push("BigCommerce");
+    }
+    if (selectors.includes("squarespace") || interactions.some((i: any) => i.url?.includes("squarespace.com"))) {
+      ecommercePlatforms.push("Squarespace");
+    }
+    
+    // Detect if it's likely custom-built
+    const hasCustomIndicators = interactions.some((i: any) => 
+      i.url?.includes("api/") || i.url?.includes("/graphql") || 
+      i.primarySelector?.includes("data-testid") ||
+      i.primarySelector?.includes("[data-")
+    );
+    if (ecommercePlatforms.length === 0 && hasCustomIndicators) {
+      ecommercePlatforms.push("Custom Build");
+    } else if (ecommercePlatforms.length === 0) {
+      ecommercePlatforms.push("Unknown Platform");
+    }
 
     // Count element types
     const elementCounts = {
@@ -364,6 +396,7 @@ export class ContextEnhancementService {
     return {
       pageType: primaryPageType as any,
       framework: frameworks,
+      ecommercePlatform: ecommercePlatforms,
       hasNavigation,
       hasSearch,
       hasFilters,
@@ -840,6 +873,12 @@ export class ContextEnhancementService {
     if (pageStructure.framework.length > 0) {
       insights.push(
         `Modern web framework detected: ${pageStructure.framework.join(", ")}`
+      );
+    }
+
+    if (pageStructure.ecommercePlatform.length > 0) {
+      insights.push(
+        `E-commerce platform identified: ${pageStructure.ecommercePlatform.join(", ")}`
       );
     }
 
