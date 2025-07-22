@@ -106,6 +106,12 @@ class UnifiedBackgroundService {
           sendResponse({ success: true });
           break;
 
+        case 'FETCH_TASK':
+          console.log('Background: FETCH_TASK message received'); // Debug log
+          const task = await this.fetchTaskFromAPI(message.sessionId, message.difficulty);
+          sendResponse(task);
+          break;
+
         case 'ping':
           sendResponse({ success: true, message: 'Background script is working', connected: !!this.websocketConnection });
           break;
@@ -874,6 +880,35 @@ class UnifiedBackgroundService {
       this.websocketConnection.send(JSON.stringify(message));
     } catch (error) {
       console.error('Background: Failed to stop backend session:', error);
+    }
+  }
+
+  // Fetch task from API (avoids CORS issues from content script)
+  async fetchTaskFromAPI(sessionId, difficulty = 'beginner') {
+    try {
+      console.log('Background: Fetching task from API for session:', sessionId);
+      
+      const response = await fetch('https://gentle-vision-production.up.railway.app/api/test/task/random?difficulty=' + difficulty, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Background: Task fetched successfully:', data.task?.title);
+      
+      return data;
+    } catch (error) {
+      console.error('Background: Failed to fetch task from API:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 

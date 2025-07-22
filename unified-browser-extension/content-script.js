@@ -36,6 +36,14 @@
       this.lastInteractionTime = 0;
       this.interactionSequence = 0;
       
+      // Task tracking
+      this.currentTask = null;
+      this.taskProgress = {
+        currentStep: 0,
+        completedSteps: []
+      };
+      this.taskOverlay = null;
+      
       // Privacy filters
       this.sensitiveSelectors = [
         'input[type="password"]',
@@ -66,8 +74,16 @@
       // Set up state preservation for navigation
       this.setupStatePreservation();
       
+      // Set up periodic state saving for navigation
+      this.setupPeriodicStateSaving();
+      
       // Restore state if needed
       this.restoreState();
+      
+      // Restore task overlay if tracking is active (delay to ensure state is fully restored)
+      setTimeout(() => {
+        this.restoreTaskOverlay();
+      }, 200);
       
       console.log('Unified CodeSight Tracker initialized v2.0');
     }
@@ -142,6 +158,9 @@
       // Show tracking indicator
       this.showTrackingIndicator();
       
+      // Fetch and display task
+      await this.fetchAndDisplayTask();
+      
       // Save state
       this.saveState();
       
@@ -177,8 +196,9 @@
       // Stop periodic validation
       this.stopPeriodicValidation();
       
-      // Hide tracking indicator
+      // Hide tracking indicator and task overlay
       this.hideTrackingIndicator();
+      this.hideTaskOverlay();
       
       // Capture final screenshot
       await this.captureScreenshot('session_end');
@@ -192,6 +212,12 @@
       
       // Stop backend session
       await this.stopBackendSession();
+      
+      // Clear periodic saving
+      if (this.stateSaveInterval) {
+        clearInterval(this.stateSaveInterval);
+        this.stateSaveInterval = null;
+      }
       
       // Clear state
       this.clearState();
@@ -1586,6 +1612,8 @@
         sessionId: this.sessionId
       });
       
+      // Task progress is tracked naturally through user interactions
+      
       // Send to background script for processing
       this.sendEventToBackground(eventData);
       
@@ -1899,6 +1927,8 @@
         startTime: this.startTime,
         eventCount: this.events.length,
         screenshotCount: this.screenshots.length,
+        currentTask: this.currentTask,
+        taskProgress: this.taskProgress,
         lastSaved: Date.now()
       };
       
@@ -1921,11 +1951,34 @@
           this.sessionId = state.sessionId;
           this.isTracking = state.isTracking;
           this.startTime = state.startTime;
+          this.currentTask = state.currentTask;
+          this.taskProgress = state.taskProgress || { currentStep: 0, completedSteps: [] };
+          
+          // Initialize arrays if not already initialized
+          if (!this.events) this.events = [];
+          if (!this.screenshots) this.screenshots = [];
+          
+          // Restore approximate counts (actual events are sent to backend)
+          this.restoredEventCount = state.eventCount || 0;
+          this.restoredScreenshotCount = state.screenshotCount || 0;
           
           if (this.isTracking) {
             console.log('Unified: Restored tracking state for session:', this.sessionId);
+            
+            // Re-initialize tracking components after state restoration
             this.bindEventListeners();
             this.showTrackingIndicator();
+            
+            // Re-establish backend connection if needed
+            this.sendEventToBackground({
+              type: 'navigation_restored',
+              sessionId: this.sessionId,
+              url: window.location.href,
+              timestamp: Date.now()
+            });
+            
+            // Start periodic validation to ensure connection remains active
+            this.startPeriodicValidation();
           }
         }
       } catch (error) {
@@ -1939,6 +1992,15 @@
       } catch (error) {
         console.error('Unified: Failed to clear state:', error);
       }
+    }
+
+    setupPeriodicStateSaving() {
+      // Save state every 2 seconds when tracking to handle navigation
+      this.stateSaveInterval = setInterval(() => {
+        if (this.isTracking) {
+          this.saveState();
+        }
+      }, 2000);
     }
 
     // Session data preparation
@@ -2497,18 +2559,204 @@
       }
     }
 
+    // Task overlay methods
+    async fetchAndDisplayTask() {
+      console.log('Unified: fetchAndDisplayTask() called'); // Debug log
+      try {
+        console.log('Unified: Fetching task for session:', this.sessionId);
+        
+        // Request task from background script to avoid CORS issues
+        const response = await chrome.runtime.sendMessage({
+          action: 'FETCH_TASK',
+          sessionId: this.sessionId,
+          difficulty: 'beginner'
+        });
+        
+        if (response && response.success && response.task) {
+          this.currentTask = response.task;
+          this.showTaskOverlay();
+          console.log('Unified: Task loaded:', this.currentTask.title);
+        } else {
+          throw new Error('Failed to fetch task: ' + (response?.error || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Unified: Failed to fetch task:', error);
+        // Show fallback task
+        this.currentTask = {
+          title: "Explore this website",
+          description: "Browse around and interact with different elements to help train our AI system",
+          website: window.location.href,
+          difficulty: "BEGINNER"
+        };
+        this.showTaskOverlay();
+      }
+    }
+
+    showTaskOverlay() {
+      if (document.getElementById('unified-task-overlay')) return;
+      if (!this.currentTask) return;
+      
+      const overlay = document.createElement('div');
+      overlay.id = 'unified-task-overlay';
+      
+      // Get website URL for display
+      const targetWebsite = this.currentTask.website || 'the target website';
+      const websiteDomain = targetWebsite.includes('://') ? new URL(targetWebsite).hostname : targetWebsite;
+      
+      overlay.innerHTML = `
+        <div style="
+          position: fixed;
+          top: 50px;
+          right: 10px;
+          width: 320px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 18px;
+          border-radius: 12px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          font-size: 14px;
+          z-index: 999998;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+          border: 1px solid rgba(255,255,255,0.2);
+        ">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <h4 style="margin: 0; font-size: 18px; color: #fff; display: flex; align-items: center;">
+              🎯 <span style="margin-left: 8px;">Your Task</span>
+            </h4>
+            <button onclick="document.getElementById('unified-task-overlay').style.display='none'" 
+                    style="background: none; border: none; color: white; font-size: 20px; cursor: pointer; opacity: 0.8; padding: 4px;">×</button>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <div style="font-weight: 600; margin-bottom: 6px; font-size: 15px;">${this.currentTask.title}</div>
+            <div style="font-size: 13px; opacity: 0.9; line-height: 1.4;">${this.currentTask.description}</div>
+          </div>
+          
+          <div style="
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+          ">
+            <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px; opacity: 0.9;">🌐 Target Website:</div>
+            <div style="font-size: 13px; font-weight: 500; color: #e8f4fd;">${websiteDomain}</div>
+          </div>
+          
+          <div style="font-size: 11px; opacity: 0.8; text-align: center; font-style: italic;">
+            Navigate to the website and complete your task naturally
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(overlay);
+      this.taskOverlay = overlay;
+    }
+
+    hideTaskOverlay() {
+      const overlay = document.getElementById('unified-task-overlay');
+      if (overlay) {
+        overlay.remove();
+      }
+      this.taskOverlay = null;
+    }
+
+    // Task progress is no longer automatically tracked - let users complete tasks naturally
+
+    // Task completion is now handled naturally by user behavior, not automated step tracking
+
+    restoreTaskOverlay() {
+      // Check if we're tracking and have a current task
+      if (this.isTracking && this.currentTask) {
+        console.log('Unified: Restoring task overlay after navigation for task:', this.currentTask.title);
+        
+        // Small delay to ensure DOM is ready and tracking indicator is shown
+        setTimeout(() => {
+          this.showTaskOverlay();
+        }, 100);
+      } else if (this.isTracking && !this.currentTask) {
+        // If we're tracking but lost the task, try to fetch it again
+        console.log('Unified: Tracking active but no current task - attempting to fetch task');
+        setTimeout(() => {
+          this.fetchAndDisplayTask();
+        }, 500);
+      }
+      
+      // Check if current domain matches task website domain  
+      if (this.isTracking && this.currentTask && this.currentTask.website) {
+        const currentDomain = window.location.hostname;
+        const taskDomain = new URL(this.currentTask.website).hostname;
+        
+        if (currentDomain === taskDomain || currentDomain.includes(taskDomain)) {
+          console.log('Unified: Now on task target website!', currentDomain);
+          // Highlight that we've reached the task website
+          this.showTaskCompletionHint();
+        }
+      }
+    }
+
+    showTaskCompletionHint() {
+      // Remove any existing hints
+      const existingHint = document.getElementById('unified-task-completion-hint');
+      if (existingHint) existingHint.remove();
+      
+      const hint = document.createElement('div');
+      hint.id = 'unified-task-completion-hint';
+      hint.innerHTML = `
+        <div style="
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+          color: white;
+          padding: 16px 20px;
+          border-radius: 8px;
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          z-index: 999999;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          max-width: 300px;
+          animation: slideIn 0.3s ease-out;
+        ">
+          <div style="font-size: 18px; margin-bottom: 8px;">🎯 Task Website Reached!</div>
+          <div style="font-weight: bold; margin-bottom: 4px;">You're now on the target website</div>
+          <div style="font-size: 12px; opacity: 0.9;">Start completing your task objectives</div>
+        </div>
+        <style>
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        </style>
+      `;
+      
+      document.body.appendChild(hint);
+      
+      // Auto remove after 4 seconds
+      setTimeout(() => {
+        if (hint.parentNode) {
+          hint.remove();
+        }
+      }, 4000);
+    }
+
     // Status methods
     getStatus() {
+      // Use restored counts if available, otherwise use current array lengths
+      const eventCount = this.events.length + (this.restoredEventCount || 0);
+      const screenshotCount = this.screenshots.length + (this.restoredScreenshotCount || 0);
+      
       return {
         isTracking: this.isTracking,
         sessionId: this.sessionId,
         startTime: this.startTime,
         duration: this.isTracking ? Date.now() - this.startTime : 0,
-        eventCount: this.events.length,
-        screenshotCount: this.screenshots.length,
+        eventCount: eventCount,
+        screenshotCount: screenshotCount,
         currentUrl: window.location.href,
         qualityScore: this.calculateQualityScore(),
-        completeness: this.calculateCompleteness()
+        completeness: this.calculateCompleteness(),
+        currentTask: this.currentTask,
+        taskProgress: this.taskProgress
       };
     }
 
