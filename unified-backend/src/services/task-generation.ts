@@ -245,13 +245,30 @@ export class TaskGenerationService {
       (values as any)[variable] = await this.generateVariableValue(variable, siteContext);
     }
     
-    // Replace variables in template
-    let templateStr = JSON.stringify(template);
-    for (const [key, value] of Object.entries(values)) {
-      templateStr = templateStr.replace(new RegExp(`\\{${key}\\}`, 'g'), value as string);
+    // Replace variables in template - recursive approach to avoid JSON parsing issues
+    return this.replaceVariablesInObject(template, values);
+  }
+
+  // Recursively replace variables in object without JSON stringification
+  private replaceVariablesInObject(obj: any, values: Record<string, string>): any {
+    if (typeof obj === 'string') {
+      // Replace all variables in the string
+      let result = obj;
+      for (const [key, value] of Object.entries(values)) {
+        result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+      }
+      return result;
+    } else if (Array.isArray(obj)) {
+      return obj.map(item => this.replaceVariablesInObject(item, values));
+    } else if (obj && typeof obj === 'object') {
+      const result: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        result[key] = this.replaceVariablesInObject(value, values);
+      }
+      return result;
     }
     
-    return JSON.parse(templateStr);
+    return obj;
   }
 
   // Generate specific values for variables
