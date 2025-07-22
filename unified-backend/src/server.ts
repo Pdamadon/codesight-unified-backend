@@ -21,6 +21,7 @@ import { archiveRoutes } from "./routes/archives";
 import { adminRoutes } from "./routes/admin";
 import { analyticsRoutes } from "./routes/analytics";
 import testRoutes from "./routes/test";
+import taskRoutes from "./routes/tasks";
 
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { authMiddleware, authRateLimit, authBruteForceProtection } from "./middleware/auth";
@@ -59,6 +60,13 @@ const dataProcessingPipeline = new DataProcessingPipeline(
   openaiService,
   qualityControl
 );
+
+// Make services available to routes via app.locals
+app.locals.prisma = prisma;
+app.locals.storageManager = storageManager;
+app.locals.openaiService = openaiService;
+app.locals.qualityControl = qualityControl;
+app.locals.dataProcessingPipeline = dataProcessingPipeline;
 
 // Security middleware
 app.use(
@@ -261,6 +269,7 @@ app.use("/api/training", authRateLimit as any, authBruteForceProtection as any, 
 app.use("/api/archives", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, validationMiddleware as any, archiveRoutes);
 app.use("/api/admin", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, adminRoutes);
 app.use("/api/analytics", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, analyticsRoutes);
+app.use("/api/tasks", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, validationMiddleware as any, taskRoutes);
 
 // Legacy compatibility endpoints (for gradual migration)
 app.use("/api/workers", authMiddleware as any, (req, res) => {

@@ -1123,7 +1123,23 @@ export class DataProcessingPipeline extends EventEmitter {
 
     // Save training data
     const jsonlContent = trainingData.messages.map((msg: any) => JSON.stringify(msg)).join('\n');
+    
+    // Find existing training data for this session
+    const existing = await this.prisma.trainingData.findFirst({
+      where: { sessionId }
+    });
+    
     const trainingRecord = await this.executeWithThrottling(() => 
+      existing ? 
+      this.prisma.trainingData.update({
+        where: { id: existing.id },
+        data: {
+          jsonlData: jsonlContent,
+          fileSize: jsonlContent.length,
+          trainingQuality: trainingData.trainingValue,
+          status: 'PENDING'
+        }
+      }) :
       this.prisma.trainingData.create({
         data: {
           sessionId,

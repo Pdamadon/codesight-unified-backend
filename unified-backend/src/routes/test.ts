@@ -1,7 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body, validationResult, query } from 'express-validator';
 import { prisma } from '../lib/database';
 import { Logger } from '../utils/logger';
+import { TaskGenerationService } from '../services/task-generation';
+import { OpenAIIntegrationService } from '../services/openai-integration-clean';
 
 const router = Router();
 const logger = new Logger('TestRoutes');

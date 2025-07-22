@@ -329,10 +329,13 @@ Focus on psychological insights that would help understand the user's shopping m
     };
   }
 
-  // Training Data Generation
+  // Training Data Generation with Task Context
   async generateTrainingData(sessionData: any): Promise<TrainingData> {
     try {
-      const messages = await this.formatForOpenAI(sessionData);
+      // Get task context if available
+      const taskContext = await this.getTaskContext(sessionData.id);
+      
+      const messages = await this.formatForOpenAI(sessionData, taskContext);
       
       return {
         messages,
@@ -350,40 +353,279 @@ Focus on psychological insights that would help understand the user's shopping m
     }
   }
 
-  private async formatForOpenAI(sessionData: any): Promise<any[]> {
-    const messages = [];
-    
-    // System message with context
-    messages.push({
-      role: "system",
-      content: `You are an AI assistant that helps users navigate e-commerce websites. 
-      Based on the user's behavior and psychology profile, provide helpful guidance for finding and purchasing products.
-      
-      User Psychology Profile:
-      - Personality: ${sessionData.userPsychology?.dominantPersonality || 'Unknown'}
-      - Emotional State: ${sessionData.userPsychology?.emotionalState || 'Unknown'}
-      - Decision Style: ${sessionData.userPsychology?.decisionMakingStyle || 'Unknown'}
-      - Trust Level: ${sessionData.userPsychology?.trustLevel || 50}/100
-      - Price Sensitivity: ${sessionData.userPsychology?.priceSensitivity || 50}/100`
-    });
+  // Get task context for session
+  private async getTaskContext(sessionId: string): Promise<any> {
+    try {
+      const taskAssignment = await this.prisma.taskAssignment.findFirst({
+        where: { sessionId },
+        include: { task: true }
+      });
 
-    // Add interaction-based messages from enhanced interactions JSON
+      if (!taskAssignment || !taskAssignment.task) return null;
+
+      return {
+        taskId: taskAssignment.task.id,
+        title: taskAssignment.task.title,
+        description: taskAssignment.task.description,
+        type: taskAssignment.task.type,
+        difficulty: taskAssignment.task.difficulty,
+        steps: JSON.parse(taskAssignment.task.steps),
+        successCriteria: JSON.parse(taskAssignment.task.successCriteria),
+        status: taskAssignment.status,
+        completionTime: taskAssignment.completionTime,
+        assignedAt: taskAssignment.assignedAt
+      };
+    } catch (error) {
+      this.logger.error("Failed to get task context", { sessionId, error });
+      return null;
+    }
+  }
+
+  private async formatForOpenAI(sessionData: any, taskContext?: any): Promise<any[]> {
+    const trainingExamples: any[] = [];
+    
     const enhancedInteractions = sessionData.enhancedInteractions || [];
-    if (enhancedInteractions.length > 0) {
-      for (const interaction of enhancedInteractions.slice(0, 10)) { // Limit for token efficiency
-        messages.push({
-          role: "user",
-          content: `I ${interaction.type} on "${interaction.elementText || interaction.primarySelector}" at ${interaction.url}`
-        });
-        
-        messages.push({
-          role: "assistant",
-          content: this.generateContextualResponse(interaction, sessionData.userPsychology)
-        });
-      }
+    if (enhancedInteractions.length === 0) return trainingExamples;
+
+    // Add task-driven training examples if task context is available
+    if (taskContext) {
+      const taskExamples = this.createTaskDrivenExamples(enhancedInteractions, taskContext);
+      trainingExamples.push(...taskExamples);
     }
 
-    return messages;
+    // Create individual training examples for each interaction
+    enhancedInteractions.forEach((interaction: any) => {
+      const examples = this.createFineTuningExamples(interaction, taskContext);
+      trainingExamples.push(...examples);
+    });
+
+    // Add sequence-based training examples
+    if (enhancedInteractions.length > 1) {
+      const sequenceExamples = this.createSequenceExamples(enhancedInteractions);
+      trainingExamples.push(...sequenceExamples);
+    }
+
+    return trainingExamples;
+  }
+
+  // Create task-driven training examples - the key innovation!
+  private createTaskDrivenExamples(interactions: any[], taskContext: any): any[] {
+    const examples = [];
+    
+    // Task goal → Complete automation sequence
+    const automationSequence = interactions
+      .map(int => this.getPlaywrightAction(
+        int.type?.toLowerCase(), 
+        this.getBestSelector(int.selectors)
+      ))
+      .join(';\n');
+    
+    examples.push({
+      input: `TASK: "${taskContext.description}" on ${new URL(interactions[0]?.context?.url || '').hostname}`,
+      output: automationSequence
+    });
+
+    // Task step → Specific automation 
+    taskContext.steps?.forEach((step: string, index: number) => {
+      if (interactions[index]) {
+        const interaction = interactions[index];
+        const action = this.getPlaywrightAction(
+          interaction.type?.toLowerCase(),
+          this.getBestSelector(interaction.selectors)
+        );
+        
+        examples.push({
+          input: `STEP: "${step}" - How to automate this step?`,
+          output: `${action} // ${step}`
+        });
+      }
+    });
+
+    // Success criteria → Verification commands
+    taskContext.successCriteria?.forEach((criteria: string) => {
+      examples.push({
+        input: `VERIFY: "${criteria}" - How to check if this was accomplished?`,
+        output: this.generateVerificationCommand(criteria)
+      });
+    });
+
+    // Task completion analysis
+    const taskSuccess = taskContext.status === 'completed';
+    examples.push({
+      input: `Task completion analysis: "${taskContext.title}" - ${taskSuccess ? 'SUCCESS' : 'INCOMPLETE'}`,
+      output: `Task ${taskSuccess ? 'completed successfully' : 'not completed'} in ${taskContext.completionTime || 'unknown'} seconds. Automation sequence: ${automationSequence}`
+    });
+
+    return examples;
+  }
+
+  // Generate verification commands for success criteria
+  private generateVerificationCommand(criteria: string): string {
+    const lowerCriteria = criteria.toLowerCase();
+    
+    if (lowerCriteria.includes('cart icon shows') || lowerCriteria.includes('cart count')) {
+      return `await expect(page.locator('.cart-count, [data-testid="cart-count"]')).toBeVisible(); // Verify cart has items`;
+    } else if (lowerCriteria.includes('cart page') || lowerCriteria.includes('cart contents')) {
+      return `await expect(page.locator('.cart-items, [data-testid="cart-items"]')).toBeVisible(); // Verify on cart page`;
+    } else if (lowerCriteria.includes('product') && lowerCriteria.includes('page')) {
+      return `await expect(page.locator('h1, [data-testid="product-title"]')).toBeVisible(); // Verify product page loaded`;
+    } else if (lowerCriteria.includes('search')) {
+      return `await expect(page.locator('.search-results, [data-testid="search-results"]')).toBeVisible(); // Verify search results displayed`;
+    } else if (lowerCriteria.includes('price') || lowerCriteria.includes('$')) {
+      return `await expect(page.locator('[data-testid="price"], .price')).toBeVisible(); // Verify price displayed`;
+    } else {
+      return `await expect(page.locator('body')).toContainText('${criteria}'); // Verify criteria met`;
+    }
+  }
+
+  // Create fine-tuning training examples for individual interactions
+  private createFineTuningExamples(interaction: any, taskContext?: any): any[] {
+    const examples = [];
+    
+    const url = interaction.context?.url;
+    const hostname = url ? new URL(url).hostname : 'unknown-site';
+    const elementText = interaction.element?.text || '';
+    const actionType = interaction.type?.toLowerCase() || 'interact';
+    const pageTitle = interaction.context?.pageTitle || '';
+    
+    // Get the best selector based on reliability
+    const selectors = interaction.selectors || {};
+    const bestSelector = this.getBestSelector(selectors);
+    const backupSelectors = this.getBackupSelectors(selectors, bestSelector);
+    
+    // Get nearby elements for context
+    const nearby = interaction.element?.nearbyElements || [];
+    const nearbyText = nearby.slice(0, 2).map((el: any) => 
+      `"${el.text}" (${el.direction}, ${el.distance}px)`
+    ).join(', ');
+
+    // Example 1: Basic selector identification
+    examples.push({
+      input: `Site: ${hostname}, Element: "${elementText}", Context: ${pageTitle}`,
+      output: bestSelector
+    });
+
+    // Example 2: Action command generation
+    const playwrightAction = this.getPlaywrightAction(actionType, bestSelector);
+    examples.push({
+      input: `${actionType.toUpperCase()} "${elementText}" on ${hostname}`,
+      output: playwrightAction
+    });
+
+    // Example 3: Context-aware automation
+    if (nearbyText) {
+      examples.push({
+        input: `Site: ${hostname}, Target: "${elementText}", Nearby: ${nearbyText}, Action: ${actionType}`,
+        output: `${playwrightAction} // "${elementText}" near ${nearbyText}`
+      });
+    }
+
+    // Example 4: Selector reliability and fallbacks
+    if (backupSelectors.length > 0) {
+      examples.push({
+        input: `Find reliable selector for "${elementText}" on ${hostname}`,
+        output: `Primary: ${bestSelector}, Fallback: ${backupSelectors[0]}`
+      });
+    }
+
+    // Example 5: Element purpose identification
+    const purpose = this.inferElementPurpose(elementText, interaction.element?.attributes);
+    examples.push({
+      input: `Element purpose: "${elementText}" with selector ${bestSelector}`,
+      output: purpose
+    });
+
+    return examples;
+  }
+
+  // Create sequence-based training examples
+  private createSequenceExamples(interactions: any[]): any[] {
+    const examples = [];
+    
+    // Take sequences of 2-3 interactions
+    for (let i = 0; i < interactions.length - 1; i++) {
+      const current = interactions[i];
+      const next = interactions[i + 1];
+      
+      const currentAction = this.getPlaywrightAction(
+        current.type?.toLowerCase(), 
+        this.getBestSelector(current.selectors)
+      );
+      const nextAction = this.getPlaywrightAction(
+        next.type?.toLowerCase(),
+        this.getBestSelector(next.selectors)
+      );
+      
+      const currentText = current.element?.text || 'element';
+      const nextText = next.element?.text || 'element';
+      
+      examples.push({
+        input: `Sequence: Click "${currentText}" then "${nextText}"`,
+        output: `${currentAction};\n${nextAction};`
+      });
+    }
+
+    return examples;
+  }
+
+  private getBestSelector(selectors: any): string {
+    if (!selectors) return 'element';
+    
+    // Priority order: data-testid > id > class > tag
+    if (selectors.primary?.includes('data-testid')) return selectors.primary;
+    if (selectors.primary?.includes('#')) return selectors.primary;
+    
+    // Check alternatives for better options
+    const alternatives = selectors.alternatives || [];
+    const dataTestId = alternatives.find((s: string) => s.includes('data-testid'));
+    if (dataTestId) return dataTestId;
+    
+    const idSelector = alternatives.find((s: string) => s.includes('#'));
+    if (idSelector) return idSelector;
+    
+    return selectors.primary || selectors.alternatives?.[0] || 'element';
+  }
+
+  private getBackupSelectors(selectors: any, exclude: string): string[] {
+    if (!selectors) return [];
+    
+    const all = [selectors.primary, ...(selectors.alternatives || []), selectors.xpath]
+      .filter(s => s && s !== exclude);
+    
+    return all.slice(0, 2); // Return top 2 backup selectors
+  }
+
+  private getPlaywrightAction(actionType: string, selector: string): string {
+    switch (actionType) {
+      case 'click':
+        return `await page.click('${selector}')`;
+      case 'hover':
+      case 'focus':
+        return `await page.hover('${selector}')`;
+      case 'type':
+      case 'input':
+        return `await page.fill('${selector}', 'value')`;
+      case 'select':
+        return `await page.selectOption('${selector}', 'option')`;
+      default:
+        return `await page.click('${selector}')`;
+    }
+  }
+
+  private inferElementPurpose(elementText: string, attributes: any = {}): string {
+    const text = elementText.toLowerCase();
+    const type = attributes?.type?.toLowerCase() || '';
+    const role = attributes?.role?.toLowerCase() || '';
+    
+    if (text.includes('add to cart') || text.includes('buy')) return 'Purchase action';
+    if (text.includes('login') || text.includes('sign in')) return 'Authentication';
+    if (text.includes('search')) return 'Search functionality';
+    if (text.includes('menu') || text.includes('nav')) return 'Navigation';
+    if (type === 'submit' || attributes?.['data-testid']?.includes('submit')) return 'Form submission';
+    if (role === 'button' || attributes?.tagName === 'button') return 'Interactive button';
+    if (text.match(/\d+/) && text.includes('$')) return 'Pricing element';
+    
+    return `Interactive element: ${elementText}`;
   }
 
   private generateContextualResponse(interaction: any, psychology: any): string {

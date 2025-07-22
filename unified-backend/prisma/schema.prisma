@@ -329,3 +329,77 @@ enum DecisionMakingStyle {
   COMPARISON_HEAVY
   RESEARCH_DRIVEN
 }
+
+model GeneratedTask {
+  id               String              @id @default(uuid())
+  type             TaskType
+  difficulty       TaskDifficulty
+  title            String
+  description      String
+  steps            String              // JSON string of steps array
+  website          String
+  category         String
+  estimatedTime    Int                 // in minutes
+  successCriteria  String              // JSON string of success criteria array
+  tags             String              // JSON string of tags array
+  context          String              // JSON string of task context
+  status           TaskAvailability    @default(AVAILABLE)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  assignments      TaskAssignment[]
+
+  @@index([type])
+  @@index([difficulty])
+  @@index([category])
+  @@index([status])
+  @@index([createdAt])
+  @@map("generated_tasks")
+}
+
+model TaskAssignment {
+  id                  String               @id @default(uuid())
+  taskId              String
+  sessionId           String
+  userId              String               @default("anonymous")
+  assignedAt          DateTime             @default(now())
+  status              TaskAssignmentStatus @default(ASSIGNED)
+  completionTime      Int?                 // in seconds
+  automationSequence String?              // JSON string of automation steps
+  outcomeAnalysis     String?              // JSON string of analysis
+  task                GeneratedTask        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([status])
+  @@index([assignedAt])
+  @@map("task_assignments")
+}
+
+enum TaskType {
+  SIMPLE
+  COMPARISON
+  COMPLEX
+  WORKFLOW
+}
+
+enum TaskDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum TaskAvailability {
+  AVAILABLE
+  ASSIGNED
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskAssignmentStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  ABANDONED
+}

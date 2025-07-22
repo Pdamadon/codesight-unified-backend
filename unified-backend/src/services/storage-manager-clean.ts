@@ -158,7 +158,6 @@ export class StorageManager {
     const session = await this.prisma.unifiedSession.findUnique({
       where: { id: sessionId },
       include: {
-        interactions: true,
         screenshots: true
       }
     });
@@ -174,9 +173,14 @@ export class StorageManager {
       this.prisma.trainingData.findFirst({ where: { sessionId } })
     ]);
 
+    // Use enhanced interactions from JSON field for archiving
+    const enhancedInteractions = Array.isArray(session.enhancedInteractions) 
+      ? session.enhancedInteractions as any[]
+      : [];
+
     return {
       sessionId,
-      interactions: session.interactions,
+      interactions: enhancedInteractions, // Use enhanced JSON interactions
       screenshots: session.screenshots,
       metadata: {
         session: {
