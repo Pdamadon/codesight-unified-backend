@@ -170,14 +170,29 @@ router.get('/task/random', async (req: Request, res: Response) => {
   try {
     const { difficulty = 'beginner', category, sessionId } = req.query;
     
-    // Random popular e-commerce sites (Seattle-focused for local testing)
+    // Seattle-focused e-commerce sites (mix of local and major retailers)
     const websites = [
+      // Seattle heritage brands
       'https://www.rei.com',      // Seattle-based outdoor retailer
       'https://www.nordstrom.com', // Seattle-based department store  
       'https://www.starbucks.com', // Seattle-based coffee
+      'https://www.filson.com',   // Seattle-based premium outdoor goods
+      
+      // Seattle local boutiques
+      'https://prismseattle.com', // Local fashion boutique
+      'https://millieseattle.com', // Local clothing boutique  
+      'https://elmboutique.com',  // Local fashion boutique
+      
+      // Kitchen & home (popular in Seattle)
+      'https://www.surlatable.com', // Kitchen equipment
+      'https://www.williams-sonoma.com', // Home & kitchen
+      'https://www.homedepot.com', // Home improvement
+      
+      // Major retailers
       'https://www.nike.com',
       'https://www.amazon.com',
-      'https://www.uniqlo.com'
+      'https://www.uniqlo.com',
+      'https://www.target.com'
     ];
     
     const randomWebsite = websites[Math.floor(Math.random() * websites.length)];

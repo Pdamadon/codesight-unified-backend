@@ -401,6 +401,54 @@ export class TaskGenerationService {
         storeType: 'Fast Fashion & Basics',
         products: ['basic clothing', 'seasonal collections', 'outerwear', 'undergarments', 'accessories'],
         features: ['size customization', 'seasonal lookbooks', 'fabric technology', 'coordinated outfits', 'global shipping']
+      },
+      'filson.com': {
+        description: 'Seattle-based premium outdoor and workwear brand since 1897',
+        storeType: 'Premium Outdoor & Workwear',
+        products: ['rugged outerwear', 'leather bags', 'wool clothing', 'boots', 'classic Seattle style', 'durable workwear'],
+        features: ['lifetime guarantee', 'Seattle heritage', 'handcrafted quality', 'repair service', 'premium materials']
+      },
+      'prismseattle.com': {
+        description: 'Seattle local fashion boutique with curated contemporary styles',
+        storeType: 'Local Fashion Boutique',
+        products: ['contemporary clothing', 'designer pieces', 'accessories', 'unique finds', 'local designers'],
+        features: ['curated selection', 'personal styling', 'local Seattle fashion', 'boutique experience', 'unique pieces']
+      },
+      'millieseattle.com': {
+        description: 'Seattle boutique specializing in modern women\'s fashion',
+        storeType: 'Local Women\'s Boutique',
+        products: ['women\'s clothing', 'dresses', 'tops', 'accessories', 'modern styles', 'contemporary fashion'],
+        features: ['modern aesthetic', 'Seattle local', 'women-focused', 'fashion-forward', 'boutique service']
+      },
+      'elmboutique.com': {
+        description: 'Seattle fashion boutique with eclectic and artistic clothing',
+        storeType: 'Local Fashion Boutique',
+        products: ['artistic clothing', 'unique fashion', 'accessories', 'eclectic styles', 'independent designers'],
+        features: ['artistic curation', 'unique finds', 'Seattle local', 'independent brands', 'creative fashion']
+      },
+      'surlatable.com': {
+        description: 'Premium kitchen and cooking equipment retailer',
+        storeType: 'Kitchen & Cooking Equipment',
+        products: ['cookware', 'kitchen appliances', 'baking supplies', 'cutlery', 'kitchen gadgets', 'food items'],
+        features: ['cooking classes', 'expert advice', 'professional quality', 'recipe resources', 'kitchen design']
+      },
+      'williams-sonoma.com': {
+        description: 'Premium home and kitchen retailer',
+        storeType: 'Home & Kitchen',
+        products: ['cookware', 'home decor', 'furniture', 'bedding', 'kitchen appliances', 'holiday items'],
+        features: ['design services', 'registry', 'seasonal collections', 'premium brands', 'home styling']
+      },
+      'homedepot.com': {
+        description: 'Home improvement and hardware retailer',
+        storeType: 'Home Improvement & Hardware',
+        products: ['tools', 'building materials', 'garden supplies', 'appliances', 'home improvement', 'paint'],
+        features: ['installation services', 'project guides', 'bulk ordering', 'contractor services', 'local pickup']
+      },
+      'target.com': {
+        description: 'General merchandise retailer with style and value',
+        storeType: 'General Merchandise',
+        products: ['clothing', 'home goods', 'electronics', 'groceries', 'beauty', 'toys', 'seasonal items'],
+        features: ['Target Circle rewards', 'same-day delivery', 'exclusive brands', 'pharmacy', 'grocery pickup']
       }
     };
 
