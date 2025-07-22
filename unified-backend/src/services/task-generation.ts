@@ -363,6 +363,55 @@ export class TaskGenerationService {
     return obj;
   }
 
+  // Get website-specific shopping context for OpenAI prompts
+  private getWebsiteShoppingContext(hostname: string): any {
+    const contexts = {
+      'rei.com': {
+        description: 'Leading outdoor gear and apparel retailer',
+        storeType: 'Outdoor Recreation & Sporting Goods',
+        products: ['hiking gear', 'camping equipment', 'outdoor clothing', 'bikes', 'climbing gear', 'winter sports gear'],
+        features: ['expert advice', 'local store pickup', 'member benefits', 'size guides', 'product reviews']
+      },
+      'nordstrom.com': {
+        description: 'Premium department store with fashion and home goods',
+        storeType: 'Department Store & Fashion',
+        products: ['designer clothing', 'shoes', 'handbags', 'jewelry', 'beauty products', 'home decor'],
+        features: ['personal styling', 'free shipping/returns', 'price matching', 'beauty services', 'wedding registry']
+      },
+      'starbucks.com': {
+        description: 'Global coffeehouse chain with retail products',
+        storeType: 'Coffee & Lifestyle Retail',
+        products: ['coffee beans', 'brewing equipment', 'mugs & tumblers', 'food items', 'gift cards'],
+        features: ['mobile ordering', 'rewards program', 'subscription service', 'store locator', 'seasonal offerings']
+      },
+      'nike.com': {
+        description: 'Athletic footwear and apparel brand',
+        storeType: 'Athletic Wear & Footwear',
+        products: ['sneakers', 'athletic clothing', 'sports equipment', 'team merchandise', 'accessories'],
+        features: ['Nike customization', 'size guides', 'athlete collections', 'sport-specific gear', 'mobile app integration']
+      },
+      'amazon.com': {
+        description: 'Global e-commerce marketplace',
+        storeType: 'Online Marketplace',
+        products: ['electronics', 'books', 'home goods', 'clothing', 'groceries', 'virtually everything'],
+        features: ['Prime shipping', 'reviews/ratings', 'recommendations', 'price comparison', 'multiple sellers']
+      },
+      'uniqlo.com': {
+        description: 'Japanese casual wear designer and retailer',
+        storeType: 'Fast Fashion & Basics',
+        products: ['basic clothing', 'seasonal collections', 'outerwear', 'undergarments', 'accessories'],
+        features: ['size customization', 'seasonal lookbooks', 'fabric technology', 'coordinated outfits', 'global shipping']
+      }
+    };
+
+    return (contexts as any)[hostname] || {
+      description: 'E-commerce website',
+      storeType: 'Online Retail Store',
+      products: ['various products'],
+      features: ['online shopping', 'product search', 'shopping cart']
+    };
+  }
+
   // Generate specific values for variables with Seattle context
   private async generateVariableValue(variable: string, siteContext: any): Promise<string> {
     const seattleGenerators = {
@@ -399,26 +448,39 @@ export class TaskGenerationService {
 
   // Build OpenAI prompt for task generation
   private buildTaskGenerationPrompt(hostname: string, siteContext: any, userLevel: string, category?: string): string {
+    // Get website-specific context
+    const websiteContext = this.getWebsiteShoppingContext(hostname);
+    
     return `You are a professional AI fine-tuner aimed at collecting training data for an autonomous shopping agent. 
 
 MISSION: Create realistic shopping tasks for humans who will:
-- Browse and navigate e-commerce websites
-- Find and compare products 
+- Browse and navigate e-commerce websites with active online stores
+- Find and compare products available for online purchase
 - Add items to cart (but NOT complete checkout)
 - For complex tasks: enter shipping data but stop before payment
 
-CONTEXT:
-- Website: ${hostname}
+WEBSITE CONTEXT:
+- Website: ${hostname} (${websiteContext.description})
+- Store Type: ${websiteContext.storeType}
+- Primary Products: ${websiteContext.products.join(', ')}
+- Shopping Features: ${websiteContext.features.join(', ')}
 - User Level: ${userLevel}
 - Category Focus: ${category || 'any relevant category'}
-- Site Features: ${siteContext.features?.join(', ') || 'standard e-commerce'}
 - Local Context: Seattle area (prefer Pacific Northwest relevant items)
+
+IMPORTANT: This website HAS an active online store. Create tasks that utilize:
+- Product search and browsing
+- Shopping cart functionality  
+- Product comparison features
+- Category navigation
+- Filter/sort capabilities
 
 TASK REQUIREMENTS:
 - Create realistic shopping scenarios a Seattle resident might have
 - Focus on discovery and cart addition, not purchase completion
-- Include specific product types relevant to Seattle climate/culture
+- Include specific product types available on ${hostname}
 - Make tasks engaging and realistic for data collection
+- Ensure tasks match the website's actual product catalog
 - ${userLevel === 'beginner' ? 'Keep steps simple (2-4 steps max)' : ''}
 - ${userLevel === 'advanced' ? 'Include comparison, filtering, and complex product selection' : ''}
 
