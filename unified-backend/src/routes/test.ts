@@ -221,4 +221,60 @@ router.get('/task/random', async (req: Request, res: Response) => {
   }
 });
 
+// Debug OpenAI connectivity
+router.get('/openai-debug', async (req: Request, res: Response) => {
+  try {
+    logger.info('Testing OpenAI connectivity');
+    
+    // Test 1: Check if API key exists
+    const hasApiKey = !!process.env.OPENAI_API_KEY;
+    const apiKeyLength = process.env.OPENAI_API_KEY?.length || 0;
+    
+    // Test 2: Try to instantiate the service
+    let serviceCreated = false;
+    let serviceError = null;
+    try {
+      const { OpenAITaskService } = await import('../services/openai-task-service');
+      const service = new OpenAITaskService();
+      serviceCreated = true;
+      
+      // Test 3: Try health check
+      const healthCheckResult = await service.healthCheck();
+      
+      res.json({
+        success: true,
+        diagnostics: {
+          hasApiKey,
+          apiKeyLength,
+          serviceCreated,
+          healthCheckResult,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      serviceError = error instanceof Error ? error.message : String(error);
+      res.json({
+        success: false,
+        diagnostics: {
+          hasApiKey,
+          apiKeyLength,
+          serviceCreated,
+          serviceError,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('OpenAI debug failed', { error: errorMessage });
+    
+    res.status(500).json({
+      success: false,
+      error: 'Debug endpoint failed',
+      message: errorMessage
+    });
+  }
+});
+
 export default router;
