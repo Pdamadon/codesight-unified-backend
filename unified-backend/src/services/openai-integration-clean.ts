@@ -493,47 +493,125 @@ Focus on psychological insights that would help understand the user's shopping m
     const bestSelector = this.getBestSelector(selectors);
     const backupSelectors = this.getBackupSelectors(selectors, bestSelector);
     
-    // Get nearby elements for context
+    // Extract rich contextual data
     const nearby = interaction.element?.nearbyElements || [];
-    const nearbyText = nearby.slice(0, 2).map((el: any) => 
+    const parentElements = interaction.element?.parentElements || [];
+    const siblingElements = interaction.element?.siblingElements || [];
+    const contextData = interaction.contextData || {};
+    const overlays = interaction.overlays || [];
+    const elementDetails = interaction.elementDetails || {};
+    
+    // Build comprehensive context strings
+    const nearbyText = nearby.slice(0, 3).map((el: any) => 
       `"${el.text}" (${el.direction}, ${el.distance}px)`
     ).join(', ');
+    
+    const siblingText = siblingElements.slice(0, 2).map((el: any) => 
+      `"${el.text}" (${el.position})`
+    ).join(', ');
+    
+    const parentContext = parentElements.length > 0 ? 
+      parentElements[0].className || parentElements[0].tagName : '';
+    
+    // Determine page context and user journey stage
+    const pageContext = this.analyzePageContext(interaction, hostname);
+    const userJourneyStage = this.inferUserJourneyStage(interaction, pageContext);
+    const conversionContext = this.getConversionContext(interaction, pageContext);
 
-    // Example 1: Basic selector identification
-    examples.push({
-      input: `Site: ${hostname}, Element: "${elementText}", Context: ${pageTitle}`,
-      output: bestSelector
-    });
-
-    // Example 2: Action command generation
     const playwrightAction = this.getPlaywrightAction(actionType, bestSelector);
+
+    // 🆕 ENHANCED TRAINING EXAMPLES
+
+    // Example 1: Site-specific pattern recognition
     examples.push({
-      input: `${actionType.toUpperCase()} "${elementText}" on ${hostname}`,
-      output: playwrightAction
+      input: `${hostname.toUpperCase()}: "${elementText}" ${actionType}, ${pageContext.pageType}`,
+      output: `${playwrightAction} // ${hostname} ${pageContext.designSystem || 'standard'} pattern`
     });
 
-    // Example 3: Context-aware automation
+    // Example 2: Spatial relationship learning
     if (nearbyText) {
       examples.push({
-        input: `Site: ${hostname}, Target: "${elementText}", Nearby: ${nearbyText}, Action: ${actionType}`,
-        output: `${playwrightAction} // "${elementText}" near ${nearbyText}`
+        input: `SPATIAL: "${elementText}" with nearby elements: ${nearbyText} on ${hostname}`,
+        output: `${playwrightAction} // Located near: ${nearbyText}`
       });
     }
 
-    // Example 4: Selector reliability and fallbacks
+    // Example 3: DOM hierarchy context
+    if (parentContext) {
+      examples.push({
+        input: `DOM HIERARCHY: "${elementText}" in ${parentContext} container on ${hostname}`,
+        output: `${playwrightAction} // Within ${parentContext} structure`
+      });
+    }
+
+    // Example 4: Sibling element context
+    if (siblingText) {
+      examples.push({
+        input: `SIBLING CONTEXT: "${elementText}" grouped with ${siblingText} on ${hostname}`,
+        output: `${playwrightAction} // Part of element group: ${siblingText}`
+      });
+    }
+
+    // Example 5: Modal/Overlay context
+    if (overlays.length > 0) {
+      const overlayType = overlays[0].css_selector?.includes('modal') ? 'modal' : 'overlay';
+      examples.push({
+        input: `${overlayType.toUpperCase()}: "${elementText}" in ${overlayType} on ${hostname}`,
+        output: `${playwrightAction} // ${overlayType} interaction`
+      });
+    }
+
+    // Example 6: Conversion funnel context
+    if (conversionContext.stage) {
+      examples.push({
+        input: `CONVERSION: ${conversionContext.stage} - "${elementText}" on ${hostname}`,
+        output: `${playwrightAction} // ${conversionContext.businessAction} action`
+      });
+    }
+
+    // Example 7: User journey context
+    if (userJourneyStage) {
+      examples.push({
+        input: `USER JOURNEY: ${userJourneyStage} stage, click "${elementText}" on ${hostname}`,
+        output: `${playwrightAction} // ${userJourneyStage} workflow`
+      });
+    }
+
+    // Example 8: Element attribute patterns (enhanced)
+    const attributes = interaction.element?.attributes || {};
+    const dataTestId = attributes['data-testid'];
+    if (dataTestId) {
+      examples.push({
+        input: `RELIABLE SELECTOR: Find "${elementText}" with data-testid on ${hostname}`,
+        output: `[data-testid="${dataTestId}"] // High reliability selector for ${hostname}`
+      });
+    }
+
+    // Example 9: Visual context (if available)
+    const boundingBox = interaction.visual?.boundingBox;
+    if (boundingBox) {
+      const position = this.getVisualPosition(boundingBox);
+      examples.push({
+        input: `VISUAL POSITION: "${elementText}" in ${position} area of ${hostname}`,
+        output: `${playwrightAction} // ${position} positioned element`
+      });
+    }
+
+    // Example 10: Selector reliability with context
     if (backupSelectors.length > 0) {
       examples.push({
-        input: `Find reliable selector for "${elementText}" on ${hostname}`,
-        output: `Primary: ${bestSelector}, Fallback: ${backupSelectors[0]}`
+        input: `SELECTOR STRATEGY: Find "${elementText}" on ${hostname}, primary may fail`,
+        output: `Primary: ${bestSelector}, Fallback: ${backupSelectors[0]} // Reliability-based selection`
       });
     }
 
-    // Example 5: Element purpose identification
-    const purpose = this.inferElementPurpose(elementText, interaction.element?.attributes);
-    examples.push({
-      input: `Element purpose: "${elementText}" with selector ${bestSelector}`,
-      output: purpose
-    });
+    // Example 11: Business context integration
+    if (taskContext) {
+      examples.push({
+        input: `TASK: "${taskContext.description}" - interact with "${elementText}" on ${hostname}`,
+        output: `${playwrightAction} // Task-driven interaction: ${taskContext.title}`
+      });
+    }
 
     return examples;
   }
@@ -626,6 +704,97 @@ Focus on psychological insights that would help understand the user's shopping m
     if (text.match(/\d+/) && text.includes('$')) return 'Pricing element';
     
     return `Interactive element: ${elementText}`;
+  }
+
+  // Enhanced context analysis methods for training data
+  private analyzePageContext(interaction: any, hostname: string): any {
+    const url = interaction.context?.url || '';
+    const pageTitle = interaction.context?.pageTitle || '';
+    const overlays = interaction.overlays || [];
+    
+    // Determine page type from URL and context
+    let pageType = 'unknown';
+    if (url.includes('/cart')) pageType = 'cart';
+    else if (url.includes('/checkout')) pageType = 'checkout';
+    else if (url.includes('/product') || url.match(/\/t\//)) pageType = 'product';
+    else if (url.includes('/search')) pageType = 'search';
+    else if (url === `https://www.${hostname}/` || url === `https://${hostname}/`) pageType = 'homepage';
+    else if (overlays.length > 0) pageType = 'modal_overlay';
+    
+    // Determine design system from hostname
+    let designSystem = 'standard';
+    if (hostname.includes('nike.com')) designSystem = 'nds'; // Nike Design System
+    else if (hostname.includes('amazon.com')) designSystem = 'amazon-ui';
+    else if (hostname.includes('uniqlo.com')) designSystem = 'uniqlo-ui';
+    
+    return {
+      pageType,
+      designSystem,
+      hasModal: overlays.length > 0,
+      url,
+      title: pageTitle
+    };
+  }
+
+  private inferUserJourneyStage(interaction: any, pageContext: any): string {
+    const elementText = interaction.element?.text?.toLowerCase() || '';
+    const url = interaction.context?.url || '';
+    
+    // Analyze user journey stage based on context
+    if (pageContext.pageType === 'homepage') return 'discovery';
+    if (pageContext.pageType === 'search') return 'search_browse';
+    if (pageContext.pageType === 'product') {
+      if (elementText.includes('add to cart') || elementText.includes('add to bag')) return 'consideration_to_intent';
+      return 'consideration';
+    }
+    if (pageContext.pageType === 'cart') {
+      if (elementText.includes('checkout')) return 'intent_to_purchase';
+      return 'cart_review';
+    }
+    if (pageContext.pageType === 'checkout') return 'purchase_completion';
+    if (pageContext.hasModal && elementText.includes('view bag')) return 'post_add_review';
+    
+    return 'unknown';
+  }
+
+  private getConversionContext(interaction: any, pageContext: any): any {
+    const elementText = interaction.element?.text?.toLowerCase() || '';
+    
+    // Map actions to business conversion stages
+    let stage = 'unknown';
+    let businessAction = 'unknown';
+    
+    if (elementText.includes('add to cart') || elementText.includes('add to bag')) {
+      stage = 'add_to_cart';
+      businessAction = 'conversion_action';
+    } else if (elementText.includes('checkout') || elementText.includes('buy now')) {
+      stage = 'checkout_initiation';
+      businessAction = 'purchase_intent';
+    } else if (elementText.includes('view bag') || elementText.includes('view cart')) {
+      stage = 'cart_review';
+      businessAction = 'cart_validation';
+    } else if (elementText.includes('continue shopping')) {
+      stage = 'continue_browsing';
+      businessAction = 'retention_action';
+    }
+    
+    return { stage, businessAction };
+  }
+
+  private getVisualPosition(boundingBox: any): string {
+    const { x, y, width, height } = boundingBox;
+    const viewport = { width: 1700, height: 863 }; // Default, could be extracted from interaction
+    
+    // Determine general position on screen
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    
+    const horizontalPos = centerX < viewport.width * 0.33 ? 'left' : 
+                         centerX > viewport.width * 0.67 ? 'right' : 'center';
+    const verticalPos = centerY < viewport.height * 0.33 ? 'top' :
+                       centerY > viewport.height * 0.67 ? 'bottom' : 'middle';
+    
+    return `${verticalPos}-${horizontalPos}`;
   }
 
   private generateContextualResponse(interaction: any, psychology: any): string {
