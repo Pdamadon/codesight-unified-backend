@@ -1119,12 +1119,35 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async updateProcessingStatus(sessionId: string, status: string): Promise<void> {
-    await this.executeWithThrottling(() => 
-      this.prisma.unifiedSession.update({
+    try {
+      // First check if session exists
+      const sessionExists = await this.prisma.unifiedSession.findUnique({
         where: { id: sessionId },
-        data: { processingStatus: status as any }
-      })
-    );
+        select: { id: true }
+      });
+
+      if (!sessionExists) {
+        this.logger.warn('Cannot update processing status - session not found', { 
+          sessionId, 
+          status,
+          error: 'Session record does not exist in database'
+        });
+        throw new Error(`Session ${sessionId} not found - cannot update status to ${status}`);
+      }
+
+      await this.executeWithThrottling(() => 
+        this.prisma.unifiedSession.update({
+          where: { id: sessionId },
+          data: { processingStatus: status as any }
+        })
+      );
+
+      this.logger.info('Processing status updated', { sessionId, status });
+
+    } catch (error) {
+      this.logger.error('Failed to update processing status', error, { sessionId, status });
+      throw error;
+    }
   }
 
   // Event Handling
