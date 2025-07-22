@@ -134,13 +134,10 @@ export class QualityControlService {
       ? session.enhancedInteractions as any[]
       : [];
     
-    // Normalize interactions from both sources
-    const allInteractions = [
-      // Legacy flat interactions
-      ...session.interactions.map(this.normalizeInteraction),
-      // Enhanced JSON interactions  
-      ...enhancedInteractions.map(this.normalizeEnhancedInteraction)
-    ].sort((a, b) => a.timestamp - b.timestamp);
+    // Use only enhanced JSON interactions (legacy interactions table removed)
+    const allInteractions = enhancedInteractions
+      .map(this.normalizeEnhancedInteraction)
+      .sort((a, b) => a.timestamp - b.timestamp);
     
     // Replace session.interactions with normalized data
     return {
