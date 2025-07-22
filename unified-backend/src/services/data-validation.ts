@@ -760,13 +760,10 @@ export class DataValidationService {
     try {
       this.logger.info("Starting session validation", { sessionId });
 
-      // Get session data
+      // Get session data - use JSON field instead of interactions table
       const session = await this.prisma.unifiedSession.findUnique({
         where: { id: sessionId },
         include: {
-          interactions: {
-            orderBy: { timestamp: 'asc' }
-          },
           screenshots: {
             orderBy: { timestamp: 'asc' }
           }
