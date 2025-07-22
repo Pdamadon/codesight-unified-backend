@@ -9,8 +9,8 @@ const logger = new Logger('TestRoutes');
 
 // Test endpoint to directly create sessions in database
 router.post('/database', 
-  body('action').isIn(['create_session', 'create_interaction']),
-  body('data').isObject(),
+  body('action').isIn(['create_session', 'create_interaction', 'clear_all_sessions']),
+  body('data').optional().isObject(),
   async (req: Request, res: Response) => {
     try {
       const errors = validationResult(req);
@@ -82,6 +82,12 @@ router.post('/database',
             }
           });
           logger.info('Interaction created directly in database', { interactionId: result.id });
+          break;
+
+        case 'clear_all_sessions':
+          const deleteResult = await prisma.unifiedSession.deleteMany({});
+          result = { deletedCount: deleteResult.count };
+          logger.info('All unified sessions cleared', { deletedCount: deleteResult.count });
           break;
 
         default:
