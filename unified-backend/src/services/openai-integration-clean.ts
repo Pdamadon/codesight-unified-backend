@@ -361,7 +361,10 @@ Focus on psychological insights that would help understand the user's shopping m
         include: { task: true }
       });
 
-      if (!taskAssignment || !taskAssignment.task) return null;
+      if (!taskAssignment || !taskAssignment.task) {
+        this.logger.info("No task context found", { sessionId });
+        return null;
+      }
 
       return {
         taskId: taskAssignment.task.id,
@@ -373,7 +376,12 @@ Focus on psychological insights that would help understand the user's shopping m
         successCriteria: JSON.parse(taskAssignment.task.successCriteria),
         status: taskAssignment.status,
         completionTime: taskAssignment.completionTime,
-        assignedAt: taskAssignment.assignedAt
+        assignedAt: taskAssignment.assignedAt,
+        website: taskAssignment.task.website,
+        category: taskAssignment.task.category,
+        estimatedTime: taskAssignment.task.estimatedTime,
+        tags: JSON.parse(taskAssignment.task.tags),
+        context: JSON.parse(taskAssignment.task.context)
       };
     } catch (error) {
       this.logger.error("Failed to get task context", { sessionId, error });
@@ -1200,6 +1208,42 @@ Focus on psychological insights that would help understand the user's shopping m
     // For now, delegate to the standard analyzeScreenshots method
     // This maintains compatibility while using the existing implementation
     return await this.analyzeScreenshots(screenshots);
+  }
+
+  // Generate task content using OpenAI
+  async generateTaskContent(prompt: string): Promise<string> {
+    try {
+      this.logger.info("Generating task content with OpenAI", { promptLength: prompt.length });
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a professional AI fine-tuner aimed at collecting training data for an autonomous shopping agent. Generate realistic shopping tasks that humans will complete to train the AI. Focus on Seattle-area relevant shopping scenarios. Always return valid JSON format."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+        response_format: { type: "json_object" }
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No content returned from OpenAI");
+      }
+
+      this.logger.info("Task content generated successfully", { responseLength: content.length });
+      return content;
+
+    } catch (error) {
+      this.logger.error("Task content generation failed", error);
+      throw new Error(`OpenAI task generation failed: ${error.message}`);
+    }
   }
 
   // Health check method for server monitoring

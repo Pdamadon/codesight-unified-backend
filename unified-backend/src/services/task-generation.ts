@@ -43,22 +43,46 @@ export class TaskGenerationService {
     this.openaiService = openaiService;
   }
 
-  // Generate contextual task based on website and user level
+  // Generate contextual task using OpenAI based on website and user level
   async generateTask(website: string, userLevel: string = 'beginner', category?: string): Promise<GeneratedTask> {
+    // Analyze site capabilities outside try block so it's available for fallback
+    const siteContext = await this.analyzeSiteCapabilities(website);
+    
     try {
-      this.logger.info('Generating task', { website, userLevel, category });
+      this.logger.info('Generating AI-powered task', { website, userLevel, category });
 
-      const siteContext = await this.analyzeSiteCapabilities(website);
-      const task = await this.createContextualTask(website, siteContext, userLevel, category);
+      const task = await this.generateTaskWithOpenAI(website, siteContext, userLevel, category);
       
       // Store task in database for tracking
       await this.storeTask(task);
       
       return task;
     } catch (error) {
-      this.logger.error('Task generation failed', { website, error });
-      throw error;
+      this.logger.error('AI task generation failed', { website, error });
+      // Fallback to template-based generation if OpenAI fails
+      const fallbackTask = await this.createContextualTask(website, siteContext, userLevel, category);
+      await this.storeTask(fallbackTask);
+      return fallbackTask;
     }
+  }
+
+  // Generate task using OpenAI with contextual prompts
+  private async generateTaskWithOpenAI(website: string, siteContext: any, userLevel: string, category?: string): Promise<GeneratedTask> {
+    const hostname = new URL(website).hostname;
+    
+    this.logger.info('Building OpenAI task generation prompt', { hostname, userLevel, category });
+    
+    const prompt = this.buildTaskGenerationPrompt(hostname, siteContext, userLevel, category);
+    
+    this.logger.info('Calling OpenAI service for task generation', { promptLength: prompt.length });
+    
+    // Call OpenAI to generate the task
+    const openAIResponse = await this.openaiService.generateTaskContent(prompt);
+    
+    this.logger.info('OpenAI response received', { responseLength: openAIResponse.length });
+    
+    // Parse and structure the response
+    return this.parseOpenAITaskResponse(openAIResponse, website, userLevel);
   }
 
   // Analyze website capabilities to generate appropriate tasks
@@ -89,7 +113,30 @@ export class TaskGenerationService {
       }
     };
 
-    return (siteCapabilities as any)[hostname] || {
+    // Seattle-specific site capabilities
+    const seattleSpecificSites = {
+      'rei.com': {
+        categories: ['outdoor', 'hiking', 'seattle_weather', 'pacific_northwest'],
+        features: ['gear_finder', 'local_store_pickup', 'expert_advice', 'outdoor_classes'],
+        complexity: ['gear_selection', 'size_fitting', 'activity_matching'],
+        localContext: 'Seattle flagship store available for pickup and returns'
+      },
+      'nordstrom.com': {
+        categories: ['fashion', 'seattle_style', 'business_casual', 'rain_appropriate'],
+        features: ['personal_styling', 'size_consultation', 'seattle_store_pickup'],
+        complexity: ['style_coordination', 'occasion_dressing', 'seattle_weather_appropriate'],
+        localContext: 'Founded in Seattle, local store network for services'
+      },
+      'starbucks.com': {
+        categories: ['coffee', 'seattle_culture', 'local_roasters', 'gift_cards'],
+        features: ['store_locator', 'mobile_order', 'rewards_program'],
+        complexity: ['drink_customization', 'seasonal_offerings', 'local_store_features'],
+        localContext: 'Seattle headquarters, original Pike Place location nearby'
+      }
+    };
+
+    // Check for Seattle-specific sites first, then general
+    return seattleSpecificSites[hostname] || (siteCapabilities as any)[hostname] || {
       categories: ['general', 'shopping', 'navigation'],
       features: ['browse', 'search', 'interact'],
       complexity: ['basic_navigation', 'simple_interaction']
@@ -195,6 +242,44 @@ export class TaskGenerationService {
             }
           ]
         }
+      },
+      'rei.com': {
+        simple: {
+          outdoor: [
+            {
+              title: "Find Seattle weather gear",
+              description: "Search for {gear} suitable for Seattle's rainy climate",
+              steps: ["Browse outdoor gear", "Filter for weather protection", "Select Seattle-appropriate item"],
+              successCriteria: ["Weather-resistant gear found", "Suitable for Pacific Northwest", "Added to cart"]
+            },
+            {
+              title: "Gear up for local hiking",
+              description: "Find {gear} for hiking trails around Seattle like Mount Rainier",
+              steps: ["Visit hiking section", "Filter by activity", "Select trail-appropriate gear"],
+              successCriteria: ["Hiking gear selected", "Appropriate for local trails", "Ready for checkout"]
+            }
+          ],
+          seattle_weather: [
+            {
+              title: "Rain gear essentials",
+              description: "Find a {product} to stay dry in Seattle weather",
+              steps: ["Search rain gear", "Compare waterproof ratings", "Add to cart"],
+              successCriteria: ["Waterproof item found", "Seattle weather appropriate", "Cart updated"]
+            }
+          ]
+        }
+      },
+      'starbucks.com': {
+        simple: {
+          coffee: [
+            {
+              title: "Order Seattle coffee culture",
+              description: "Find {product} representing Seattle's coffee heritage",
+              steps: ["Browse coffee selection", "Look for Seattle-roasted options", "Add to cart"],
+              successCriteria: ["Seattle coffee found", "Authentic local selection", "Order placed"]
+            }
+          ]
+        }
       }
     };
 
@@ -271,34 +356,157 @@ export class TaskGenerationService {
     return obj;
   }
 
-  // Generate specific values for variables
+  // Generate specific values for variables with Seattle context
   private async generateVariableValue(variable: string, siteContext: any): Promise<string> {
-    const generators = {
+    const seattleGenerators = {
       product: () => this.randomChoice([
-        'wireless earbuds', 'running shoes', 'backpack', 'water bottle', 
-        't-shirt', 'jeans', 'jacket', 'sneakers', 'watch', 'phone case'
+        'waterproof hiking boots', 'rain jacket', 'coffee beans', 'fleece pullover',
+        'insulated water bottle', 'daypack', 'wool socks', 'umbrella', 'Seahawks jersey', 'local honey'
       ]),
-      price: () => this.randomChoice(['$50', '$100', '$200', '$25', '$75']),
+      price: () => this.randomChoice(['$50', '$100', '$200', '$75', '$150']),
       products: () => this.randomChoice([
-        'bluetooth speakers', 'running shoes', 'laptops', 'headphones'
+        'rain gear', 'hiking boots', 'coffee equipment', 'outdoor apparel', 'Seattle souvenirs'
       ]),
       sport: () => this.randomChoice([
-        'running', 'basketball', 'tennis', 'training', 'football'
+        'hiking', 'cycling', 'kayaking', 'running', 'climbing'
       ]),
       gear: () => this.randomChoice([
-        'shoes', 'shorts', 'shirt', 'equipment', 'accessories'
+        'rain gear', 'hiking boots', 'cycling equipment', 'outdoor clothing', 'camping gear'
       ]),
       clothing_type: () => this.randomChoice([
-        'shirts', 'pants', 'sweaters', 'jackets', 'basics'
+        'rain jackets', 'wool sweaters', 'hiking pants', 'fleece layers', 'waterproof boots'
       ]),
       number: () => this.randomChoice(['3', '5', '2', '4']),
       category: () => this.randomChoice([
-        'home office', 'workout', 'travel', 'gaming'
+        'Pacific Northwest outdoor', 'Seattle weather gear', 'local favorites', 'rainy day essentials'
       ]),
-      budget: () => this.randomChoice(['$300', '$500', '$150', '$250'])
+      budget: () => this.randomChoice(['$300', '$500', '$150', '$250']),
+      seattle_specific: () => this.randomChoice([
+        'for Seattle weather', 'perfect for hiking Mount Rainier', 'ideal for Pike Place Market visits', 
+        'great for Seattle coffee culture', 'perfect for Puget Sound activities'
+      ])
     };
 
-    return (generators as any)[variable] ? (generators as any)[variable]() : variable;
+    return (seattleGenerators as any)[variable] ? (seattleGenerators as any)[variable]() : variable;
+  }
+
+  // Build OpenAI prompt for task generation
+  private buildTaskGenerationPrompt(hostname: string, siteContext: any, userLevel: string, category?: string): string {
+    return `You are a professional AI fine-tuner aimed at collecting training data for an autonomous shopping agent. 
+
+MISSION: Create realistic shopping tasks for humans who will:
+- Browse and navigate e-commerce websites
+- Find and compare products 
+- Add items to cart (but NOT complete checkout)
+- For complex tasks: enter shipping data but stop before payment
+
+CONTEXT:
+- Website: ${hostname}
+- User Level: ${userLevel}
+- Category Focus: ${category || 'any relevant category'}
+- Site Features: ${siteContext.features?.join(', ') || 'standard e-commerce'}
+- Local Context: Seattle area (prefer Pacific Northwest relevant items)
+
+TASK REQUIREMENTS:
+- Create realistic shopping scenarios a Seattle resident might have
+- Focus on discovery and cart addition, not purchase completion
+- Include specific product types relevant to Seattle climate/culture
+- Make tasks engaging and realistic for data collection
+- ${userLevel === 'beginner' ? 'Keep steps simple (2-4 steps max)' : ''}
+- ${userLevel === 'advanced' ? 'Include comparison, filtering, and complex product selection' : ''}
+
+RESPONSE FORMAT (JSON):
+{
+  "title": "Concise task title",
+  "description": "Detailed task description with specific product/criteria",
+  "steps": ["Step 1", "Step 2", "Step 3"],
+  "successCriteria": ["Criteria 1", "Criteria 2"],
+  "estimatedTime": number_in_minutes,
+  "tags": ["tag1", "tag2"],
+  "difficulty": "${userLevel.toUpperCase()}"
+}
+
+EXAMPLES OF GOOD TASKS:
+- "Find waterproof hiking boots under $200 suitable for Seattle trails"
+- "Compare 3 different rain jackets and add the best value to cart"
+- "Find local Seattle coffee beans and add 2 different roasts to cart"
+
+Generate 1 task now:`;
+  }
+
+  // Parse OpenAI response into structured task format
+  private parseOpenAITaskResponse(response: string, website: string, userLevel: string): GeneratedTask {
+    try {
+      // Try to extract JSON from the response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in response');
+      }
+
+      const taskData = JSON.parse(jsonMatch[0]);
+
+      return {
+        id: this.generateTaskId(),
+        type: this.determineTaskTypeFromDescription(taskData.description),
+        difficulty: this.mapDifficultyLevel(userLevel),
+        title: taskData.title || 'AI Generated Task',
+        description: taskData.description || 'Complete this shopping task',
+        steps: Array.isArray(taskData.steps) ? taskData.steps : ['Complete the task'],
+        website,
+        category: taskData.tags?.[0] || 'general',
+        estimatedTime: taskData.estimatedTime || 5,
+        successCriteria: Array.isArray(taskData.successCriteria) ? taskData.successCriteria : ['Task completed'],
+        tags: Array.isArray(taskData.tags) ? taskData.tags : ['ai-generated'],
+        context: {
+          targetElements: this.predictTargetElements(taskData, {}),
+          expectedPages: this.predictPageFlow(taskData),
+          alternativeApproaches: ['Use search instead of navigation', 'Filter first, then browse']
+        }
+      };
+    } catch (error) {
+      this.logger.error('Failed to parse OpenAI task response', { error, response });
+      // Return a fallback task structure
+      return this.createFallbackTask(website, userLevel);
+    }
+  }
+
+  // Helper methods for OpenAI task generation
+  private determineTaskTypeFromDescription(description: string): TaskType {
+    const lowerDesc = description.toLowerCase();
+    if (lowerDesc.includes('compare') || lowerDesc.includes('vs')) return TaskType.COMPARISON;
+    if (lowerDesc.includes('find') && lowerDesc.includes('add')) return TaskType.SIMPLE;
+    if (lowerDesc.includes('complete') || lowerDesc.includes('checkout')) return TaskType.COMPLEX;
+    return TaskType.WORKFLOW;
+  }
+
+  private mapDifficultyLevel(userLevel: string): TaskDifficulty {
+    switch (userLevel.toLowerCase()) {
+      case 'beginner': return TaskDifficulty.BEGINNER;
+      case 'intermediate': return TaskDifficulty.INTERMEDIATE;
+      case 'advanced': return TaskDifficulty.ADVANCED;
+      default: return TaskDifficulty.BEGINNER;
+    }
+  }
+
+  private createFallbackTask(website: string, userLevel: string): GeneratedTask {
+    return {
+      id: this.generateTaskId(),
+      type: TaskType.SIMPLE,
+      difficulty: this.mapDifficultyLevel(userLevel),
+      title: 'Browse and explore products',
+      description: 'Explore the website and find products that interest you',
+      steps: ['Browse products', 'Select an item', 'Add to cart'],
+      website,
+      category: 'general',
+      estimatedTime: 5,
+      successCriteria: ['Product found', 'Item added to cart'],
+      tags: ['fallback'],
+      context: {
+        targetElements: ['search-box', 'product-grid'],
+        expectedPages: ['homepage', 'search-results'],
+        alternativeApproaches: ['Use category navigation']
+      }
+    };
   }
 
   // Helper methods

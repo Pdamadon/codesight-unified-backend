@@ -169,14 +169,16 @@ router.get('/database', async (req: Request, res: Response) => {
 // Test task generation endpoint (bypasses auth)
 router.get('/task/random', async (req: Request, res: Response) => {
   try {
-    const { difficulty = 'beginner', category } = req.query;
+    const { difficulty = 'beginner', category, sessionId } = req.query;
     
-    // Random popular e-commerce sites
+    // Random popular e-commerce sites (Seattle-focused for local testing)
     const websites = [
+      'https://www.rei.com',      // Seattle-based outdoor retailer
+      'https://www.nordstrom.com', // Seattle-based department store  
+      'https://www.starbucks.com', // Seattle-based coffee
+      'https://www.nike.com',
       'https://www.amazon.com',
-      'https://www.nike.com', 
-      'https://www.uniqlo.com',
-      'https://www.target.com'
+      'https://www.uniqlo.com'
     ];
     
     const randomWebsite = websites[Math.floor(Math.random() * websites.length)];
@@ -184,13 +186,24 @@ router.get('/task/random', async (req: Request, res: Response) => {
     const openaiService = new OpenAIIntegrationService();
     const taskService = new TaskGenerationService(prisma, openaiService);
     
-    logger.info('Generating test task', { website: randomWebsite, difficulty, category });
+    logger.info('Generating test task', { website: randomWebsite, difficulty, category, sessionId });
     
     const task = await taskService.generateTask(
       randomWebsite, 
       difficulty as string, 
       category as string
     );
+    
+    // If sessionId provided, create task assignment for training data context
+    if (sessionId) {
+      try {
+        await taskService.assignTask(task.id, sessionId as string);
+        logger.info('Task assigned to session', { taskId: task.id, sessionId, title: task.title });
+      } catch (assignError) {
+        logger.warn('Failed to assign task to session', { sessionId, taskId: task.id, error: assignError });
+        // Don't fail the whole request if assignment fails
+      }
+    }
     
     res.json({
       success: true,
