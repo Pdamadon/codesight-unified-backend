@@ -82,13 +82,20 @@ export class OpenAITaskService {
   // Simple health check
   async healthCheck(): Promise<boolean> {
     try {
+      this.logger.info("Starting OpenAI health check");
       const response = await this.openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: "Hello" }],
         max_tokens: 5
       });
-      return !!response.choices[0]?.message?.content;
-    } catch {
+      const result = !!response.choices[0]?.message?.content;
+      this.logger.info("OpenAI health check completed", { result, hasResponse: !!response });
+      return result;
+    } catch (error) {
+      this.logger.error("OpenAI health check failed", {
+        error: error instanceof Error ? error.message : String(error),
+        name: error instanceof Error ? error.name : 'UnknownError'
+      });
       return false;
     }
   }
