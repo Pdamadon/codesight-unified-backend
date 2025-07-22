@@ -613,6 +613,23 @@ Focus on psychological insights that would help understand the user's shopping m
       });
     }
 
+    // 🆕 Example 12: Structured environment + action format (ChatGPT style)
+    const environmentSnapshot = this.createEnvironmentSnapshot(interaction, hostname);
+    examples.push({
+      input: `ENVIRONMENT: ${JSON.stringify(environmentSnapshot)}\nINTENT: ${taskContext?.description || 'User interaction'}`,
+      output: JSON.stringify({
+        action: actionType,
+        selector: bestSelector,
+        reasoning: `${pageContext.pageType} page interaction with ${conversionContext.businessAction} intent`,
+        confidence: interaction.selectors?.reliability?.[bestSelector] || 0.5,
+        context: {
+          site: hostname,
+          stage: userJourneyStage,
+          spatial: nearbyText
+        }
+      })
+    });
+
     return examples;
   }
 
@@ -795,6 +812,61 @@ Focus on psychological insights that would help understand the user's shopping m
                        centerY > viewport.height * 0.67 ? 'bottom' : 'middle';
     
     return `${verticalPos}-${horizontalPos}`;
+  }
+
+  // Create structured environment snapshot (ChatGPT style)
+  private createEnvironmentSnapshot(interaction: any, hostname: string): any {
+    const nearby = interaction.element?.nearbyElements || [];
+    const parentElements = interaction.element?.parentElements || [];
+    
+    return {
+      url: interaction.context?.url,
+      pageTitle: interaction.context?.pageTitle,
+      site: hostname,
+      pageType: this.analyzePageContext(interaction, hostname).pageType,
+      currentElement: {
+        tag: interaction.element?.tag,
+        text: interaction.element?.text,
+        attributes: interaction.element?.attributes
+      },
+      nearbyElements: nearby.slice(0, 3).map((el: any) => ({
+        text: el.text,
+        direction: el.direction,
+        distance: el.distance,
+        interactive: el.isInteractive
+      })),
+      domHierarchy: parentElements.slice(0, 3).map((parent: any) => ({
+        tag: parent.tagName,
+        class: parent.className,
+        level: parent.level
+      })),
+      viewport: interaction.visual?.viewport,
+      hasModal: (interaction.overlays || []).length > 0,
+      cartState: this.extractCartState(interaction),
+      filters: this.extractCurrentFilters(interaction)
+    };
+  }
+
+  private extractCartState(interaction: any): any {
+    const elementText = interaction.element?.text || '';
+    const match = elementText.match(/\((\d+)\)/); // Extract numbers in parentheses
+    return {
+      itemCount: match ? parseInt(match[1]) : 0,
+      hasItems: !!match
+    };
+  }
+
+  private extractCurrentFilters(interaction: any): any {
+    // Could extract from URL parameters or DOM state
+    const url = interaction.context?.url || '';
+    const urlParams = new URLSearchParams(url.split('?')[1] || '');
+    
+    return {
+      size: urlParams.get('size'),
+      color: urlParams.get('color'),
+      price: urlParams.get('price'),
+      category: urlParams.get('category')
+    };
   }
 
   private generateContextualResponse(interaction: any, psychology: any): string {
