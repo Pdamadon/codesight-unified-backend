@@ -82,7 +82,7 @@ export class OpenAITaskService {
   // Simple health check
   async healthCheck(): Promise<boolean> {
     try {
-      this.logger.info("Starting OpenAI health check");
+      this.logger.info("Starting OpenAI health check", { timestamp: new Date().toISOString() });
       const response = await this.openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ role: "user", content: "Hello" }],
