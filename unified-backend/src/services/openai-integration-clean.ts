@@ -1213,7 +1213,10 @@ Focus on psychological insights that would help understand the user's shopping m
   // Generate task content using OpenAI
   async generateTaskContent(prompt: string): Promise<string> {
     try {
-      this.logger.info("Generating task content with OpenAI", { promptLength: prompt.length });
+      this.logger.info("Generating task content with OpenAI", { 
+        promptLength: prompt.length,
+        hasApiKey: !!process.env.OPENAI_API_KEY 
+      });
 
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o-mini",
