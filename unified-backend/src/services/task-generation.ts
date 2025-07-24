@@ -513,19 +513,28 @@ export class TaskGenerationService {
 MISSION: Analyze the website ${hostname} and create a realistic shopping task based on what this website actually sells.
 
 STEP 1: ANALYZE THE WEBSITE
-First, determine what type of store ${hostname} is by considering:
-- What products/services does this website sell?
-- What is the store's main category (fashion, electronics, home goods, etc.)?
+First, determine what type of website ${hostname} is:
+
+IF IT'S AN E-COMMERCE STORE (sells products online):
+- What products does this website sell?
+- What is the store's main category (fashion, electronics, home goods, pet supplies, etc.)?
 - What would be typical shopping behaviors on this site?
 - What price ranges and product types are common here?
 
+IF IT'S A SERVICE BUSINESS (dog groomer, restaurant, salon, etc.):
+- Create an appointment booking task appropriate for their services
+- Focus on finding services, checking availability, and booking appointments
+- Use realistic scenarios for that type of service business
+
 STEP 2: CREATE APPROPRIATE TASK
-Based on your analysis, create a realistic shopping task that:
+ONLY if this is an e-commerce site with online shopping, create a realistic shopping task that:
 - Matches the website's actual product catalog and target audience
-- Uses realistic product types and price ranges for this specific store
+- Uses realistic product types and price ranges for this specific store  
 - Focuses on discovery and cart addition (NOT checkout completion)
 - Is appropriate for a ${userLevel} level user
 - ${category ? `Focuses on ${category} if relevant to this website` : ''}
+
+IF IT'S A SERVICE BUSINESS: Create an appointment booking task that stops before final confirmation.
 
 TASK REQUIREMENTS:
 - Make it realistic for what people actually shop for on ${hostname}
@@ -547,10 +556,17 @@ RESPONSE FORMAT (JSON):
 }
 
 EXAMPLES:
-- For a fashion site: "Find a trendy summer dress under $60 and matching accessories"
-- For electronics: "Compare laptop specifications and find one under $800"
-- For home goods: "Find coordinating bedroom decor items for a modern style"
-- For books: "Find 3 mystery novels by different authors and add to cart"
+FOR E-COMMERCE SITES:
+- Fashion site: "Find a trendy summer dress under $60 and matching accessories"
+- Electronics: "Compare laptop specifications and find one under $800"
+- Pet supplies: "Find dog toys and treats suitable for medium-sized dogs"
+- Home goods: "Find coordinating bedroom decor items for a modern style"
+
+FOR SERVICE BUSINESSES:
+- Dog groomer: "Book a full grooming appointment for a medium-sized dog (stop before final confirmation)"
+- Restaurant: "Make a dinner reservation for 4 people this weekend (stop before confirming)"
+- Hair salon: "Schedule a haircut and color appointment (stop before payment)"
+- Doctor/Dentist: "Book a routine checkup appointment (stop before final booking)"
 
 Generate 1 task specifically appropriate for ${hostname} now:`;
   }
