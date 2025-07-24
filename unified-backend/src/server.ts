@@ -107,6 +107,16 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
+      
+      // Allow browser extension origins
+      if (origin && origin.startsWith('chrome-extension://')) {
+        return callback(null, true);
+      }
+      
+      // Allow moz-extension for Firefox
+      if (origin && origin.startsWith('moz-extension://')) {
+        return callback(null, true);
+      }
 
       const isAllowed = allowedOrigins.some((allowed) => {
         if (!allowed || typeof allowed !== "string") return false;
