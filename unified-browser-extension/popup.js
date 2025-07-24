@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('Generating task for site:', currentUrl);
       
       // Call the backend API to generate a task
-      const response = await fetch(`http://localhost:3001/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
+      const response = await fetch(`https://gentle-vision-production.up.railway.app/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
@@ -230,10 +230,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           console.log('Generated task:', generatedTask.title);
           updateTaskDisplay();
         } else {
-          console.error('Task generation failed:', data.error);
+          console.error('Task generation failed:', data.error || 'Unknown error');
+          console.log('Task generation response:', data);
         }
       } else {
-        console.error('Failed to call task generation API:', response.status);
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error('Failed to call task generation API:', response.status, response.statusText);
+        console.error('Error response:', errorText);
       }
     } catch (error) {
       console.error('Error generating task:', error);

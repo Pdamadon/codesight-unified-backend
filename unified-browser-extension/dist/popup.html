@@ -137,6 +137,59 @@
       padding: 50px;
       color: #666;
     }
+    
+    .task-display {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #4CAF50;
+    }
+    
+    .task-display h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    
+    .task-content {
+      margin-bottom: 15px;
+    }
+    
+    .task-title {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .task-description {
+      color: #666;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    
+    .regenerate-btn {
+      background-color: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .regenerate-btn:hover {
+      background-color: #e8e8e8;
+    }
+    
+    .regenerate-btn:disabled {
+      background-color: #f9f9f9;
+      color: #999;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -175,6 +228,15 @@
         <span class="status-label">Quality Score:</span>
         <span id="qualityScore" class="status-value">0%</span>
       </div>
+    </div>
+    
+    <div id="taskDisplay" class="task-display" style="display: none;">
+      <h3>🎯 Your Task</h3>
+      <div class="task-content">
+        <div id="taskTitle" class="task-title"></div>
+        <div id="taskDescription" class="task-description"></div>
+      </div>
+      <button id="regenerateBtn" class="regenerate-btn">Generate New Task</button>
     </div>
     
     <div class="controls">

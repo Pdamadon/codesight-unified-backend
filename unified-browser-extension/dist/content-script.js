@@ -92,7 +92,7 @@
       try {
         switch (message.action) {
           case 'START_TRACKING':
-            await this.startTracking(message.sessionId, message.config);
+            await this.startTracking(message.sessionId, message.config, message.generatedTask);
             sendResponse({ success: true });
             break;
             
@@ -133,7 +133,7 @@
       }
     }
 
-    async startTracking(sessionId, config = {}) {
+    async startTracking(sessionId, config = {}, generatedTask = null) {
       if (this.isTracking) {
         console.log('Unified: Already tracking');
         return;
@@ -148,6 +148,12 @@
       
       // Update configuration
       this.config = { ...this.config, ...config };
+      
+      // Store generated task if provided
+      if (generatedTask) {
+        this.currentTask = generatedTask;
+        console.log('Unified: Using generated task:', generatedTask.title);
+      }
       
       // Analyze initial page structure
       this.pageStructure = this.analyzePageStructure();
@@ -1676,6 +1682,7 @@
         const response = await chrome.runtime.sendMessage({
           action: 'START_BACKEND_SESSION',
           sessionId: this.sessionId,
+          generatedTask: this.currentTask,
           config: {
             type: 'AUTOMATED',
             url: window.location.href,

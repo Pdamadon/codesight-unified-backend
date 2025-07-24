@@ -19,10 +19,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const qualityScoreEl = document.getElementById('qualityScore');
   
   let updateInterval = null;
+  let generatedTask = null;
   
   // Initialize popup
   try {
     await updateStatus();
+    await generateTaskForCurrentSite();
     loadingDiv.style.display = 'none';
     contentDiv.style.display = 'block';
     
@@ -115,6 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const response = await chrome.tabs.sendMessage(tab.id, {
         action: 'START_TRACKING',
         sessionId,
+        generatedTask,
         config: {
           screenshotEnabled: true,
           compressionEnabled: true,
@@ -198,11 +201,79 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.runtime.openOptionsPage();
   });
   
+  // Generate task for current site
+  async function generateTaskForCurrentSite() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const currentUrl = tab.url;
+      
+      // Skip task generation for non-http(s) URLs
+      if (!currentUrl || (!currentUrl.startsWith('http://') && !currentUrl.startsWith('https://'))) {
+        console.log('Skipping task generation for non-web URL:', currentUrl);
+        return;
+      }
+      
+      console.log('Generating task for site:', currentUrl);
+      
+      // Call the backend API to generate a task
+      const response = await fetch(`https://gentle-vision-production.up.railway.app/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.task) {
+          generatedTask = data.task;
+          console.log('Generated task:', generatedTask.title);
+          updateTaskDisplay();
+        } else {
+          console.error('Task generation failed:', data.error || 'Unknown error');
+          console.log('Task generation response:', data);
+        }
+      } else {
+        const errorText = await response.text().catch(() => 'Could not read error response');
+        console.error('Failed to call task generation API:', response.status, response.statusText);
+        console.error('Error response:', errorText);
+      }
+    } catch (error) {
+      console.error('Error generating task:', error);
+      // Don't show error to user - just proceed without generated task
+    }
+  }
+
   // Generate session ID
   function generateSessionId() {
     return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
   
+  // Update task display in popup
+  function updateTaskDisplay() {
+    const taskDisplayEl = document.getElementById('taskDisplay');
+    const taskTitleEl = document.getElementById('taskTitle');
+    const taskDescriptionEl = document.getElementById('taskDescription');
+    const regenerateBtn = document.getElementById('regenerateBtn');
+    
+    if (generatedTask && taskDisplayEl) {
+      taskTitleEl.textContent = generatedTask.title;
+      taskDescriptionEl.textContent = generatedTask.description;
+      taskDisplayEl.style.display = 'block';
+      
+      // Update regenerate button if it exists
+      if (regenerateBtn) {
+        regenerateBtn.onclick = async () => {
+          regenerateBtn.textContent = 'Generating...';
+          regenerateBtn.disabled = true;
+          await generateTaskForCurrentSite();
+          regenerateBtn.textContent = 'Generate New Task';
+          regenerateBtn.disabled = false;
+        };
+      }
+    }
+  }
+
   // Show error message
   function showError(message) {
     errorDiv.textContent = message;
