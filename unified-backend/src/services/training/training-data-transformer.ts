@@ -145,7 +145,7 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     if (bestSelector !== 'element') {
       examples.push({
         prompt: `${hostname.toUpperCase()}: "${elementText}" ${actionType} | ${visualContext.layout} ${designSystemContext.componentLibrary} | ${elementContext.formContext} | ${nearbyElementsContext.spatialSummary} | ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} user | ${pageContext.performance} performance`,
-        completion: `${playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length} | NearbyOptions: ${nearbyElementsContext.allElementSelectors.slice(0, 5).map(el => `${el.text}[${el.selector.slice(0, 15)}]`).join(',')}`,
+        completion: `${playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length} | NearbyOptions: ${nearbyElementsContext.allElementSelectors.slice(0, 5).map((el: any) => `${el.text}[${el.selector.slice(0, 15)}]`).join(',')}`,
         context: {
           pageType: interaction.context?.pageType,
           userJourney: interaction.context?.userJourney,
@@ -1027,10 +1027,10 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     });
     
     // Store complete element map for rich context
-    context.completeElementMap = completeElementInfo.reduce((map, el, index) => {
+    context.completeElementMap = completeElementInfo.reduce((map: Record<string, any>, el, index) => {
       map[`element_${index}`] = el;
       return map;
-    }, {});
+    }, {} as Record<string, any>);
     
     // Extract all selectors for training data (THIS IS THE KEY ENHANCEMENT!)
     context.allElementSelectors = completeElementInfo.map(el => ({
