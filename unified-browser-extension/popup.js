@@ -247,9 +247,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       console.log('Generating task for site:', currentUrl);
       
-      // Call the backend API to generate a task
-      const apiBaseUrl = process.env.API_BASE_URL || 'https://gentle-vision-production.up.railway.app';
-      const apiKey = process.env.API_KEY || 'production-key-placeholder';
+      // Show task display section immediately
+      const taskDisplayEl = document.getElementById('taskDisplay');
+      if (taskDisplayEl) {
+        taskDisplayEl.style.display = 'block';
+        document.getElementById('taskTitle').textContent = 'Generating task...';
+        document.getElementById('taskDescription').textContent = 'Please wait while we create a personalized shopping task for this website.';
+      }
+      
+      // Get API config from backend
+      const apiBaseUrl = 'https://gentle-vision-production.up.railway.app';
+      const configResponse = await fetch(`${apiBaseUrl}/api/extension/config`);
+      if (!configResponse.ok) {
+        throw new Error('Failed to get extension config');
+      }
+      const configData = await configResponse.json();
+      const apiKey = configData.config.apiKey;
       
       const response = await fetch(`${apiBaseUrl}/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
         method: 'GET',
