@@ -44,6 +44,7 @@ interface SessionCreationData {
   workerId?: string;
   userAgent?: string;
   ipAddress?: string;
+  generatedTask?: any;
 }
 
 export class DataProcessingPipeline extends EventEmitter {
@@ -221,7 +222,10 @@ export class DataProcessingPipeline extends EventEmitter {
           create: {
             id: data.id,
             type: data.type,
-            config: data.config,
+            config: {
+              ...data.config,
+              generatedTask: data.generatedTask
+            },
             workerId: data.workerId,
             userAgent: data.userAgent,
             ipAddress: data.ipAddress,
@@ -235,7 +239,10 @@ export class DataProcessingPipeline extends EventEmitter {
           update: {
             // Update session if it already exists (in case of duplicate start messages)
             status: 'ACTIVE',
-            config: data.config,
+            config: {
+              ...data.config,
+              generatedTask: data.generatedTask
+            },
             userAgent: data.userAgent,
             ipAddress: data.ipAddress
           }

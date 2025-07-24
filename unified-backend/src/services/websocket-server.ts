@@ -458,7 +458,8 @@ export class UnifiedWebSocketServer {
         config: config || {},
         workerId: config?.workerId,
         userAgent: client.metadata.userAgent,
-        ipAddress: client.metadata.ipAddress
+        ipAddress: client.metadata.ipAddress,
+        generatedTask: config?.generatedTask || null
       };
       
       this.logger.info('Creating session in database', { sessionData });

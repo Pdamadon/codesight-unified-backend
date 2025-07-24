@@ -18,13 +18,14 @@ import {
 } from '../../types/training-types';
 
 export interface TrainingDataTransformerService {
-  generateTrainingData(sessionId: string, enhancedInteractions: any[]): Promise<TrainingDataResult>;
+  generateTrainingData(sessionId: string, enhancedInteractions: any[], sessionData?: any): Promise<TrainingDataResult>;
   createFineTuningExamples(interaction: EnhancedInteractionData): TrainingExample[];
   createSequenceExamples(interactions: EnhancedInteractionData[]): TrainingExample[];
   createTaskDrivenExamples(interactions: EnhancedInteractionData[], taskContext?: any): TrainingExample[];
 }
 
 export class TrainingDataTransformerImpl implements TrainingDataTransformerService {
+  private sessionData?: any; // Store session data for access in methods
 
   constructor(
     private selectorStrategy: SelectorStrategyService
@@ -33,10 +34,13 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   /**
    * Main orchestration method - extracted from openai-integration-clean.ts
    */
-  async generateTrainingData(sessionId: string, enhancedInteractions: any[]): Promise<TrainingDataResult> {
+  async generateTrainingData(sessionId: string, enhancedInteractions: any[], sessionData?: any): Promise<TrainingDataResult> {
     const startTime = Date.now();
     console.log(`\n🚀 [TRAINING DATA] Starting generation for session ${sessionId}`);
     console.log(`📊 [TRAINING DATA] Input: ${enhancedInteractions.length} enhanced interactions`);
+    
+    // Store session data for use in user intent extraction
+    this.sessionData = sessionData;
     
     const allExamples: TrainingExample[] = [];
     let selectorEnhancements = 0;
@@ -1805,9 +1809,25 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
 
   /**
    * 🧠 USER INTENT EXTRACTION: Understand why user is taking this journey
+   * Priority: 1) Generated task 2) Inferred intent 3) Generic fallback
    */
   private extractUserIntent(journey: EnhancedInteractionData[]): string {
-    // Look for search queries, product categories, or explicit intent data
+    // PRIORITY 1: Check for AI-generated task from session data
+    if (this.sessionData?.config?.generatedTask) {
+      const generatedTask = this.sessionData.config.generatedTask;
+      // Use task description as user intent
+      if (generatedTask.description) {
+        console.log('🎯 [TRAINING DATA] Using generated task as user intent:', generatedTask.description);
+        return generatedTask.description;
+      }
+      // Fallback to task title if no description
+      if (generatedTask.title) {
+        console.log('🎯 [TRAINING DATA] Using generated task title as user intent:', generatedTask.title);
+        return generatedTask.title;
+      }
+    }
+    
+    // PRIORITY 2: Look for search queries, product categories, or explicit intent data
     for (const interaction of journey) {
       if (interaction.state?.before?.formData) {
         const searchQuery = interaction.state.before.formData['search'] || 
@@ -1821,7 +1841,7 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       }
     }
     
-    // Fallback to journey type
+    // PRIORITY 3: Fallback to journey type
     const journeyType = this.detectJourneyType(journey);
     switch (journeyType) {
       case 'ecommerce-purchase': return 'looking to buy product';

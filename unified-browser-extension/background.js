@@ -97,7 +97,7 @@ class UnifiedBackgroundService {
           break;
 
         case 'START_BACKEND_SESSION':
-          await this.startBackendSession(message.sessionId, message.config);
+          await this.startBackendSession(message.sessionId, message.config, message.generatedTask);
           sendResponse({ success: true });
           break;
 
@@ -839,7 +839,7 @@ class UnifiedBackgroundService {
     });
   }
 
-  async startBackendSession(sessionId, config) {
+  async startBackendSession(sessionId, config, generatedTask = null) {
     if (!this.websocketConnection || this.websocketConnection.readyState !== WebSocket.OPEN) {
       console.warn('Background: Cannot start backend session - WebSocket not connected');
       return;
@@ -852,7 +852,10 @@ class UnifiedBackgroundService {
       const message = {
         type: 'session_start',
         sessionId,
-        data: config,
+        data: {
+          ...config,
+          generatedTask
+        },
         timestamp: Date.now()
       };
 

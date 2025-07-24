@@ -117,7 +117,7 @@ export class OpenAIIntegrationService {
         interactionCount: interactions.length 
       });
       
-      const result = await this.trainingTransformer.generateTrainingData(sessionData, interactions);
+      const result = await this.trainingTransformer.generateTrainingData(sessionData, interactions, { id: sessionData, config: {} });
       console.log(`✅ [OPENAI INTEGRATION] Generated ${result.examples.length} training examples`);
       return result;
     } else {
@@ -133,7 +133,7 @@ export class OpenAIIntegrationService {
         interactionCount: sessionInteractions.length 
       });
       
-      const result = await this.trainingTransformer.generateTrainingData(sessionId, sessionInteractions);
+      const result = await this.trainingTransformer.generateTrainingData(sessionId, sessionInteractions, sessionData);
       console.log(`✅ [OPENAI INTEGRATION] Generated ${result.examples.length} training examples`);
       return result;
     }
