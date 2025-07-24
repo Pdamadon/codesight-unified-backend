@@ -201,14 +201,128 @@ app.get("/health", async (_req, res) => {
 // Extension config endpoint (accessible without auth)
 app.get("/config", (req, res) => {
   logger.info('Extension config endpoint accessed');
+  logger.info('X_API_KEY value:', process.env.X_API_KEY ? 'exists' : 'undefined');
   res.json({
     success: true,
     config: {
       apiKey: process.env.X_API_KEY,
       apiBaseUrl: `https://${req.get('host')}`,
       websocketUrl: `wss://${req.get('host')}/ws`
+    },
+    debug: {
+      hasApiKey: !!process.env.X_API_KEY,
+      allKeys: Object.keys(process.env).filter(k => k.includes('API'))
     }
   });
+});
+
+// Privacy policy page
+app.get("/privacy-policy", (req, res) => {
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeSight Shopping Assistant - Privacy Policy</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        h1 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+        h2 { color: #555; margin-top: 30px; }
+        .last-updated { background: #f5f5f5; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>CodeSight Shopping Assistant - Privacy Policy</h1>
+    
+    <div class="last-updated">
+        <strong>Last Updated:</strong> July 24, 2025
+    </div>
+
+    <h2>1. Overview</h2>
+    <p>CodeSight Shopping Assistant is a browser extension designed to enhance your online shopping experience while contributing to AI research. We prioritize user privacy and never collect personal information.</p>
+
+    <h2>2. Data We Collect</h2>
+    <ul>
+        <li>Anonymous website interaction patterns on supported e-commerce sites</li>
+        <li>Non-personal browsing behavior and navigation flows</li>
+        <li>Task completion metrics and usage statistics</li>
+        <li>Anonymous screenshots with comprehensive PII filtering</li>
+        <li>Performance and technical diagnostic data</li>
+    </ul>
+
+    <h2>3. Data We DO NOT Collect</h2>
+    <ul>
+        <li>Personal identifiable information (names, addresses, phone numbers)</li>
+        <li>Payment or financial information (credit cards, banking details)</li>
+        <li>Passwords or login credentials</li>
+        <li>Email addresses or contact information</li>
+        <li>Location data beyond website URLs</li>
+        <li>Personal communications or messages</li>
+    </ul>
+
+    <h2>4. How We Protect Your Privacy</h2>
+    <ul>
+        <li>Comprehensive PII filtering technology that automatically removes sensitive information</li>
+        <li>Secure API authentication with encrypted data transmission</li>
+        <li>No local storage of sensitive information</li>
+        <li>Access restricted to legitimate e-commerce websites only</li>
+        <li>Regular security audits and updates</li>
+    </ul>
+
+    <h2>5. User Consent and Control</h2>
+    <ul>
+        <li>Explicit consent required before any data collection begins</li>
+        <li>Users can revoke consent at any time through extension settings</li>
+        <li>Clear disclosure of all data collection practices</li>
+        <li>Users maintain full control over data collection preferences</li>
+    </ul>
+
+    <h2>6. How We Use Your Data</h2>
+    <p>Data is used exclusively for:</p>
+    <ul>
+        <li>AI training and machine learning research</li>
+        <li>Improving shopping recommendation systems</li>
+        <li>Academic research on user behavior patterns</li>
+        <li>Enhancing user experience through personalized shopping tasks</li>
+        <li>Developing better privacy-preserving AI technologies</li>
+    </ul>
+
+    <h2>7. Data Sharing and Third Parties</h2>
+    <p>We do NOT sell, rent, or share your data with third parties. All data is used solely for internal research purposes and academic collaboration.</p>
+
+    <h2>8. Data Retention</h2>
+    <p>Anonymous behavioral data is retained for research purposes. No personal information is retained as none is collected. Users can request data deletion by contacting us.</p>
+
+    <h2>9. Supported Websites</h2>
+    <p>Our extension only operates on pre-approved e-commerce and service provider websites including Amazon, Target, Nike, Best Buy, Nordstrom, and 80+ other legitimate shopping destinations.</p>
+
+    <h2>10. Children's Privacy</h2>
+    <p>Our extension is not intended for use by children under 13. We do not knowingly collect data from children under 13 years of age.</p>
+
+    <h2>11. International Users</h2>
+    <p>This extension complies with GDPR, CCPA, and other international privacy regulations. Users in all regions have the right to data access, correction, and deletion.</p>
+
+    <h2>12. Changes to This Policy</h2>
+    <p>We may update this privacy policy from time to time. Users will be notified of any material changes through the extension interface.</p>
+
+    <h2>13. Contact Information</h2>
+    <p>For privacy questions, concerns, or data deletion requests, please contact us at:</p>
+    <p><strong>Email:</strong> [Your email address]<br>
+    <strong>Website:</strong> https://gentle-vision-production.up.railway.app</p>
+
+    <h2>14. Legal Compliance</h2>
+    <p>This extension and its data practices comply with:</p>
+    <ul>
+        <li>Chrome Web Store Developer Program Policies</li>
+        <li>General Data Protection Regulation (GDPR)</li>
+        <li>California Consumer Privacy Act (CCPA)</li>
+        <li>Children's Online Privacy Protection Act (COPPA)</li>
+    </ul>
+</body>
+</html>
+  `;
+  res.send(html);
 });
 
 app.get("/api/health", (_req, res) => {
