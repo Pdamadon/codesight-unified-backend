@@ -219,7 +219,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const response = await fetch(`https://gentle-vision-production.up.railway.app/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-api-key': 'test-key-dev'
         }
       });
       
