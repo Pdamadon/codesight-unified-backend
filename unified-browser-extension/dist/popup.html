@@ -190,16 +190,80 @@
       color: #999;
       cursor: not-allowed;
     }
+    
+    .consent-dialog {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #2196F3;
+    }
+    
+    .consent-dialog h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 16px;
+    }
+    
+    .consent-dialog p {
+      color: #666;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 15px;
+    }
+    
+    .consent-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .consent-buttons button {
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    
+    #acceptBtn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    
+    #declineBtn {
+      background-color: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>🔍 CodeSight Tracker</h1>
-    <p style="color: #666; margin: 0; font-size: 14px;">AI Training Data Collector</p>
+    <h1>🛍️ Shopping Assistant</h1>
+    <p style="color: #666; margin: 0; font-size: 14px;">AI-powered shopping helper</p>
   </div>
   
   <div id="loading" class="loading">Loading...</div>
   
+  <div id="consentDialog" class="consent-dialog" style="display: none;">
+    <h3>🛡️ Privacy & Data Collection</h3>
+    <p>This shopping assistant helps you discover products and complete tasks on e-commerce sites. To provide personalized shopping assistance, we:</p>
+    <ul style="color: #666; font-size: 13px; line-height: 1.5; margin: 0 0 15px 20px;">
+      <li>Track your interactions on supported shopping websites</li>
+      <li>Generate AI-powered shopping tasks tailored to each site</li>
+      <li>Capture screenshots and interaction data to improve our AI</li>
+      <li>Analyze your shopping patterns to provide better assistance</li>
+    </ul>
+    
+    <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin: 15px 0; border-left: 3px solid #28a745;">
+      <p style="margin: 0; font-size: 12px; color: #495057;"><strong>🔒 PII Protection:</strong> We automatically filter out and never collect personal information including names, addresses, phone numbers, email addresses, credit card numbers, Social Security numbers, or any other personally identifiable information.</p>
+    </div>
+    
+    <p><strong>Your data is used solely to improve AI shopping assistance and is never sold or shared with third parties.</strong></p>
+    <div class="consent-buttons">
+      <button id="acceptBtn">Accept & Continue</button>
+      <button id="declineBtn">Decline</button>
+    </div>
+  </div>
+
   <div id="content" style="display: none;">
     <div id="error" class="error" style="display: none;"></div>
     

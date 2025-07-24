@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PII Filtering Test - CodeSight Shopping Assistant</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-section { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .form-section h3 { margin-top: 0; color: #333; }
+        input, select { padding: 8px; margin: 5px 0; width: 200px; border: 1px solid #ddd; border-radius: 4px; }
+        label { display: inline-block; width: 150px; font-weight: bold; }
+        .test-info { background: #e7f3ff; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .expected { color: #666; font-size: 12px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>🛡️ PII Filtering Test Page</h1>
+    
+    <div class="test-info">
+        <p><strong>This page tests the CodeSight Shopping Assistant's PII filtering capabilities.</strong></p>
+        <p>When you interact with the forms below while tracking is active, the extension should automatically filter out and redact any personally identifiable information.</p>
+    </div>
+
+    <div class="form-section">
+        <h3>Personal Information Form</h3>
+        <div>
+            <label>First Name:</label>
+            <input type="text" name="first-name" placeholder="John" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>Last Name:</label>
+            <input type="text" name="last-name" placeholder="Doe" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>Email:</label>
+            <input type="email" name="email" placeholder="john.doe@example.com" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>Phone:</label>
+            <input type="tel" name="phone" placeholder="(555) 123-4567" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Address Information</h3>
+        <div>
+            <label>Street Address:</label>
+            <input type="text" name="address" placeholder="123 Main St" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>City:</label>
+            <input type="text" name="city" placeholder="Seattle" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>State:</label>
+            <input type="text" name="state" placeholder="WA" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>ZIP Code:</label>
+            <input type="text" name="zip" placeholder="98101" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Payment Information</h3>
+        <div>
+            <label>Credit Card:</label>
+            <input type="text" name="credit-card" placeholder="4111 1111 1111 1111" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>CVV:</label>
+            <input type="text" name="cvv" placeholder="123" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>Expiry Date:</label>
+            <input type="text" name="expiry" placeholder="12/25" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+        <div>
+            <label>Password:</label>
+            <input type="password" name="password" placeholder="secret123" />
+            <span class="expected">❌ Should be filtered</span>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Shopping Preferences (Safe to Track)</h3>
+        <div>
+            <label>Preferred Size:</label>
+            <select name="size">
+                <option>Small</option>
+                <option>Medium</option>
+                <option>Large</option>
+                <option>X-Large</option>
+            </select>
+            <span class="expected">✅ Safe to track</span>
+        </div>
+        <div>
+            <label>Favorite Color:</label>
+            <input type="text" name="color" placeholder="Blue" />
+            <span class="expected">✅ Safe to track</span>
+        </div>
+        <div>
+            <label>Price Range:</label>
+            <select name="price-range">
+                <option>Under $25</option>
+                <option>$25 - $50</option>
+                <option>$50 - $100</option>
+                <option>Over $100</option>
+            </select>
+            <span class="expected">✅ Safe to track</span>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h3>Test Interactions</h3>
+        <p>Try these interactions while the extension is tracking:</p>
+        <ul>
+            <li>Click on input fields (should track click events)</li>
+            <li>Type in sensitive fields (values should be redacted)</li>
+            <li>Type in non-sensitive fields (values should be preserved)</li>
+            <li>Submit forms (form data should be sanitized)</li>
+        </ul>
+        <button onclick="alert('Button clicked - this interaction should be tracked!')">Test Button Click</button>
+        <button onclick="testFormData()">Test Form Data Logging</button>
+    </div>
+
+    <script>
+        function testFormData() {
+            const formData = {};
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (input.name) {
+                    formData[input.name] = input.value || input.placeholder;
+                }
+            });
+            
+            console.log('Raw form data (this would be filtered by extension):', formData);
+            alert('Check browser console for form data - extension should have filtered PII');
+        }
+
+        // Add some test event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('PII Filtering Test Page Loaded');
+            console.log('Extension should filter PII from interactions on this page');
+        });
+    </script>
+</body>
+</html>

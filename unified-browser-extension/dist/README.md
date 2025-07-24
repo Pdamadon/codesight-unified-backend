@@ -1,4 +1,4 @@
-# CodeSight Unified Browser Extension
+# CodeSight Shopping Assistant Extension
 
 This is the production build of the CodeSight Unified Browser Extension for shopping behavior data collection.
 

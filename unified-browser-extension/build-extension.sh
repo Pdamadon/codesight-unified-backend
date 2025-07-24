@@ -2,32 +2,28 @@
 
 # Build script for CodeSight Unified Browser Extension
 
-echo "🏗️  Building CodeSight Unified Browser Extension..."
+echo "🏗️  Building CodeSight Shopping Assistant Extension..."
 
-# Create build directory
+# Install dependencies if needed
+if [ ! -d "node_modules" ]; then
+  echo "📦 Installing dependencies..."
+  npm install
+fi
+
+# Build with webpack
+echo "🔧 Building with webpack..."
+npm run build
+
 BUILD_DIR="dist"
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"
 
-# Copy essential files
-echo "📋 Copying files..."
-cp manifest.json "$BUILD_DIR/"
-cp background.js "$BUILD_DIR/"
-cp content-script.js "$BUILD_DIR/"
-cp injected-script.js "$BUILD_DIR/"
-cp popup.html "$BUILD_DIR/"
-cp popup.js "$BUILD_DIR/"
-cp options.html "$BUILD_DIR/"
-cp options.js "$BUILD_DIR/"
-cp test.html "$BUILD_DIR/"
-
-# Copy icons directory
-cp -r icons "$BUILD_DIR/"
+# Copy additional files not handled by webpack
+echo "📋 Copying additional files..."
+cp test.html "$BUILD_DIR/" 2>/dev/null || true
 
 # Create package info
 echo "📝 Creating package info..."
 cat > "$BUILD_DIR/README.md" << 'EOF'
-# CodeSight Unified Browser Extension
+# CodeSight Shopping Assistant Extension
 
 This is the production build of the CodeSight Unified Browser Extension for shopping behavior data collection.
 

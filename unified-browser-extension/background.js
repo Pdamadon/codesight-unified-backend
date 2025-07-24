@@ -10,8 +10,8 @@ class UnifiedBackgroundService {
     this.websocketConnection = null;
     this.reconnectAttempts = 0;
     this.config = {
-      backendUrl: 'wss://gentle-vision-production.up.railway.app/ws',
-      apiKey: 'test-key-dev', // Development API key
+      backendUrl: process.env.BACKEND_URL || 'wss://gentle-vision-production.up.railway.app/ws',
+      apiKey: process.env.API_KEY || 'production-key-placeholder',
       maxScreenshotSize: 2 * 1024 * 1024, // 2MB
       compressionQuality: 0.8,
       burstModeDelay: 300,

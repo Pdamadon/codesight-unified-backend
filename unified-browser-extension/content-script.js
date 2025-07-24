@@ -44,18 +44,127 @@
       };
       this.taskOverlay = null;
       
-      // Privacy filters
+      // Privacy filters - Comprehensive PII protection
       this.sensitiveSelectors = [
+        // Password fields
         'input[type="password"]',
         'input[name*="password"]',
+        'input[name*="pwd"]',
+        'input[id*="password"]',
+        'input[placeholder*="password"]',
+        
+        // Personal identification
         'input[name*="ssn"]',
         'input[name*="social"]',
+        'input[name*="social-security"]',
+        'input[name*="social_security"]',
+        'input[name*="socialsecurity"]',
+        'input[id*="ssn"]',
+        'input[id*="social"]',
+        
+        // Credit card and payment
         'input[name*="credit"]',
         'input[name*="card"]',
+        'input[name*="cc"]',
         'input[name*="cvv"]',
+        'input[name*="cvc"]',
+        'input[name*="security-code"]',
+        'input[name*="security_code"]',
+        'input[name*="securitycode"]',
+        'input[name*="expir"]',
+        'input[name*="exp-"]',
         'input[name*="pin"]',
+        'input[id*="credit"]',
+        'input[id*="card"]',
+        'input[id*="cvv"]',
+        'input[id*="cvc"]',
+        'input[autocomplete*="cc"]',
+        
+        // Bank and financial
+        'input[name*="bank"]',
+        'input[name*="routing"]',
+        'input[name*="account"]',
+        'input[name*="iban"]',
+        'input[name*="swift"]',
+        'input[id*="bank"]',
+        'input[id*="routing"]',
+        'input[id*="account"]',
+        
+        // Personal information
+        'input[name*="first-name"]',
+        'input[name*="first_name"]',
+        'input[name*="firstname"]',
+        'input[name*="last-name"]',
+        'input[name*="last_name"]',
+        'input[name*="lastname"]',
+        'input[name*="full-name"]',
+        'input[name*="full_name"]',
+        'input[name*="fullname"]',
+        'input[name="name"]',
+        'input[id*="first-name"]',
+        'input[id*="first_name"]',
+        'input[id*="firstname"]',
+        'input[id*="last-name"]',
+        'input[id*="last_name"]',
+        'input[id*="lastname"]',
+        'input[id="name"]',
+        
+        // Contact information
+        'input[name*="email"]',
+        'input[name*="phone"]',
+        'input[name*="mobile"]',
+        'input[name*="telephone"]',
+        'input[type="email"]',
+        'input[type="tel"]',
+        'input[id*="email"]',
+        'input[id*="phone"]',
+        'input[id*="mobile"]',
+        
+        // Address information
+        'input[name*="address"]',
+        'input[name*="street"]',
+        'input[name*="city"]',
+        'input[name*="state"]',
+        'input[name*="zip"]',
+        'input[name*="postal"]',
+        'input[name*="country"]',
+        'input[id*="address"]',
+        'input[id*="street"]',
+        'input[id*="city"]',
+        'input[id*="state"]',
+        'input[id*="zip"]',
+        'input[id*="postal"]',
+        
+        // Date of birth
+        'input[name*="birth"]',
+        'input[name*="dob"]',
+        'input[name*="age"]',
+        'input[id*="birth"]',
+        'input[id*="dob"]',
+        'input[id*="age"]',
+        
+        // Government IDs
+        'input[name*="license"]',
+        'input[name*="passport"]',
+        'input[name*="id-number"]',
+        'input[name*="id_number"]',
+        'input[name*="idnumber"]',
+        'input[id*="license"]',
+        'input[id*="passport"]',
+        'input[id*="id-number"]',
+        
+        // Generic sensitive fields
+        'input[type="hidden"]',
         '[data-sensitive]',
-        '.sensitive-data'
+        '.sensitive-data',
+        '[autocomplete="new-password"]',
+        '[autocomplete="current-password"]',
+        '[autocomplete*="name"]',
+        '[autocomplete*="email"]',
+        '[autocomplete*="tel"]',
+        '[autocomplete*="address"]',
+        '[autocomplete*="postal-code"]',
+        '[autocomplete*="cc-"]'
       ];
       
       this.initializeTracker();
@@ -138,6 +247,18 @@
         console.log('Unified: Already tracking');
         return;
       }
+      
+      // Check for user consent before starting tracking
+      const consentResult = await new Promise((resolve) => {
+        chrome.storage.local.get(['userConsent'], (result) => {
+          resolve(result.userConsent);
+        });
+      });
+      
+      if (consentResult !== true) {
+        console.log('Unified: User consent not granted, cannot start tracking');
+        return;
+      }
 
       this.sessionId = sessionId;
       this.startTime = Date.now();
@@ -164,8 +285,8 @@
       // Show tracking indicator
       this.showTrackingIndicator();
       
-      // Fetch and display task
-      await this.fetchAndDisplayTask();
+      // Task display disabled - using extension popup instead
+      // await this.fetchAndDisplayTask();
       
       // Save state
       this.saveState();
@@ -1391,7 +1512,7 @@
       return attrs;
     }
 
-    // Privacy protection
+    // Privacy protection - Comprehensive PII detection
     isSensitiveInput(element) {
       if (!element) return false;
       
@@ -1401,13 +1522,158 @@
       }
       
       // Check against sensitive selectors
-      return this.sensitiveSelectors.some(selector => {
+      const matchesSensitiveSelector = this.sensitiveSelectors.some(selector => {
         try {
           return element.matches(selector);
         } catch (e) {
           return false;
         }
       });
+      
+      if (matchesSensitiveSelector) return true;
+      
+      // Check element properties for PII indicators
+      const sensitivePatterns = [
+        // Names and personal info
+        /\b(first[-_\s]*name|last[-_\s]*name|full[-_\s]*name|given[-_\s]*name|surname|family[-_\s]*name)\b/i,
+        
+        // Contact information
+        /\b(email|e[-_\s]*mail|phone|mobile|telephone|fax)\b/i,
+        
+        // Address information
+        /\b(address|street|city|state|province|zip|postal|country|region)\b/i,
+        
+        // Financial information
+        /\b(credit[-_\s]*card|debit[-_\s]*card|card[-_\s]*number|cvv|cvc|security[-_\s]*code|expiry|expiration|routing|account[-_\s]*number|iban|swift)\b/i,
+        
+        // Identification
+        /\b(ssn|social[-_\s]*security|passport|license|id[-_\s]*number|tax[-_\s]*id)\b/i,
+        
+        // Personal details
+        /\b(birth[-_\s]*date|date[-_\s]*of[-_\s]*birth|dob|age|gender|nationality)\b/i,
+        
+        // Security
+        /\b(password|pin|secret|security[-_\s]*question|mother[-_\s]*maiden)\b/i
+      ];
+      
+      // Check all element attributes and properties
+      const checkText = [
+        element.name,
+        element.id,
+        element.className,
+        element.placeholder,
+        element.title,
+        element.getAttribute('aria-label'),
+        element.getAttribute('data-testid'),
+        element.getAttribute('autocomplete')
+      ].filter(Boolean).join(' ').toLowerCase();
+      
+      if (sensitivePatterns.some(pattern => pattern.test(checkText))) {
+        return true;
+      }
+      
+      // Check parent labels for sensitive content
+      const label = element.closest('label') || document.querySelector(`label[for="${element.id}"]`);
+      if (label) {
+        const labelText = label.textContent.toLowerCase();
+        if (sensitivePatterns.some(pattern => pattern.test(labelText))) {
+          return true;
+        }
+      }
+      
+      // Check for credit card number patterns in value (basic format check)
+      if (element.value && element.value.length > 0) {
+        // Credit card pattern (4 groups of 4 digits or similar)
+        const ccPattern = /^\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{3,4}$/;
+        const ssnPattern = /^\d{3}[-\s]?\d{2}[-\s]?\d{4}$/;
+        const phonePattern = /^[\+]?[1-9][\d]{0,2}[\s-]?\(?[\d]{3}\)?[\s-]?[\d]{3}[\s-]?[\d]{4}$/;
+        
+        if (ccPattern.test(element.value.replace(/\s/g, '')) || 
+            ssnPattern.test(element.value) || 
+            phonePattern.test(element.value)) {
+          return true;
+        }
+      }
+      
+      return false;
+    }
+
+    // Sanitize data to remove any PII that might have been captured
+    sanitizeData(data) {
+      if (!data || typeof data !== 'object') return data;
+      
+      const sanitized = JSON.parse(JSON.stringify(data)); // Deep clone
+      
+      // PII patterns to redact
+      const piiPatterns = [
+        // Credit card numbers (various formats)
+        { pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{3,4}\b/g, replacement: '[CREDIT_CARD_REDACTED]' },
+        
+        // Social Security Numbers
+        { pattern: /\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b/g, replacement: '[SSN_REDACTED]' },
+        
+        // Phone numbers
+        { pattern: /\b[\+]?[1-9][\d]{0,2}[\s-]?\(?[\d]{3}\)?[\s-]?[\d]{3}[\s-]?[\d]{4}\b/g, replacement: '[PHONE_REDACTED]' },
+        
+        // Email addresses
+        { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, replacement: '[EMAIL_REDACTED]' },
+        
+        // Zip codes (US format)
+        { pattern: /\b\d{5}(-\d{4})?\b/g, replacement: '[ZIP_REDACTED]' },
+        
+        // Generic patterns for names in common formats
+        { pattern: /\b[A-Z][a-z]+ [A-Z][a-z]+\b/g, replacement: '[NAME_REDACTED]' }
+      ];
+      
+      // Recursively sanitize object
+      const sanitizeValue = (value) => {
+        if (typeof value === 'string') {
+          let sanitizedValue = value;
+          piiPatterns.forEach(({ pattern, replacement }) => {
+            sanitizedValue = sanitizedValue.replace(pattern, replacement);
+          });
+          return sanitizedValue;
+        } else if (Array.isArray(value)) {
+          return value.map(sanitizeValue);
+        } else if (value && typeof value === 'object') {
+          const sanitizedObj = {};
+          for (const [key, val] of Object.entries(value)) {
+            // Skip sensitive keys entirely
+            if (this.isSensitiveKey(key)) {
+              sanitizedObj[key] = '[PII_REDACTED]';
+            } else {
+              sanitizedObj[key] = sanitizeValue(val);
+            }
+          }
+          return sanitizedObj;
+        }
+        return value;
+      };
+      
+      return sanitizeValue(sanitized);
+    }
+
+    // Check if a key name suggests it contains PII
+    isSensitiveKey(key) {
+      if (!key || typeof key !== 'string') return false;
+      
+      const sensitiveKeyPatterns = [
+        /password/i,
+        /email/i,
+        /phone/i,
+        /address/i,
+        /name/i,
+        /credit/i,
+        /card/i,
+        /ssn/i,
+        /social/i,
+        /birth/i,
+        /dob/i,
+        /license/i,
+        /passport/i
+      ];
+      
+      return sensitiveKeyPatterns.some(pattern => pattern.test(key));
     }
 
     // Screenshot capture
@@ -1612,8 +1878,11 @@
         this.events.shift();
       }
       
+      // Sanitize event data to remove any PII before storing
+      const sanitizedEventData = this.sanitizeData(eventData);
+      
       this.events.push({
-        ...eventData,
+        ...sanitizedEventData,
         id: this.generateId(),
         sessionId: this.sessionId
       });
@@ -2581,7 +2850,7 @@
         
         if (response && response.success && response.task) {
           this.currentTask = response.task;
-          this.showTaskOverlay();
+          // this.showTaskOverlay(); // Disabled per user request
           console.log('Unified: Task loaded:', this.currentTask.title);
         } else {
           throw new Error('Failed to fetch task: ' + (response?.error || 'Unknown error'));
@@ -2595,7 +2864,7 @@
           website: window.location.href,
           difficulty: "BEGINNER"
         };
-        this.showTaskOverlay();
+        // this.showTaskOverlay(); // Disabled per user request
       }
     }
 
@@ -2678,13 +2947,13 @@
         
         // Small delay to ensure DOM is ready and tracking indicator is shown
         setTimeout(() => {
-          this.showTaskOverlay();
+          // this.showTaskOverlay(); // Disabled per user request
         }, 100);
       } else if (this.isTracking && !this.currentTask) {
         // If we're tracking but lost the task, try to fetch it again
         console.log('Unified: Tracking active but no current task - attempting to fetch task');
         setTimeout(() => {
-          this.fetchAndDisplayTask();
+          // this.fetchAndDisplayTask(); // Disabled per user request
         }, 500);
       }
       
@@ -3182,7 +3451,7 @@
     getSessionData() {
       const duration = this.isTracking ? Date.now() - this.startTime : 0;
       
-      return {
+      const sessionData = {
         sessionId: this.sessionId,
         isTracking: this.isTracking,
         startTime: this.startTime,
@@ -3226,6 +3495,9 @@
           ]
         }
       };
+      
+      // Apply comprehensive PII sanitization to entire session data
+      return this.sanitizeData(sessionData);
     }
 
     // Calculate session quality score

@@ -3,12 +3,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingDiv = document.getElementById('loading');
   const contentDiv = document.getElementById('content');
+  const consentDialog = document.getElementById('consentDialog');
   const errorDiv = document.getElementById('error');
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
   const downloadBtn = document.getElementById('downloadBtn');
   const downloadControls = document.getElementById('downloadControls');
   const settingsLink = document.getElementById('settingsLink');
+  const acceptBtn = document.getElementById('acceptBtn');
+  const declineBtn = document.getElementById('declineBtn');
   
   // Status elements
   const trackingStatusEl = document.getElementById('trackingStatus');
@@ -21,17 +24,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   let updateInterval = null;
   let generatedTask = null;
   
-  // Initialize popup
-  try {
-    await updateStatus();
-    await generateTaskForCurrentSite();
-    loadingDiv.style.display = 'none';
-    contentDiv.style.display = 'block';
-    
-    // Start periodic updates
-    updateInterval = setInterval(updateStatus, 1000);
-  } catch (error) {
-    showError('Failed to initialize: ' + error.message);
+  // Check for existing consent
+  chrome.storage.local.get(['userConsent'], async (result) => {
+    if (result.userConsent === true) {
+      // User has already consented, initialize normally
+      await initializeExtension();
+    } else {
+      // Show consent dialog
+      loadingDiv.style.display = 'none';
+      consentDialog.style.display = 'block';
+    }
+  });
+  
+  // Consent handlers
+  acceptBtn.addEventListener('click', async () => {
+    chrome.storage.local.set({ userConsent: true }, async () => {
+      consentDialog.style.display = 'none';
+      await initializeExtension();
+    });
+  });
+  
+  declineBtn.addEventListener('click', () => {
+    chrome.storage.local.set({ userConsent: false }, () => {
+      consentDialog.style.display = 'none';
+      showError('Data collection consent is required to use this shopping assistant.');
+    });
+  });
+  
+  // Initialize extension after consent
+  async function initializeExtension() {
+    try {
+      await updateStatus();
+      await generateTaskForCurrentSite();
+      loadingDiv.style.display = 'none';
+      contentDiv.style.display = 'block';
+      
+      // Start periodic updates
+      updateInterval = setInterval(updateStatus, 1000);
+    } catch (error) {
+      showError('Failed to initialize: ' + error.message);
+    }
   }
   
   // Update status from current tab
@@ -216,11 +248,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.log('Generating task for site:', currentUrl);
       
       // Call the backend API to generate a task
-      const response = await fetch(`https://gentle-vision-production.up.railway.app/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
+      const apiBaseUrl = process.env.API_BASE_URL || 'https://gentle-vision-production.up.railway.app';
+      const apiKey = process.env.API_KEY || 'production-key-placeholder';
+      
+      const response = await fetch(`${apiBaseUrl}/api/tasks/generate?website=${encodeURIComponent(currentUrl)}&userLevel=beginner`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': 'test-key-dev'
+          'x-api-key': apiKey
         }
       });
       
