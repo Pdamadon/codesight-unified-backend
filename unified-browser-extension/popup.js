@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Get API config from backend
       const apiBaseUrl = 'https://gentle-vision-production.up.railway.app';
-      const configResponse = await fetch(`${apiBaseUrl}/api/extension/config`);
+      const configResponse = await fetch(`${apiBaseUrl}/api/config`);
       if (!configResponse.ok) {
         throw new Error('Failed to get extension config');
       }
