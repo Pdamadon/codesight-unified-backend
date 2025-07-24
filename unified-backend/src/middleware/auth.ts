@@ -128,8 +128,8 @@ export const authMiddleware = async (
       token = authHeader.substring(7);
     } else if (apiKey) {
       // Handle API key authentication
-      // Simple bypass for development testing
-      if (apiKey === 'test-key-dev' || apiKey === 'codesight-dev-key') {
+      const validApiKey = process.env.X_API_KEY;
+      if (validApiKey && apiKey === validApiKey) {
         req.user = {
           id: 'api-user',
           type: 'system',
