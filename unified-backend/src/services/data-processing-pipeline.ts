@@ -1186,13 +1186,28 @@ export class DataProcessingPipeline extends EventEmitter {
     console.log('🔄 TRAINING DATA DEBUG: Calling OpenAI service to generate training data...');
     const trainingData = await this.openaiService.generateTrainingData(session);
     console.log('✅ TRAINING DATA DEBUG: OpenAI training data generation completed:', {
-      messageCount: trainingData.messages?.length || 0,
+      exampleCount: trainingData.examples?.length || 0,
+      messageCount: trainingData.messages?.length || 0,  // Legacy format check
       trainingValue: trainingData.trainingValue,
-      hasMessages: !!trainingData.messages
+      hasExamples: !!trainingData.examples,
+      hasMessages: !!trainingData.messages,
+      dataStructure: Object.keys(trainingData || {})
     });
 
+    // Handle both new format (examples) and legacy format (messages)
+    const trainingExamples = trainingData.examples || trainingData.messages || [];
+    console.log('📊 TRAINING DATA DEBUG: Using training examples:', {
+      count: trainingExamples.length,
+      source: trainingData.examples ? 'examples' : (trainingData.messages ? 'messages' : 'none')
+    });
+
+    if (trainingExamples.length === 0) {
+      console.error('❌ TRAINING DATA DEBUG: No training examples found in result');
+      throw new Error('No training examples generated');
+    }
+
     // Save training data
-    const jsonlContent = trainingData.messages.map((msg: any) => JSON.stringify(msg)).join('\n');
+    const jsonlContent = trainingExamples.map((msg: any) => JSON.stringify(msg)).join('\n');
     console.log('📝 TRAINING DATA DEBUG: JSONL content prepared, size:', jsonlContent.length, 'characters');
     
     // Find existing training data for this session
@@ -1206,6 +1221,18 @@ export class DataProcessingPipeline extends EventEmitter {
       existingId: existing?.id || 'none'
     });
     
+    // Calculate training quality/value from the result
+    const trainingQuality = trainingData.trainingValue || 
+                           trainingData.metadata?.overallQuality || 
+                           (trainingExamples.length > 0 ? Math.min(0.8, trainingExamples.length * 0.02) : 0.1);
+    
+    console.log('📊 TRAINING DATA DEBUG: Training quality calculated:', {
+      fromTrainingValue: trainingData.trainingValue,
+      fromMetadata: trainingData.metadata?.overallQuality,
+      calculated: trainingQuality,
+      exampleCount: trainingExamples.length
+    });
+
     console.log('💾 TRAINING DATA DEBUG: Saving training data to database...');
     const trainingRecord = await this.executeWithThrottling(() => 
       existing ? 
@@ -1214,7 +1241,7 @@ export class DataProcessingPipeline extends EventEmitter {
         data: {
           jsonlData: jsonlContent,
           fileSize: jsonlContent.length,
-          trainingQuality: trainingData.trainingValue,
+          trainingQuality: trainingQuality,
           status: 'PENDING'
         }
       }) :
@@ -1223,7 +1250,7 @@ export class DataProcessingPipeline extends EventEmitter {
           sessionId,
           jsonlData: jsonlContent,
           fileSize: jsonlContent.length,
-          trainingQuality: trainingData.trainingValue,
+          trainingQuality: trainingQuality,
           status: 'PENDING'
         }
       })
