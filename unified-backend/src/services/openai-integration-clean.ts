@@ -109,23 +109,33 @@ export class OpenAIIntegrationService {
     // Handle both old API (session object) and new API (sessionId + interactions)
     if (typeof sessionData === 'string') {
       // New API: sessionId + interactions
+      console.log(`\n🎯 [OPENAI INTEGRATION] Starting training data generation for session ${sessionData}`);
+      console.log(`📊 [OPENAI INTEGRATION] Input: ${interactions.length} interactions`);
+      
       this.logger.info("Generating training data via TrainingDataTransformer", { 
         sessionId: sessionData, 
         interactionCount: interactions.length 
       });
       
-      return this.trainingTransformer.generateTrainingData(sessionData, interactions);
+      const result = await this.trainingTransformer.generateTrainingData(sessionData, interactions);
+      console.log(`✅ [OPENAI INTEGRATION] Generated ${result.examples.length} training examples`);
+      return result;
     } else {
       // Old API: session object with embedded interactions (backward compatibility)
       const sessionId = sessionData.id;
       const sessionInteractions = sessionData.enhancedInteractions || sessionData.interactions || [];
+      
+      console.log(`\n🎯 [OPENAI INTEGRATION] Starting legacy training data generation for session ${sessionId}`);
+      console.log(`📊 [OPENAI INTEGRATION] Input: ${sessionInteractions.length} interactions`);
       
       this.logger.info("Generating training data via TrainingDataTransformer (legacy API)", { 
         sessionId, 
         interactionCount: sessionInteractions.length 
       });
       
-      return this.trainingTransformer.generateTrainingData(sessionId, sessionInteractions);
+      const result = await this.trainingTransformer.generateTrainingData(sessionId, sessionInteractions);
+      console.log(`✅ [OPENAI INTEGRATION] Generated ${result.examples.length} training examples`);
+      return result;
     }
   }
 

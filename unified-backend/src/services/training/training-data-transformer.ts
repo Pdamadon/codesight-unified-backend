@@ -35,11 +35,15 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
    */
   async generateTrainingData(sessionId: string, enhancedInteractions: any[]): Promise<TrainingDataResult> {
     const startTime = Date.now();
+    console.log(`\n🚀 [TRAINING DATA] Starting generation for session ${sessionId}`);
+    console.log(`📊 [TRAINING DATA] Input: ${enhancedInteractions.length} enhanced interactions`);
+    
     const allExamples: TrainingExample[] = [];
     let selectorEnhancements = 0;
     let contextEnhancements = 0;
 
     // Process each interaction with enhanced context extraction
+    console.log(`\n🔄 [INDIVIDUAL EXAMPLES] Processing ${enhancedInteractions.length} individual interactions...`);
     for (const interaction of enhancedInteractions) {
       try {
         // 🎯 CRITICAL FIX: Use SelectorStrategyService for reliable selectors
@@ -53,20 +57,35 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
           contextEnhancements++;
         }
       } catch (error) {
-        console.warn(`Failed to process interaction:`, error);
+        console.warn(`❌ [INDIVIDUAL EXAMPLES] Failed to process interaction:`, error);
       }
     }
+    console.log(`✅ [INDIVIDUAL EXAMPLES] Generated ${allExamples.length} individual training examples`);
 
     // Create sequence and task-driven examples
+    console.log(`\n🛤️ [JOURNEY EXAMPLES] Creating sequence examples...`);
     const sequenceExamples = this.createSequenceExamples(enhancedInteractions);
+    console.log(`✅ [JOURNEY EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
+    
+    console.log(`🎯 [TASK EXAMPLES] Creating task-driven examples...`);
     const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
+    console.log(`✅ [TASK EXAMPLES] Generated ${taskExamples.length} task examples`);
     
     allExamples.push(...sequenceExamples, ...taskExamples);
+    console.log(`📈 [TOTAL EXAMPLES] Combined total: ${allExamples.length} training examples`);
 
     // 🎯 JOURNEY-PRIORITIZED QUALITY FILTERING
+    console.log(`🔍 [QUALITY FILTER] Applying journey-prioritized quality filtering...`);
     const qualityExamples = this.filterAndPrioritizeByJourneyQuality(allExamples);
+    console.log(`✅ [QUALITY FILTER] Final output: ${qualityExamples.length} high-quality examples`);
 
     const endTime = Date.now();
+    const processingTime = endTime - startTime;
+    
+    console.log(`\n📊 [TRAINING DATA] Generation completed in ${processingTime}ms`);
+    console.log(`📊 [TRAINING DATA] Selector enhancements: ${selectorEnhancements}`);
+    console.log(`📊 [TRAINING DATA] Context enhancements: ${contextEnhancements}`);
+    console.log(`📊 [TRAINING DATA] Success rate: ${(qualityExamples.length / enhancedInteractions.length * 100).toFixed(1)}% examples per interaction`);
     
     return {
       examples: qualityExamples,
@@ -74,7 +93,7 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       processing: {
         startTime,
         endTime,
-        duration: endTime - startTime,
+        duration: processingTime,
         selectorEnhancements,
         contextEnhancements
       }
@@ -523,6 +542,8 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
    * Prioritizes complete journey examples over individual interactions
    */
   private filterAndPrioritizeByJourneyQuality(allExamples: TrainingExample[]): TrainingExample[] {
+    console.log(`\n🔍 [QUALITY FILTER] Starting quality filtering with ${allExamples.length} examples`);
+    
     // Separate journey examples from individual interaction examples
     const journeyExamples = allExamples.filter(ex => 
       ex.context?.pageType === 'journey-sequence' ||
@@ -533,17 +554,21 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     );
     
     const individualExamples = allExamples.filter(ex => !journeyExamples.includes(ex));
+    console.log(`📊 [QUALITY FILTER] Found ${journeyExamples.length} journey examples, ${individualExamples.length} individual examples`);
     
     // 🎯 JOURNEY EXAMPLES: Lower quality threshold (0.4) - prioritize complete flows
     const qualityJourneyExamples = journeyExamples.filter(ex => ex.quality.score >= 0.4);
+    console.log(`✅ [QUALITY FILTER] ${qualityJourneyExamples.length} journey examples pass quality threshold (0.4)`);
     
     // 🔍 INDIVIDUAL EXAMPLES: Higher quality threshold (0.6) - be selective
     const qualityIndividualExamples = individualExamples.filter(ex => ex.quality.score >= 0.6);
+    console.log(`✅ [QUALITY FILTER] ${qualityIndividualExamples.length} individual examples pass quality threshold (0.6)`);
     
     // 📊 PRIORITIZATION STRATEGY:
     // 1. Include ALL high-quality journey examples first
     // 2. Add individual examples only if we have space and they're high quality
     const prioritizedExamples = [...qualityJourneyExamples];
+    console.log(`🎯 [QUALITY FILTER] Starting with ${prioritizedExamples.length} high-quality journey examples`);
     
     // Add individual examples up to a reasonable limit (don't overwhelm with individual actions)
     const maxIndividualExamples = Math.max(qualityJourneyExamples.length, 5);
@@ -552,9 +577,11 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       .slice(0, maxIndividualExamples);
     
     prioritizedExamples.push(...topIndividualExamples);
+    console.log(`➕ [QUALITY FILTER] Added ${topIndividualExamples.length} top individual examples (max: ${maxIndividualExamples})`);
     
     // 🚀 FINAL BOOST: Give journey examples a small quality score boost for final sorting
-    return prioritizedExamples.map(example => {
+    console.log(`🚀 [QUALITY FILTER] Applying journey priority boost and final sorting...`);
+    const finalExamples = prioritizedExamples.map(example => {
       if (journeyExamples.includes(example)) {
         return {
           ...example,
@@ -570,6 +597,11 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       }
       return example;
     }).sort((a, b) => b.quality.score - a.quality.score); // Sort by quality (journeys will be higher)
+    
+    console.log(`✅ [QUALITY FILTER] Final result: ${finalExamples.length} high-quality examples`);
+    console.log(`📈 [QUALITY FILTER] Conversion rate: ${(finalExamples.length / allExamples.length * 100).toFixed(1)}% examples retained`);
+    
+    return finalExamples;
   }
 
   /**
@@ -1102,11 +1134,16 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   }
 
   /**
-   * 🛤️ JOURNEY-BASED GROUPING: Detect complete user journeys by funnel stages
-   * Groups interactions into logical user journey sequences from discovery to conversion
+   * 🛤️ ENHANCED JOURNEY-BASED GROUPING: Detect complete user journeys with improved logic
+   * Groups interactions into logical sequences optimized for training data density
    */
   private groupInteractionsBySequence(interactions: EnhancedInteractionData[]): EnhancedInteractionData[][] {
-    if (interactions.length === 0) return [];
+    console.log(`\n🔄 [JOURNEY GROUPING] Starting with ${interactions.length} interactions`);
+    
+    if (interactions.length === 0) {
+      console.log(`⚠️ [JOURNEY GROUPING] No interactions to process`);
+      return [];
+    }
     
     // Sort interactions by timestamp to maintain chronological order
     const sortedInteractions = [...interactions].sort((a, b) => {
@@ -1114,60 +1151,81 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       const timeB = b.interaction?.timestamp || 0;
       return timeA - timeB;
     });
+    console.log(`✅ [JOURNEY GROUPING] Sorted ${sortedInteractions.length} interactions chronologically`);
 
     const journeys: EnhancedInteractionData[][] = [];
     
-    // 🎯 JOURNEY DETECTION STRATEGY:
-    // 1. Group by funnel stages: discovery → consideration → validation → conversion
-    // 2. Look for natural breaks (page changes, long time gaps)
-    // 3. Identify complete journeys with conversion events
+    // 🎯 ENHANCED JOURNEY DETECTION STRATEGY:
+    // 1. Group by logical task completion sequences (3-7 interactions)
+    // 2. Detect page flow progressions and funnel stages
+    // 3. Identify decision points and validation sequences
+    // 4. Create training-optimized interaction bundles
     
     let currentJourney: EnhancedInteractionData[] = [];
     let lastFunnelStage = '';
-    let lastPageUrl = '';
+    let lastPageType = '';
     let lastTimestamp = 0;
+    let currentTaskContext = '';
+    let journeyBreaks = 0;
     
+    console.log(`🔍 [JOURNEY GROUPING] Processing interactions for journey detection...`);
     for (const interaction of sortedInteractions) {
       const funnelStage = interaction.business?.conversion?.funnelStage || 'unknown';
+      const pageType = interaction.context?.pageType || '';
       const pageUrl = interaction.context?.pageUrl || '';
       const timestamp = interaction.interaction?.timestamp || 0;
       const timeDiff = timestamp - lastTimestamp;
+      const taskContext = this.extractTaskContext(interaction);
       
-      // 🔄 JOURNEY BREAK DETECTION:
-      // Start new journey if:
-      // 1. First interaction
-      // 2. Large time gap (>5 minutes = new session)
-      // 3. Going backwards in funnel (user started over)
-      // 4. Conversion completed (journey finished)
-      
+      // 🔄 ENHANCED JOURNEY BREAK DETECTION:
       const shouldStartNewJourney = 
         currentJourney.length === 0 || // First interaction
-        timeDiff > 300000 || // >5 minutes gap
+        timeDiff > 300000 || // >5 minutes gap (session break)
         this.isFunnelRegression(lastFunnelStage, funnelStage) || // User went backwards
-        this.isJourneyComplete(currentJourney); // Previous journey completed
+        this.isJourneyComplete(currentJourney) || // Previous journey completed
+        this.isTaskContextChange(currentTaskContext, taskContext) || // Major task change
+        this.isOptimalJourneyLength(currentJourney) || // Optimal training length reached
+        this.isPageFlowBreak(lastPageType, pageType, pageUrl); // Logical page flow break
       
       if (shouldStartNewJourney && currentJourney.length > 0) {
         // Save completed journey if it has meaningful content
         if (this.isValidJourney(currentJourney)) {
           journeys.push([...currentJourney]);
+          console.log(`🎯 [JOURNEY GROUPING] Journey ${journeys.length}: ${currentJourney.length} interactions (${this.detectJourneyType(currentJourney)})`);
+        } else {
+          console.log(`⚠️ [JOURNEY GROUPING] Skipped invalid journey with ${currentJourney.length} interactions`);
         }
         currentJourney = [];
+        journeyBreaks++;
       }
       
       // Add interaction to current journey
       currentJourney.push(interaction);
       lastFunnelStage = funnelStage;
-      lastPageUrl = pageUrl;
+      lastPageType = pageType;
       lastTimestamp = timestamp;
+      currentTaskContext = taskContext;
     }
     
     // Add final journey if valid
     if (currentJourney.length > 0 && this.isValidJourney(currentJourney)) {
       journeys.push(currentJourney);
+      console.log(`🎯 [JOURNEY GROUPING] Final journey ${journeys.length}: ${currentJourney.length} interactions (${this.detectJourneyType(currentJourney)})`);
     }
     
+    console.log(`📊 [JOURNEY GROUPING] Detected ${journeys.length} valid journeys with ${journeyBreaks} breaks`);
+    
+    // 🎯 POST-PROCESSING: Create additional training-optimized bundles
+    console.log(`🔄 [BUNDLE OPTIMIZATION] Creating optimized training bundles...`);
+    const optimizedJourneys = this.createOptimizedTrainingBundles(journeys, sortedInteractions);
+    console.log(`✅ [BUNDLE OPTIMIZATION] Generated ${optimizedJourneys.length} optimized bundles`);
+    
     // 🎯 JOURNEY ENHANCEMENT: Add journey metadata
-    return journeys.map(journey => this.enhanceJourneyWithMetadata(journey));
+    console.log(`🔄 [METADATA ENHANCEMENT] Adding comprehensive journey metadata...`);
+    const enrichedJourneys = optimizedJourneys.map(journey => this.enhanceJourneyWithMetadata(journey));
+    console.log(`✅ [METADATA ENHANCEMENT] Enhanced ${enrichedJourneys.length} journeys with metadata`);
+    
+    return enrichedJourneys;
   }
 
   /**
@@ -1259,17 +1317,24 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   }
 
   /**
-   * 🎯 JOURNEY ENHANCEMENT: Add journey-specific metadata
+   * 🎯 ENHANCED JOURNEY METADATA: Add comprehensive journey-specific metadata for training optimization
    */
   private enhanceJourneyWithMetadata(journey: EnhancedInteractionData[]): EnhancedInteractionData[] {
     const journeyType = this.detectJourneyType(journey);
     const journeyGoal = this.extractJourneyGoal(journey);
     const userIntent = this.extractUserIntent(journey);
     
-    // Add journey metadata to each interaction
+    // Extract comprehensive journey analytics
+    const journeyAnalytics = this.analyzeJourneyPattern(journey);
+    const decisionPoints = this.identifyDecisionPoints(journey);
+    const funnelProgression = this.analyzeFunnelProgression(journey);
+    const conversionSignals = this.extractConversionSignals(journey);
+    
+    // Add enhanced journey metadata to each interaction
     return journey.map((interaction, index) => ({
       ...interaction,
       journeyMetadata: {
+        // Basic journey information
         journeyType,
         journeyGoal,
         userIntent,
@@ -1277,13 +1342,43 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
         totalSteps: journey.length,
         isJourneyStart: index === 0,
         isJourneyEnd: index === journey.length - 1,
-        journeyProgress: ((index + 1) / journey.length * 100).toFixed(0) + '%'
+        journeyProgress: ((index + 1) / journey.length * 100).toFixed(0) + '%',
+        
+        // 🆕 ENHANCED JOURNEY ANALYTICS
+        journeyQuality: journeyAnalytics.quality,
+        journeyCompleteness: journeyAnalytics.completeness,
+        journeyComplexity: journeyAnalytics.complexity,
+        estimatedConversionProbability: journeyAnalytics.conversionProbability,
+        
+        // Decision point analysis
+        isDecisionPoint: decisionPoints.includes(index),
+        decisionContext: decisionPoints.includes(index) ? this.getDecisionContext(interaction, journey, index) : null,
+        decisionFactors: decisionPoints.includes(index) ? this.extractDecisionFactors(journey.slice(0, index + 1)) : [],
+        
+        // Funnel progression tracking
+        currentFunnelStage: interaction.business?.conversion?.funnelStage || 'unknown',
+        funnelProgression: funnelProgression,
+        stageTransition: index > 0 ? this.analyzeFunnelTransition(journey[index - 1], interaction) : null,
+        
+        // Conversion signals and intent
+        conversionSignals: conversionSignals.filter(signal => signal.stepIndex <= index),
+        hasStrongConversionIntent: conversionSignals.some(signal => signal.stepIndex === index && signal.strength === 'high'),
+        
+        // Journey context for training
+        similarStepsInJourney: this.findSimilarSteps(interaction, journey, index),
+        pageFlowContext: this.getPageFlowContext(journey, index),
+        taskContextProgression: this.getTaskContextProgression(journey, index),
+        
+        // Training optimization metadata
+        trainingValue: this.calculateStepTrainingValue(interaction, journey, index),
+        contextRichness: this.calculateContextRichness(interaction),
+        bundleRole: this.determineBundleRole(interaction, journey, index)
       }
     }));
   }
 
   /**
-   * 🏷️ ENHANCED JOURNEY TYPE DETECTION: Identify comprehensive journey patterns with templates
+   * 🏷️ EXPANDED JOURNEY TYPE DETECTION: Identify comprehensive journey patterns with granular templates
    */
   private detectJourneyType(journey: EnhancedInteractionData[]): string {
     const pages: string[] = journey.map(i => i.context?.pageType).filter((p): p is string => Boolean(p));
@@ -1293,85 +1388,214 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     const elements: string[] = journey.map(i => i.element?.text?.toLowerCase()).filter((e): e is string => Boolean(e));
     const stages: string[] = journey.map(i => i.business?.conversion?.funnelStage).filter((s): s is string => Boolean(s));
     
-    // 🛒 E-COMMERCE JOURNEY TEMPLATES
+    // 🛒 E-COMMERCE JOURNEY TEMPLATES (Enhanced with more granular patterns)
     if (this.matchesEcommercePattern(pages, goals, products, elements, urls)) {
-      // Detect specific e-commerce sub-patterns
-      if (stages.includes('validation') && elements.some(el => el.includes('review'))) {
-        return 'ecommerce-research-purchase'; // Research-heavy purchase
+      // High-intent purchase patterns
+      if (elements.some(el => el.includes('buy now') || el.includes('purchase'))) {
+        return 'ecommerce-high-intent-purchase';
       }
-      if (goals.some(g => ['add-to-cart', 'reach-checkout'].includes(g))) {
-        return 'ecommerce-direct-purchase'; // Direct purchase intent
+      // Research-heavy patterns
+      if (stages.includes('validation') && elements.some(el => el.includes('review') || el.includes('compare'))) {
+        return 'ecommerce-research-validation-purchase';
       }
+      // Price comparison patterns
+      if (elements.some(el => el.includes('price') && el.includes('compare'))) {
+        return 'ecommerce-price-comparison-purchase';
+      }
+      // Cart abandonment and recovery patterns
+      if (goals.includes('add-to-cart') && !goals.includes('reach-checkout')) {
+        return 'ecommerce-add-to-cart-journey';
+      }
+      // Multi-product comparison patterns
+      if (products.length > 1 || elements.some(el => el.includes('compare'))) {
+        return 'ecommerce-multi-product-comparison';
+      }
+      // Quick checkout patterns
+      if (goals.some(g => ['add-to-cart', 'reach-checkout'].includes(g)) && journey.length <= 4) {
+        return 'ecommerce-quick-checkout';
+      }
+      // Browse and discovery patterns  
       if (pages.includes('search-results') && pages.includes('category')) {
-        return 'ecommerce-browse-purchase'; // Browsing-based purchase
+        return 'ecommerce-browse-discovery-purchase';
       }
       return 'ecommerce-purchase';
     }
     
-    // 💼 SAAS/SOFTWARE JOURNEY TEMPLATES  
+    // 💼 SAAS/SOFTWARE JOURNEY TEMPLATES (Enhanced with conversion paths)
     if (this.matchesSaaSPattern(pages, goals, elements, urls)) {
-      // Detect specific SaaS sub-patterns
-      if (pages.includes('pricing') && elements.some(el => el.includes('trial'))) {
-        return 'saas-trial-signup'; // Free trial signup
+      // Free trial conversion patterns
+      if (pages.includes('pricing') && elements.some(el => el.includes('trial') || el.includes('free'))) {
+        return 'saas-freemium-trial-signup';
       }
+      // Enterprise sales patterns
+      if (elements.some(el => el.includes('enterprise') || el.includes('sales'))) {
+        return 'saas-enterprise-sales-inquiry';
+      }
+      // Demo and consultation patterns
       if (elements.some(el => el.includes('demo') || el.includes('schedule'))) {
-        return 'saas-demo-request'; // Demo request
+        return 'saas-demo-consultation-request';
       }
+      // Feature evaluation patterns
+      if (pages.includes('features') && stages.includes('evaluation')) {
+        return 'saas-feature-evaluation';
+      }
+      // Pricing research patterns
+      if (pages.includes('pricing') && stages.includes('consideration')) {
+        return 'saas-pricing-research';
+      }
+      // Direct paid signup patterns
       if (goals.some(g => ['subscription', 'subscription-selected'].includes(g))) {
-        return 'saas-paid-signup'; // Paid subscription
+        return 'saas-direct-paid-signup';
       }
       return 'saas-signup';
     }
     
-    // 📅 BOOKING/RESERVATION JOURNEY TEMPLATES
+    // 📅 BOOKING/RESERVATION JOURNEY TEMPLATES (Enhanced with booking types)
     if (this.matchesBookingPattern(pages, goals, elements, urls)) {
-      // Detect specific booking sub-patterns
-      if (elements.some(el => el.includes('date') || el.includes('time'))) {
-        return 'booking-datetime-selection'; // Date/time selection flow
+      // Restaurant reservation patterns
+      if (elements.some(el => el.includes('table') || el.includes('restaurant'))) {
+        return 'booking-restaurant-reservation';
       }
-      if (elements.some(el => el.includes('room') || el.includes('table'))) {
-        return 'booking-venue-reservation'; // Venue booking
+      // Hotel/accommodation patterns
+      if (elements.some(el => el.includes('room') || el.includes('hotel') || el.includes('stay'))) {
+        return 'booking-accommodation-reservation';
       }
+      // Event/ticket booking patterns
+      if (elements.some(el => el.includes('ticket') || el.includes('event'))) {
+        return 'booking-event-ticket-purchase';
+      }
+      // Service appointment patterns
       if (elements.some(el => el.includes('appointment') || el.includes('consultation'))) {
-        return 'booking-appointment'; // Appointment booking
+        return 'booking-service-appointment';
+      }
+      // Date/time selection patterns
+      if (elements.some(el => el.includes('date') || el.includes('time') || el.includes('calendar'))) {
+        return 'booking-datetime-selection';
       }
       return 'booking-flow';
     }
     
-    // 🎓 LEAD GENERATION JOURNEY TEMPLATES
+    // 🎓 LEAD GENERATION JOURNEY TEMPLATES (Enhanced with content types)
     if (this.matchesLeadGenPattern(pages, goals, elements, urls)) {
-      if (elements.some(el => el.includes('download') || el.includes('whitepaper'))) {
-        return 'leadgen-content-download'; // Content download
+      // Content marketing patterns
+      if (elements.some(el => el.includes('download') || el.includes('whitepaper') || el.includes('ebook'))) {
+        return 'leadgen-content-marketing-download';
       }
-      if (elements.some(el => el.includes('newsletter') || el.includes('subscribe'))) {
-        return 'leadgen-newsletter-signup'; // Newsletter signup
+      // Newsletter and email patterns
+      if (elements.some(el => el.includes('newsletter') || el.includes('subscribe') || el.includes('updates'))) {
+        return 'leadgen-email-subscription';
       }
-      if (elements.some(el => el.includes('quote') || el.includes('estimate'))) {
-        return 'leadgen-quote-request'; // Quote request
+      // Quote and estimate patterns
+      if (elements.some(el => el.includes('quote') || el.includes('estimate') || el.includes('pricing'))) {
+        return 'leadgen-quote-estimate-request';
+      }
+      // Webinar and event patterns
+      if (elements.some(el => el.includes('webinar') || el.includes('register'))) {
+        return 'leadgen-webinar-registration';
+      }
+      // Contact and inquiry patterns
+      if (pages.includes('contact') || elements.some(el => el.includes('contact') || el.includes('inquiry'))) {
+        return 'leadgen-contact-inquiry';
       }
       return 'leadgen-contact';
     }
     
-    // 🔍 RESEARCH/COMPARISON JOURNEY TEMPLATES
+    // 🔍 RESEARCH/COMPARISON JOURNEY TEMPLATES (Enhanced with research types)
     if (this.matchesResearchPattern(pages, goals, elements, stages)) {
-      if (stages.includes('validation') && elements.some(el => el.includes('compare'))) {
-        return 'research-comparison'; // Comparison-focused research
+      // Product comparison patterns
+      if (stages.includes('validation') && elements.some(el => el.includes('compare') || el.includes('vs'))) {
+        return 'research-product-comparison-analysis';
       }
-      if (elements.some(el => el.includes('spec') || el.includes('feature'))) {
-        return 'research-specification'; // Specification research
+      // Technical specification patterns
+      if (elements.some(el => el.includes('spec') || el.includes('technical') || el.includes('feature'))) {
+        return 'research-technical-specification';
+      }
+      // Review and rating patterns
+      if (elements.some(el => el.includes('review') || el.includes('rating') || el.includes('feedback'))) {
+        return 'research-review-validation';
+      }
+      // Market research patterns
+      if (pages.includes('search-results') && stages.includes('discovery')) {
+        return 'research-market-discovery';
       }
       return 'research-evaluation';
     }
     
-    // 🏪 LOCAL BUSINESS JOURNEY TEMPLATES
+    // 🏪 LOCAL BUSINESS JOURNEY TEMPLATES (Enhanced with business types)
     if (this.matchesLocalBusinessPattern(elements, urls)) {
-      if (elements.some(el => el.includes('location') || el.includes('hours'))) {
-        return 'local-business-info'; // Location/hours lookup
+      // Location and hours patterns
+      if (elements.some(el => el.includes('location') || el.includes('hours') || el.includes('address'))) {
+        return 'local-business-location-hours-lookup';
       }
-      if (elements.some(el => el.includes('menu') || el.includes('service'))) {
-        return 'local-business-services'; // Services/menu research
+      // Menu and services patterns
+      if (elements.some(el => el.includes('menu') || el.includes('service') || el.includes('offerings'))) {
+        return 'local-business-menu-services-research';
+      }
+      // Contact and directions patterns
+      if (elements.some(el => el.includes('phone') || el.includes('directions') || el.includes('map'))) {
+        return 'local-business-contact-directions';
       }
       return 'local-business-research';
+    }
+    
+    // 🆕 NEW JOURNEY TEMPLATES (Additional common patterns)
+    
+    // 🏦 FINANCIAL SERVICES JOURNEY TEMPLATES
+    if (this.matchesFinancialPattern(pages, elements, urls)) {
+      if (elements.some(el => el.includes('loan') || el.includes('mortgage'))) {
+        return 'financial-loan-application';
+      }
+      if (elements.some(el => el.includes('insurance') || el.includes('coverage'))) {
+        return 'financial-insurance-quote';
+      }
+      if (elements.some(el => el.includes('account') || el.includes('open'))) {
+        return 'financial-account-opening';
+      }
+      return 'financial-services-inquiry';
+    }
+    
+    // 🎓 EDUCATION JOURNEY TEMPLATES
+    if (this.matchesEducationPattern(pages, elements, urls)) {
+      if (elements.some(el => el.includes('course') || el.includes('program'))) {
+        return 'education-course-enrollment';
+      }
+      if (elements.some(el => el.includes('application') || el.includes('apply'))) {
+        return 'education-program-application';
+      }
+      return 'education-research';
+    }
+    
+    // 🏥 HEALTHCARE JOURNEY TEMPLATES
+    if (this.matchesHealthcarePattern(pages, elements, urls)) {
+      if (elements.some(el => el.includes('appointment') || el.includes('schedule'))) {
+        return 'healthcare-appointment-booking';
+      }
+      if (elements.some(el => el.includes('provider') || el.includes('doctor'))) {
+        return 'healthcare-provider-search';
+      }
+      return 'healthcare-information-lookup';
+    }
+    
+    // 🏠 REAL ESTATE JOURNEY TEMPLATES
+    if (this.matchesRealEstatePattern(pages, elements, urls)) {
+      if (elements.some(el => el.includes('buy') || el.includes('purchase'))) {
+        return 'realestate-home-buying-search';
+      }
+      if (elements.some(el => el.includes('rent') || el.includes('rental'))) {
+        return 'realestate-rental-search';
+      }
+      return 'realestate-property-research';
+    }
+    
+    // 🎮 ENTERTAINMENT/MEDIA JOURNEY TEMPLATES
+    if (this.matchesEntertainmentPattern(pages, elements, urls)) {
+      if (elements.some(el => el.includes('stream') || el.includes('watch'))) {
+        return 'entertainment-content-streaming';
+      }
+      if (elements.some(el => el.includes('subscribe') || el.includes('membership'))) {
+        return 'entertainment-subscription-signup';
+      }
+      return 'entertainment-content-discovery';
     }
     
     return 'general-task';
@@ -1421,6 +1645,68 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   private matchesLocalBusinessPattern(elements: string[], urls: string[]): boolean {
     return elements.some(el => el.includes('location') || el.includes('hours') || el.includes('address') || el.includes('phone')) ||
            urls.some(url => url.includes('location') || url.includes('contact') || url.includes('hours'));
+  }
+
+  // 🆕 NEW PATTERN MATCHING METHODS
+
+  // 🏦 Financial Services Pattern Matching
+  private matchesFinancialPattern(pages: string[], elements: string[], urls: string[]): boolean {
+    return elements.some(el => 
+      el.includes('loan') || el.includes('mortgage') || el.includes('insurance') || 
+      el.includes('bank') || el.includes('account') || el.includes('credit') ||
+      el.includes('investment') || el.includes('finance')
+    ) || urls.some(url => 
+      url.includes('bank') || url.includes('finance') || url.includes('loan') || 
+      url.includes('insurance') || url.includes('invest')
+    ) || pages.some(p => p === 'financial' || p === 'banking');
+  }
+
+  // 🎓 Education Pattern Matching
+  private matchesEducationPattern(pages: string[], elements: string[], urls: string[]): boolean {
+    return elements.some(el => 
+      el.includes('course') || el.includes('program') || el.includes('degree') ||
+      el.includes('university') || el.includes('college') || el.includes('school') ||
+      el.includes('learn') || el.includes('education') || el.includes('study')
+    ) || urls.some(url => 
+      url.includes('edu') || url.includes('university') || url.includes('college') ||
+      url.includes('course') || url.includes('learn')
+    ) || pages.some(p => p === 'education' || p === 'course' || p === 'program');
+  }
+
+  // 🏥 Healthcare Pattern Matching
+  private matchesHealthcarePattern(pages: string[], elements: string[], urls: string[]): boolean {
+    return elements.some(el => 
+      el.includes('doctor') || el.includes('appointment') || el.includes('hospital') ||
+      el.includes('clinic') || el.includes('health') || el.includes('medical') ||
+      el.includes('provider') || el.includes('patient')
+    ) || urls.some(url => 
+      url.includes('health') || url.includes('medical') || url.includes('doctor') ||
+      url.includes('clinic') || url.includes('hospital')
+    ) || pages.some(p => p === 'healthcare' || p === 'medical' || p === 'appointment');
+  }
+
+  // 🏠 Real Estate Pattern Matching
+  private matchesRealEstatePattern(pages: string[], elements: string[], urls: string[]): boolean {
+    return elements.some(el => 
+      el.includes('home') || el.includes('house') || el.includes('property') ||
+      el.includes('real estate') || el.includes('rent') || el.includes('buy') ||
+      el.includes('mortgage') || el.includes('listing')
+    ) || urls.some(url => 
+      url.includes('realestate') || url.includes('zillow') || url.includes('realtor') ||
+      url.includes('homes') || url.includes('property')
+    ) || pages.some(p => p === 'realestate' || p === 'property' || p === 'listing');
+  }
+
+  // 🎮 Entertainment/Media Pattern Matching
+  private matchesEntertainmentPattern(pages: string[], elements: string[], urls: string[]): boolean {
+    return elements.some(el => 
+      el.includes('watch') || el.includes('stream') || el.includes('movie') ||
+      el.includes('show') || el.includes('video') || el.includes('music') ||
+      el.includes('play') || el.includes('entertainment')
+    ) || urls.some(url => 
+      url.includes('netflix') || url.includes('youtube') || url.includes('spotify') ||
+      url.includes('stream') || url.includes('media') || url.includes('entertainment')
+    ) || pages.some(p => p === 'entertainment' || p === 'media' || p === 'streaming');
   }
 
   /**
@@ -1501,6 +1787,314 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     return []; // Simplified for now  
   }
 
+  // 🆕 ENHANCED JOURNEY GROUPING HELPER METHODS
+
+  /**
+   * 🎯 EXTRACT TASK CONTEXT: Identify the primary task context for an interaction
+   */
+  private extractTaskContext(interaction: EnhancedInteractionData): string {
+    const pageType = interaction.context?.pageType || '';
+    const funnelStage = interaction.business?.conversion?.funnelStage || '';
+    const conversionGoal = interaction.business?.conversion?.conversionGoal || '';
+    const elementText = interaction.element?.text?.toLowerCase() || '';
+    const pageUrl = interaction.context?.pageUrl?.toLowerCase() || '';
+    
+    // Create a composite task context identifier
+    const contextParts = [];
+    
+    // Primary context from conversion goal
+    if (conversionGoal) {
+      contextParts.push(conversionGoal);
+    }
+    
+    // Secondary context from page type and funnel stage
+    if (pageType && funnelStage) {
+      contextParts.push(`${pageType}-${funnelStage}`);
+    }
+    
+    // Tertiary context from URL patterns
+    if (pageUrl.includes('search')) contextParts.push('search');
+    if (pageUrl.includes('product')) contextParts.push('product');
+    if (pageUrl.includes('cart')) contextParts.push('cart');
+    if (pageUrl.includes('checkout')) contextParts.push('checkout');
+    
+    // Element-based context
+    if (elementText.includes('add to cart')) contextParts.push('add-to-cart');
+    if (elementText.includes('buy') || elementText.includes('purchase')) contextParts.push('purchase');
+    if (elementText.includes('sign up') || elementText.includes('register')) contextParts.push('signup');
+    
+    return contextParts.length > 0 ? contextParts.join('|') : 'general';
+  }
+
+  /**
+   * 🔄 DETECT TASK CONTEXT CHANGE: Determine if there's a major task change
+   */
+  private isTaskContextChange(lastContext: string, currentContext: string): boolean {
+    if (!lastContext || !currentContext) return false;
+    
+    const lastParts = lastContext.split('|');
+    const currentParts = currentContext.split('|');
+    
+    // Check if primary contexts are completely different
+    const lastPrimary = lastParts[0];
+    const currentPrimary = currentParts[0];
+    
+    // Major context changes that warrant new journey
+    const majorContexts = ['add-to-cart', 'purchase', 'signup', 'checkout', 'search'];
+    
+    if (majorContexts.includes(lastPrimary) && majorContexts.includes(currentPrimary) && lastPrimary !== currentPrimary) {
+      return true;
+    }
+    
+    // Check for complete context mismatch (no common elements)
+    const commonContexts = lastParts.filter(part => currentParts.includes(part));
+    return commonContexts.length === 0 && lastParts.length > 1 && currentParts.length > 1;
+  }
+
+  /**
+   * 📏 CHECK OPTIMAL JOURNEY LENGTH: Determine if journey has reached optimal training length
+   */
+  private isOptimalJourneyLength(journey: EnhancedInteractionData[]): boolean {
+    const length = journey.length;
+    
+    // Optimal training length is 3-7 interactions
+    // Start considering breaks at 5 interactions, force break at 8
+    if (length >= 8) return true; // Force break - too long for optimal training
+    
+    if (length >= 5) {
+      // Consider break if we have a complete sub-journey
+      const hasConversionAction = journey.some(i => 
+        i.business?.conversion?.conversionGoal === 'add-to-cart' ||
+        i.business?.conversion?.conversionGoal === 'reach-checkout' ||
+        i.element?.text?.toLowerCase().includes('add to cart') ||
+        i.element?.text?.toLowerCase().includes('checkout')
+      );
+      
+      // Break if we have a natural completion point
+      return hasConversionAction;
+    }
+    
+    return false; // Continue building journey
+  }
+
+  /**
+   * 🌊 DETECT PAGE FLOW BREAK: Identify logical breaks in page navigation flow
+   */
+  private isPageFlowBreak(lastPageType: string, currentPageType: string, currentUrl: string): boolean {
+    if (!lastPageType || !currentPageType) return false;
+    
+    // Define logical page flow sequences
+    const logicalFlows = {
+      'home': ['search', 'category', 'product'],
+      'search': ['search-results', 'product', 'category'],
+      'search-results': ['product', 'search', 'category'],
+      'category': ['product', 'search', 'subcategory'],
+      'product': ['cart', 'checkout', 'product', 'category'],
+      'cart': ['checkout', 'product', 'payment'],
+      'checkout': ['payment', 'confirmation'],
+      'signup': ['confirmation', 'home', 'dashboard'],
+      'pricing': ['signup', 'checkout', 'trial']
+    };
+    
+    // Check if current page type is a logical next step
+    const expectedNextPages = logicalFlows[lastPageType as keyof typeof logicalFlows];
+    if (expectedNextPages && !expectedNextPages.includes(currentPageType)) {
+      // Additional checks for special cases
+      
+      // Allow same page type transitions (browsing multiple products)
+      if (lastPageType === currentPageType) return false;
+      
+      // Allow return to homepage/search from anywhere (common pattern)
+      if (currentPageType === 'home' || currentPageType === 'search') return false;
+      
+      // Check URL for navigation hints
+      const url = currentUrl.toLowerCase();
+      if (url.includes('back') || url.includes('return')) return false;
+      
+      return true; // This is a page flow break
+    }
+    
+    return false; // Normal page flow
+  }
+
+  /**
+   * 🎯 CREATE OPTIMIZED TRAINING BUNDLES: Generate additional training-focused interaction groups
+   */
+  private createOptimizedTrainingBundles(journeys: EnhancedInteractionData[][], allInteractions: EnhancedInteractionData[]): EnhancedInteractionData[][] {
+    const optimizedBundles: EnhancedInteractionData[][] = [...journeys];
+    console.log(`🔄 [BUNDLE OPTIMIZATION] Starting with ${journeys.length} base journeys`);
+    
+    // 🎯 STRATEGY 1: Create decision-focused bundles (3-4 interactions around key decisions)
+    console.log(`🧠 [DECISION BUNDLES] Creating decision-focused bundles...`);
+    const decisionBundles = this.createDecisionFocusedBundles(allInteractions);
+    console.log(`✅ [DECISION BUNDLES] Generated ${decisionBundles.length} decision-focused bundles`);
+    optimizedBundles.push(...decisionBundles);
+    
+    // 🎯 STRATEGY 2: Create funnel-progression bundles (interactions showing funnel advancement)
+    console.log(`📊 [FUNNEL BUNDLES] Creating funnel-progression bundles...`);
+    const funnelBundles = this.createFunnelProgressionBundles(allInteractions);
+    console.log(`✅ [FUNNEL BUNDLES] Generated ${funnelBundles.length} funnel-progression bundles`);
+    optimizedBundles.push(...funnelBundles);
+    
+    // 🎯 STRATEGY 3: Create task-completion bundles (goal-oriented interaction sequences)
+    console.log(`🎯 [TASK BUNDLES] Creating task-completion bundles...`);
+    const taskBundles = this.createTaskCompletionBundles(allInteractions);
+    console.log(`✅ [TASK BUNDLES] Generated ${taskBundles.length} task-completion bundles`);
+    optimizedBundles.push(...taskBundles);
+    
+    console.log(`📈 [BUNDLE OPTIMIZATION] Total bundles before deduplication: ${optimizedBundles.length}`);
+    
+    // Remove duplicates and ensure optimal training lengths
+    console.log(`🧹 [DEDUPLICATION] Removing duplicates and optimizing lengths...`);
+    const finalBundles = this.deduplicateAndOptimizeBundles(optimizedBundles);
+    console.log(`✅ [DEDUPLICATION] Final optimized bundles: ${finalBundles.length}`);
+    
+    return finalBundles;
+  }
+
+  /**
+   * 🧠 CREATE DECISION-FOCUSED BUNDLES: Group interactions around decision points
+   */
+  private createDecisionFocusedBundles(interactions: EnhancedInteractionData[]): EnhancedInteractionData[][] {
+    const bundles: EnhancedInteractionData[][] = [];
+    
+    // Find decision points (interactions with validation/comparison elements)
+    const decisionPoints = interactions.filter(interaction => {
+      const elementText = interaction.element?.text?.toLowerCase() || '';
+      const pageType = interaction.context?.pageType || '';
+      const funnelStage = interaction.business?.conversion?.funnelStage || '';
+      
+      return funnelStage === 'validation' ||
+             elementText.includes('compare') ||
+             elementText.includes('review') ||
+             elementText.includes('spec') ||
+             pageType === 'comparison';
+    });
+    
+    // Create bundles around each decision point (2 before, decision point, 2 after)
+    for (const decisionPoint of decisionPoints) {
+      const decisionIndex = interactions.indexOf(decisionPoint);
+      if (decisionIndex !== -1) {
+        const startIndex = Math.max(0, decisionIndex - 2);
+        const endIndex = Math.min(interactions.length, decisionIndex + 3);
+        const bundle = interactions.slice(startIndex, endIndex);
+        
+        if (bundle.length >= 3) {
+          bundles.push(bundle);
+        }
+      }
+    }
+    
+    return bundles;
+  }
+
+  /**
+   * 📊 CREATE FUNNEL PROGRESSION BUNDLES: Group interactions showing funnel advancement
+   */
+  private createFunnelProgressionBundles(interactions: EnhancedInteractionData[]): EnhancedInteractionData[][] {
+    const bundles: EnhancedInteractionData[][] = [];
+    
+    // Group interactions by funnel stage progression
+    const funnelOrder = ['discovery', 'awareness', 'consideration', 'evaluation', 'validation', 'conversion'];
+    
+    let currentBundle: EnhancedInteractionData[] = [];
+    let lastStageIndex = -1;
+    
+    for (const interaction of interactions) {
+      const stage = interaction.business?.conversion?.funnelStage || '';
+      const stageIndex = funnelOrder.indexOf(stage);
+      
+      if (stageIndex !== -1) {
+        // If we're progressing forward in the funnel, continue bundle
+        if (stageIndex >= lastStageIndex) {
+          currentBundle.push(interaction);
+          lastStageIndex = stageIndex;
+          
+          // Create bundle if we have optimal length
+          if (currentBundle.length >= 4) {
+            bundles.push([...currentBundle]);
+            currentBundle = [interaction]; // Start new bundle with current interaction
+          }
+        } else {
+          // Funnel regression - start new bundle
+          if (currentBundle.length >= 2) {
+            bundles.push([...currentBundle]);
+          }
+          currentBundle = [interaction];
+          lastStageIndex = stageIndex;
+        }
+      }
+    }
+    
+    // Add final bundle
+    if (currentBundle.length >= 2) {
+      bundles.push(currentBundle);
+    }
+    
+    return bundles;
+  }
+
+  /**
+   * ✅ CREATE TASK COMPLETION BUNDLES: Group goal-oriented interaction sequences
+   */
+  private createTaskCompletionBundles(interactions: EnhancedInteractionData[]): EnhancedInteractionData[][] {
+    const bundles: EnhancedInteractionData[][] = [];
+    
+    // Find completion goals and work backwards to create meaningful sequences
+    const completionGoals = ['add-to-cart', 'reach-checkout', 'signup-form-complete', 'booking-form-complete'];
+    
+    for (const interaction of interactions) {
+      const goal = interaction.business?.conversion?.conversionGoal;
+      if (goal && completionGoals.includes(goal)) {
+        // Find the sequence leading to this completion
+        const completionIndex = interactions.indexOf(interaction);
+        const startIndex = Math.max(0, completionIndex - 4); // Up to 4 interactions leading to completion
+        const bundle = interactions.slice(startIndex, completionIndex + 1);
+        
+        if (bundle.length >= 2) {
+          bundles.push(bundle);
+        }
+      }
+    }
+    
+    return bundles;
+  }
+
+  /**
+   * 🧹 DEDUPLICATE AND OPTIMIZE BUNDLES: Remove duplicates and ensure optimal training lengths
+   */
+  private deduplicateAndOptimizeBundles(bundles: EnhancedInteractionData[][]): EnhancedInteractionData[][] {
+    // Create unique signature for each bundle to detect duplicates
+    const bundleSignatures = new Set<string>();
+    const uniqueBundles: EnhancedInteractionData[][] = [];
+    
+    for (const bundle of bundles) {
+      // Create signature from interaction IDs and timestamps
+      const signature = bundle.map(i => 
+        `${i.interaction?.timestamp || 0}-${i.element?.text?.slice(0, 10) || 'x'}`
+      ).join('|');
+      
+      if (!bundleSignatures.has(signature)) {
+        bundleSignatures.add(signature);
+        
+        // Ensure optimal bundle length (3-7 interactions)
+        if (bundle.length >= 2 && bundle.length <= 8) {
+          uniqueBundles.push(bundle);
+        } else if (bundle.length > 8) {
+          // Split overly long bundles
+          for (let i = 0; i < bundle.length; i += 6) {
+            const subBundle = bundle.slice(i, i + 6);
+            if (subBundle.length >= 2) {
+              uniqueBundles.push(subBundle);
+            }
+          }
+        }
+      }
+    }
+    
+    return uniqueBundles;
+  }
+
   private calculateMetadata(examples: TrainingExample[]): TrainingDataResult['metadata'] {
     const qualityDistribution = {
       high: examples.filter(ex => ex.quality.score >= 0.8).length,
@@ -1520,6 +2114,413 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       qualityDistribution,
       contextTypes
     };
+  }
+
+  // 🆕 ENHANCED JOURNEY METADATA HELPER METHODS
+
+  /**
+   * 📊 ANALYZE JOURNEY PATTERN: Extract comprehensive journey analytics
+   */
+  private analyzeJourneyPattern(journey: EnhancedInteractionData[]): any {
+    const funnelStages = journey.map(i => i.business?.conversion?.funnelStage).filter(Boolean);
+    const uniqueStages = new Set(funnelStages);
+    const pageTypes = journey.map(i => i.context?.pageType).filter(Boolean);
+    const uniquePages = new Set(pageTypes);
+    
+    return {
+      quality: this.calculateJourneyQuality(journey).score,
+      completeness: uniqueStages.size / 6, // Based on 6 funnel stages
+      complexity: Math.min(uniquePages.size / 5, 1), // Normalized complexity score
+      conversionProbability: this.estimateConversionProbability(journey)
+    };
+  }
+
+  /**
+   * 🎯 IDENTIFY DECISION POINTS: Find key decision moments in the journey
+   */
+  private identifyDecisionPoints(journey: EnhancedInteractionData[]): number[] {
+    const decisionIndices: number[] = [];
+    
+    journey.forEach((interaction, index) => {
+      const elementText = interaction.element?.text?.toLowerCase() || '';
+      const pageType = interaction.context?.pageType || '';
+      const funnelStage = interaction.business?.conversion?.funnelStage || '';
+      
+      // Decision point criteria
+      const isDecision = 
+        funnelStage === 'validation' ||
+        funnelStage === 'evaluation' ||
+        elementText.includes('compare') ||
+        elementText.includes('review') ||
+        elementText.includes('spec') ||
+        pageType === 'comparison' ||
+        elementText.includes('add to cart') ||
+        elementText.includes('checkout') ||
+        elementText.includes('sign up');
+        
+      if (isDecision) {
+        decisionIndices.push(index);
+      }
+    });
+    
+    return decisionIndices;
+  }
+
+  /**
+   * 📈 ANALYZE FUNNEL PROGRESSION: Track movement through conversion funnel
+   */
+  private analyzeFunnelProgression(journey: EnhancedInteractionData[]): any {
+    const funnelOrder = ['discovery', 'awareness', 'consideration', 'evaluation', 'validation', 'conversion'];
+    const stages = journey.map(i => i.business?.conversion?.funnelStage).filter(Boolean);
+    
+    let progression = 0;
+    let regressions = 0;
+    let lastStageIndex = -1;
+    
+    stages.forEach(stage => {
+      if (stage) {
+        const stageIndex = funnelOrder.indexOf(stage);
+        if (stageIndex !== -1) {
+          if (stageIndex > lastStageIndex) {
+            progression++;
+          } else if (stageIndex < lastStageIndex) {
+            regressions++;
+          }
+          lastStageIndex = stageIndex;
+        }
+      }
+    });
+    
+    return {
+      totalStages: new Set(stages).size,
+      progressions: progression,
+      regressions: regressions,
+      maxStageReached: Math.max(...stages.filter(s => s).map(s => funnelOrder.indexOf(s!)).filter(i => i !== -1)),
+      funnelEfficiency: progression / (progression + regressions + 1)
+    };
+  }
+
+  /**
+   * 🎯 EXTRACT CONVERSION SIGNALS: Identify signals indicating conversion intent
+   */
+  private extractConversionSignals(journey: EnhancedInteractionData[]): any[] {
+    const signals: any[] = [];
+    
+    journey.forEach((interaction, index) => {
+      const elementText = interaction.element?.text?.toLowerCase() || '';
+      const goal = interaction.business?.conversion?.conversionGoal || '';
+      const pageType = interaction.context?.pageType || '';
+      
+      // Strong conversion signals
+      if (elementText.includes('add to cart') || goal === 'add-to-cart') {
+        signals.push({ stepIndex: index, type: 'add-to-cart', strength: 'high' });
+      }
+      if (elementText.includes('checkout') || goal === 'reach-checkout') {
+        signals.push({ stepIndex: index, type: 'checkout', strength: 'high' });
+      }
+      if (elementText.includes('buy now') || elementText.includes('purchase')) {
+        signals.push({ stepIndex: index, type: 'immediate-purchase', strength: 'high' });
+      }
+      
+      // Medium conversion signals
+      if (pageType === 'product' && interaction.interaction?.type === 'CLICK') {
+        signals.push({ stepIndex: index, type: 'product-engagement', strength: 'medium' });
+      }
+      if (elementText.includes('sign up') || goal === 'signup') {
+        signals.push({ stepIndex: index, type: 'signup', strength: 'medium' });
+      }
+      
+      // Weak conversion signals
+      if (elementText.includes('learn more') || elementText.includes('details')) {
+        signals.push({ stepIndex: index, type: 'information-seeking', strength: 'low' });
+      }
+    });
+    
+    return signals;
+  }
+
+  /**
+   * 🧠 GET DECISION CONTEXT: Extract context around decision points
+   */
+  private getDecisionContext(interaction: EnhancedInteractionData, journey: EnhancedInteractionData[], index: number): any {
+    const beforeContext = index > 0 ? journey.slice(Math.max(0, index - 2), index) : [];
+    const afterContext = index < journey.length - 1 ? journey.slice(index + 1, Math.min(journey.length, index + 3)) : [];
+    
+    return {
+      decisionType: this.categorizeDecision(interaction),
+      leadingActions: beforeContext.map(i => ({
+        action: i.interaction?.type,
+        element: i.element?.text?.slice(0, 20),
+        page: i.context?.pageType
+      })),
+      followupActions: afterContext.map(i => ({
+        action: i.interaction?.type,
+        element: i.element?.text?.slice(0, 20),
+        page: i.context?.pageType
+      })),
+      timeSpent: this.calculateDecisionTime(beforeContext, interaction, afterContext)
+    };
+  }
+
+  /**
+   * 📊 ANALYZE FUNNEL TRANSITION: Analyze movement between funnel stages
+   */
+  private analyzeFunnelTransition(previousInteraction: EnhancedInteractionData, currentInteraction: EnhancedInteractionData): any {
+    const prevStage = previousInteraction.business?.conversion?.funnelStage || 'unknown';
+    const currentStage = currentInteraction.business?.conversion?.funnelStage || 'unknown';
+    
+    if (prevStage === currentStage) return null;
+    
+    const funnelOrder = ['discovery', 'awareness', 'consideration', 'evaluation', 'validation', 'conversion'];
+    const prevIndex = funnelOrder.indexOf(prevStage);
+    const currentIndex = funnelOrder.indexOf(currentStage);
+    
+    return {
+      from: prevStage,
+      to: currentStage,
+      direction: currentIndex > prevIndex ? 'forward' : currentIndex < prevIndex ? 'backward' : 'lateral',
+      stagesSkipped: Math.abs(currentIndex - prevIndex) - 1,
+      isProgression: currentIndex > prevIndex
+    };
+  }
+
+  /**
+   * 🔍 FIND SIMILAR STEPS: Identify similar interactions within the journey
+   */
+  private findSimilarSteps(interaction: EnhancedInteractionData, journey: EnhancedInteractionData[], currentIndex: number): any[] {
+    const currentAction = interaction.interaction?.type || '';
+    const currentPageType = interaction.context?.pageType || '';
+    
+    return journey
+      .map((step, index) => ({ step, index }))
+      .filter(({ step, index }) => 
+        index !== currentIndex &&
+        (step.interaction?.type === currentAction || step.context?.pageType === currentPageType)
+      )
+      .map(({ step, index }) => ({
+        stepIndex: index,
+        similarity: this.calculateStepSimilarity(interaction, step),
+        context: step.context?.pageType
+      }))
+      .filter(item => item.similarity > 0.5)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 3);
+  }
+
+  /**
+   * 🌊 GET PAGE FLOW CONTEXT: Extract page navigation flow context
+   */
+  private getPageFlowContext(journey: EnhancedInteractionData[], currentIndex: number): any {
+    const pageFlow = journey.map(i => i.context?.pageType).filter(Boolean) as string[];
+    const currentPage = pageFlow[currentIndex];
+    
+    return {
+      currentPage,
+      previousPages: pageFlow.slice(0, currentIndex),
+      upcomingPages: pageFlow.slice(currentIndex + 1),
+      flowPattern: this.identifyFlowPattern(pageFlow, currentIndex),
+      isFlowBreak: currentIndex > 0 && pageFlow[currentIndex - 1] && currentPage ? 
+        this.isPageFlowBreak(pageFlow[currentIndex - 1], currentPage, '') : false
+    };
+  }
+
+  /**
+   * 📋 GET TASK CONTEXT PROGRESSION: Track task context evolution
+   */
+  private getTaskContextProgression(journey: EnhancedInteractionData[], currentIndex: number): any {
+    const taskContexts = journey.map(i => this.extractTaskContext(i));
+    const currentContext = taskContexts[currentIndex];
+    
+    return {
+      currentTask: currentContext,
+      taskEvolution: taskContexts.slice(0, currentIndex + 1),
+      taskChanges: this.identifyTaskChanges(taskContexts, currentIndex),
+      taskConsistency: this.calculateTaskConsistency(taskContexts.slice(0, currentIndex + 1))
+    };
+  }
+
+  /**
+   * 📈 CALCULATE STEP TRAINING VALUE: Determine training value of each step
+   */
+  private calculateStepTrainingValue(interaction: EnhancedInteractionData, journey: EnhancedInteractionData[], index: number): number {
+    let value = 0.5; // Base value
+    
+    // Higher value for decision points
+    if (this.identifyDecisionPoints(journey).includes(index)) {
+      value += 0.2;
+    }
+    
+    // Higher value for conversion actions
+    const conversionSignals = this.extractConversionSignals(journey);
+    if (conversionSignals.some(signal => signal.stepIndex === index && signal.strength === 'high')) {
+      value += 0.2;
+    }
+    
+    // Higher value for funnel progressions
+    if (index > 0 && this.analyzeFunnelTransition(journey[index - 1], interaction)?.isProgression) {
+      value += 0.1;
+    }
+    
+    // Higher value for context-rich interactions
+    const contextRichness = this.calculateContextRichness(interaction);
+    value += (contextRichness - 0.5) * 0.2; // Scale context richness contribution
+    
+    return Math.min(value, 1.0);
+  }
+
+  /**
+   * 🎨 CALCULATE CONTEXT RICHNESS: Measure how much context an interaction has
+   */
+  private calculateContextRichness(interaction: EnhancedInteractionData): number {
+    let richness = 0;
+    const maxFeatures = 15; // Max possible features
+    
+    if (interaction.selectors?.reliability) richness += 1;
+    if (interaction.visual?.boundingBox) richness += 1;
+    if (interaction.element?.nearbyElements?.length) richness += 1;
+    if (interaction.context?.pageType) richness += 1;
+    if (interaction.business?.conversion?.funnelStage) richness += 1;
+    if (interaction.business?.ecommerce) richness += 1;
+    if (interaction.state?.before) richness += 1;
+    if (interaction.state?.after) richness += 1;
+    if (interaction.element?.formContext) richness += 1;
+    if (interaction.context?.accessibility) richness += 1;
+    if (interaction.context?.performance) richness += 1;
+    if (interaction.visual?.designSystem) richness += 1;
+    if (interaction.business?.user?.behaviorPatterns) richness += 1;
+    if (interaction.interaction?.timing) richness += 1;
+    if (interaction.element?.ariaAttributes) richness += 1;
+    
+    return richness / maxFeatures;
+  }
+
+  /**
+   * 🎭 DETERMINE BUNDLE ROLE: Identify the role of each step in the training bundle
+   */
+  private determineBundleRole(interaction: EnhancedInteractionData, journey: EnhancedInteractionData[], index: number): string {
+    if (index === 0) return 'journey-initiator';
+    if (index === journey.length - 1) return 'journey-completer';
+    
+    const decisionPoints = this.identifyDecisionPoints(journey);
+    if (decisionPoints.includes(index)) return 'decision-maker';
+    
+    const conversionSignals = this.extractConversionSignals(journey);
+    if (conversionSignals.some(signal => signal.stepIndex === index)) return 'conversion-indicator';
+    
+    if (index > 0) {
+      const transition = this.analyzeFunnelTransition(journey[index - 1], interaction);
+      if (transition?.isProgression) return 'funnel-advancer';
+    }
+    
+    return 'journey-progressor';
+  }
+
+  // Helper methods for the enhanced journey metadata
+
+  private estimateConversionProbability(journey: EnhancedInteractionData[]): number {
+    const conversionSignals = this.extractConversionSignals(journey);
+    const funnelAnalysis = this.analyzeFunnelProgression(journey);
+    
+    let probability = 0.1; // Base probability
+    
+    // Add probability based on conversion signals
+    const highSignals = conversionSignals.filter(s => s.strength === 'high').length;
+    const mediumSignals = conversionSignals.filter(s => s.strength === 'medium').length;
+    
+    probability += (highSignals * 0.3) + (mediumSignals * 0.15);
+    probability += funnelAnalysis.funnelEfficiency * 0.3;
+    probability += (funnelAnalysis.maxStageReached / 5) * 0.2;
+    
+    return Math.min(probability, 0.95); // Cap at 95%
+  }
+
+  private categorizeDecision(interaction: EnhancedInteractionData): string {
+    const elementText = interaction.element?.text?.toLowerCase() || '';
+    const funnelStage = interaction.business?.conversion?.funnelStage || '';
+    
+    if (elementText.includes('compare')) return 'comparison';
+    if (elementText.includes('review')) return 'validation';
+    if (elementText.includes('add to cart')) return 'purchase-decision';
+    if (elementText.includes('sign up')) return 'commitment';
+    if (funnelStage === 'evaluation') return 'evaluation';
+    
+    return 'general-decision';
+  }
+
+  private calculateDecisionTime(before: EnhancedInteractionData[], decision: EnhancedInteractionData, after: EnhancedInteractionData[]): number {
+    const beforeTime = before.length > 0 ? before[before.length - 1].interaction?.timestamp || 0 : 0;
+    const decisionTime = decision.interaction?.timestamp || 0;
+    const afterTime = after.length > 0 ? after[0].interaction?.timestamp || 0 : decisionTime;
+    
+    return Math.max(0, afterTime - beforeTime);
+  }
+
+  private calculateStepSimilarity(step1: EnhancedInteractionData, step2: EnhancedInteractionData): number {
+    let similarity = 0;
+    let factors = 0;
+    
+    // Action type similarity
+    if (step1.interaction?.type === step2.interaction?.type) {
+      similarity += 1;
+    }
+    factors += 1;
+    
+    // Page type similarity
+    if (step1.context?.pageType === step2.context?.pageType) {
+      similarity += 1;
+    }
+    factors += 1;
+    
+    // Funnel stage similarity
+    if (step1.business?.conversion?.funnelStage === step2.business?.conversion?.funnelStage) {
+      similarity += 1;
+    }
+    factors += 1;
+    
+    return factors > 0 ? similarity / factors : 0;
+  }
+
+  private identifyFlowPattern(pageFlow: string[], currentIndex: number): string {
+    const flow = pageFlow.slice(0, currentIndex + 1).join(' → ');
+    
+    if (flow.includes('search → category → product')) return 'browse-to-product';
+    if (flow.includes('product → cart → checkout')) return 'purchase-flow';
+    if (flow.includes('home → pricing → signup')) return 'conversion-flow';
+    if (flow.includes('category → product → product')) return 'comparison-shopping';
+    
+    return 'custom-flow';
+  }
+
+  private identifyTaskChanges(taskContexts: string[], currentIndex: number): any[] {
+    const changes: any[] = [];
+    
+    for (let i = 1; i <= currentIndex; i++) {
+      if (taskContexts[i] !== taskContexts[i - 1]) {
+        changes.push({
+          stepIndex: i,
+          from: taskContexts[i - 1],
+          to: taskContexts[i],
+          changeType: this.categorizeTaskChange(taskContexts[i - 1], taskContexts[i])
+        });
+      }
+    }
+    
+    return changes;
+  }
+
+  private calculateTaskConsistency(taskContexts: string[]): number {
+    if (taskContexts.length <= 1) return 1.0;
+    
+    const uniqueTasks = new Set(taskContexts);
+    return 1 - (uniqueTasks.size - 1) / (taskContexts.length - 1);
+  }
+
+  private categorizeTaskChange(fromTask: string, toTask: string): string {
+    if (fromTask.includes('search') && toTask.includes('product')) return 'search-to-evaluation';
+    if (fromTask.includes('product') && toTask.includes('cart')) return 'evaluation-to-purchase';
+    if (fromTask.includes('general') && !toTask.includes('general')) return 'task-focus';
+    
+    return 'task-shift';
   }
 }
 

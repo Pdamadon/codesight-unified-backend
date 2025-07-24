@@ -593,21 +593,18 @@ export class UnifiedWebSocketServer {
   }
 
   private async handleInteractionEvent(clientId: string, message: WebSocketMessage): Promise<void> {
-    console.log('🚨🚨🚨 WEBSOCKET DEBUG: handleInteractionEvent() ENTRY POINT 🚨🚨🚨');
-    console.log('📍 Location: WebSocketServer.handleInteractionEvent()');
-    console.log('🎯 clientId:', clientId);
-    console.log('📦 message.data:', JSON.stringify(message.data, null, 2));
+    console.log(`\n📡 [WEBSOCKET] Received interaction_event from client ${clientId}`);
+    console.log(`🎯 [WEBSOCKET] Message data keys: ${Object.keys(message.data || {}).join(', ')}`);
+    console.log(`📊 [WEBSOCKET] Data size: ${JSON.stringify(message.data).length} characters`);
     
     const client = this.clients.get(clientId);
     if (!client || !client.authenticated || !client.sessionId) {
-      console.log('❌ CLIENT AUTH CHECK FAILED:', {
-        clientExists: !!client,
-        authenticated: client?.authenticated,
-        sessionId: client?.sessionId
-      });
+      console.log(`❌ [WEBSOCKET] Client authentication failed`);
       this.sendError(clientId, 'No active session');
       return;
     }
+    
+    console.log(`✅ [WEBSOCKET] Client authenticated for session ${client.sessionId}`);
 
     try {
       const interactionData = {
@@ -617,13 +614,13 @@ export class UnifiedWebSocketServer {
         clientId
       };
       
-      console.log('🔄 CALLING DATA PROCESSING PIPELINE - processInteraction()');
-      console.log('📊 interactionData being sent to pipeline:', JSON.stringify(interactionData, null, 2));
+      console.log(`🔄 [WEBSOCKET] Forwarding to data processing pipeline...`);
+      console.log(`📊 [WEBSOCKET] Interaction type: ${interactionData.type}, Session: ${client.sessionId}`); 
 
       // Process interaction through pipeline
       const result = await this.dataProcessingPipeline.processInteraction(interactionData);
       
-      console.log('✅ PIPELINE RETURNED RESULT:', JSON.stringify(result, null, 2));
+      console.log(`✅ [WEBSOCKET] Pipeline processing completed with status: ${result.status}`);
 
       // Send processing result back to client
       this.sendToClient(clientId, {

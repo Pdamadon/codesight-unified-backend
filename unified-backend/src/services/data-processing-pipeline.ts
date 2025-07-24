@@ -344,6 +344,9 @@ export class DataProcessingPipeline extends EventEmitter {
 
   // Enhanced interaction processing with optimistic locking
   private async processEnhancedInteraction(interactionData: any, jobId: string): Promise<ProcessingResult> {
+    console.log(`\n📥 [DATA PIPELINE] Processing enhanced interaction for session ${interactionData.sessionId}`);
+    console.log(`🔧 [DATA PIPELINE] Job ID: ${jobId}, Interaction type: ${interactionData.type}`);
+    
     const maxRetries = 3;
     let retryCount = 0;
     
