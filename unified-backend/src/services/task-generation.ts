@@ -402,6 +402,18 @@ export class TaskGenerationService {
         products: ['basic clothing', 'seasonal collections', 'outerwear', 'undergarments', 'accessories'],
         features: ['size customization', 'seasonal lookbooks', 'fabric technology', 'coordinated outfits', 'global shipping']
       },
+      'hm.com': {
+        description: 'Swedish fast fashion retailer with trendy, affordable clothing',
+        storeType: 'Fast Fashion & Trendy Apparel',
+        products: ['trendy clothing', 'seasonal fashion', 'accessories', 'shoes', 'home textiles', 'beauty products'],
+        features: ['latest trends', 'sustainable collections', 'size inclusivity', 'seasonal campaigns', 'fashion collaborations']
+      },
+      'www2.hm.com': {
+        description: 'Swedish fast fashion retailer with trendy, affordable clothing',
+        storeType: 'Fast Fashion & Trendy Apparel', 
+        products: ['trendy clothing', 'seasonal fashion', 'accessories', 'shoes', 'home textiles', 'beauty products'],
+        features: ['latest trends', 'sustainable collections', 'size inclusivity', 'seasonal campaigns', 'fashion collaborations']
+      },
       'filson.com': {
         description: 'Seattle-based premium outdoor and workwear brand since 1897',
         storeType: 'Premium Outdoor & Workwear',
@@ -496,46 +508,37 @@ export class TaskGenerationService {
 
   // Build OpenAI prompt for task generation
   private buildTaskGenerationPrompt(hostname: string, siteContext: any, userLevel: string, category?: string): string {
-    // Get website-specific context
-    const websiteContext = this.getWebsiteShoppingContext(hostname);
-    
     return `You are a professional AI fine-tuner aimed at collecting training data for an autonomous shopping agent. 
 
-MISSION: Create realistic shopping tasks for humans who will:
-- Browse and navigate e-commerce websites with active online stores
-- Find and compare products available for online purchase
-- Add items to cart (but NOT complete checkout)
-- For complex tasks: enter shipping data but stop before payment
+MISSION: Analyze the website ${hostname} and create a realistic shopping task based on what this website actually sells.
 
-WEBSITE CONTEXT:
-- Website: ${hostname} (${websiteContext.description})
-- Store Type: ${websiteContext.storeType}
-- Primary Products: ${websiteContext.products.join(', ')}
-- Shopping Features: ${websiteContext.features.join(', ')}
-- User Level: ${userLevel}
-- Category Focus: ${category || 'any relevant category'}
-- Local Context: Seattle area (prefer Pacific Northwest relevant items)
+STEP 1: ANALYZE THE WEBSITE
+First, determine what type of store ${hostname} is by considering:
+- What products/services does this website sell?
+- What is the store's main category (fashion, electronics, home goods, etc.)?
+- What would be typical shopping behaviors on this site?
+- What price ranges and product types are common here?
 
-IMPORTANT: This website HAS an active online store. Create tasks that utilize:
-- Product search and browsing
-- Shopping cart functionality  
-- Product comparison features
-- Category navigation
-- Filter/sort capabilities
+STEP 2: CREATE APPROPRIATE TASK
+Based on your analysis, create a realistic shopping task that:
+- Matches the website's actual product catalog and target audience
+- Uses realistic product types and price ranges for this specific store
+- Focuses on discovery and cart addition (NOT checkout completion)
+- Is appropriate for a ${userLevel} level user
+- ${category ? `Focuses on ${category} if relevant to this website` : ''}
 
 TASK REQUIREMENTS:
-- Create realistic shopping scenarios a Seattle resident might have
-- Focus on discovery and cart addition, not purchase completion
-- Include specific product types available on ${hostname}
-- Make tasks engaging and realistic for data collection
-- Ensure tasks match the website's actual product catalog
-- ${userLevel === 'beginner' ? 'Keep steps simple (2-4 steps max)' : ''}
-- ${userLevel === 'advanced' ? 'Include comparison, filtering, and complex product selection' : ''}
+- Make it realistic for what people actually shop for on ${hostname}
+- Use appropriate price ranges for this website's typical products
+- Include 2-4 actionable steps
+- Focus on browsing, comparing, and adding to cart
+- ${userLevel === 'beginner' ? 'Keep steps simple and straightforward' : ''}
+- ${userLevel === 'advanced' ? 'Include comparison, filtering, and detailed product selection' : ''}
 
 RESPONSE FORMAT (JSON):
 {
   "title": "Concise task title",
-  "description": "Detailed task description with specific product/criteria",
+  "description": "Detailed task description with specific product/criteria appropriate for ${hostname}",
   "steps": ["Step 1", "Step 2", "Step 3"],
   "successCriteria": ["Criteria 1", "Criteria 2"],
   "estimatedTime": number_in_minutes,
@@ -543,12 +546,13 @@ RESPONSE FORMAT (JSON):
   "difficulty": "${userLevel.toUpperCase()}"
 }
 
-EXAMPLES OF GOOD TASKS:
-- "Find waterproof hiking boots under $200 suitable for Seattle trails"
-- "Compare 3 different rain jackets and add the best value to cart"
-- "Find local Seattle coffee beans and add 2 different roasts to cart"
+EXAMPLES:
+- For a fashion site: "Find a trendy summer dress under $60 and matching accessories"
+- For electronics: "Compare laptop specifications and find one under $800"
+- For home goods: "Find coordinating bedroom decor items for a modern style"
+- For books: "Find 3 mystery novels by different authors and add to cart"
 
-Generate 1 task now:`;
+Generate 1 task specifically appropriate for ${hostname} now:`;
   }
 
   // Parse OpenAI response into structured task format
