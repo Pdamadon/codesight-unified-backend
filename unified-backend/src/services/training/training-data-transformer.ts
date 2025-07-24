@@ -145,14 +145,21 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     if (bestSelector !== 'element') {
       examples.push({
         prompt: `${hostname.toUpperCase()}: "${elementText}" ${actionType} | ${visualContext.layout} ${designSystemContext.componentLibrary} | ${elementContext.formContext} | ${nearbyElementsContext.spatialSummary} | ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} user | ${pageContext.performance} performance`,
-        completion: `${playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length}`,
+        completion: `${playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length} | NearbyOptions: ${nearbyElementsContext.allElementSelectors.slice(0, 5).map(el => `${el.text}[${el.selector.slice(0, 15)}]`).join(',')}`,
         context: {
           pageType: interaction.context?.pageType,
           userJourney: interaction.context?.userJourney,
           reliability,
           businessContext: businessContext.conversion,
           visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
-          element: { ...elementContext, nearbyElementsComplete: nearbyElementsContext.spatialSummary, spatialRelationships: nearbyElementsContext.relationships, interactionContext: nearbyElementsContext.interactionTargets },
+          element: { 
+            ...elementContext, 
+            nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
+            spatialRelationships: nearbyElementsContext.relationships, 
+            interactionContext: nearbyElementsContext.interactionTargets,
+            allNearbySelectors: nearbyElementsContext.allElementSelectors,
+            completeElementMap: nearbyElementsContext.completeElementMap
+          },
           page: pageContext,
           state: stateContext,
           business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns },
@@ -258,7 +265,14 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
         completion: `${playwrightAction.action} // UI: ${designSystemContext.componentLibrary} ${designSystemContext.designPatterns} | Spatial: ${nearbyElementsContext.relationships} | PersonalizedFor: ${behaviorPatternsContext.personalization} | PurchaseContext: ${behaviorPatternsContext.purchaseHistory}`,
         context: {
           visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
-          element: { ...elementContext, nearbyElementsComplete: nearbyElementsContext.spatialSummary, spatialRelationships: nearbyElementsContext.relationships, interactionContext: nearbyElementsContext.interactionTargets },
+          element: { 
+            ...elementContext, 
+            nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
+            spatialRelationships: nearbyElementsContext.relationships, 
+            interactionContext: nearbyElementsContext.interactionTargets,
+            allNearbySelectors: nearbyElementsContext.allElementSelectors,
+            completeElementMap: nearbyElementsContext.completeElementMap
+          },
           business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns, purchaseHistory: behaviorPatternsContext.purchaseHistory, userPreferences: behaviorPatternsContext.preferences, personalizedContext: behaviorPatternsContext.personalization }
         },
         quality: this.calculateComprehensiveQuality(interaction)
@@ -560,9 +574,9 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     const qualityJourneyExamples = journeyExamples.filter(ex => ex.quality.score >= 0.4);
     console.log(`✅ [QUALITY FILTER] ${qualityJourneyExamples.length} journey examples pass quality threshold (0.4)`);
     
-    // 🔍 INDIVIDUAL EXAMPLES: Moderate quality threshold (0.5) - be selective but not too strict
-    const qualityIndividualExamples = individualExamples.filter(ex => ex.quality.score >= 0.5);
-    console.log(`✅ [QUALITY FILTER] ${qualityIndividualExamples.length} individual examples pass quality threshold (0.5)`);
+    // 🔍 INDIVIDUAL EXAMPLES: Lower quality threshold (0.3) - include rich spatial context
+    const qualityIndividualExamples = individualExamples.filter(ex => ex.quality.score >= 0.3);
+    console.log(`✅ [QUALITY FILTER] ${qualityIndividualExamples.length} individual examples pass quality threshold (0.3)`);
     
     // 📊 PRIORITIZATION STRATEGY:
     // 1. Include ALL high-quality journey examples first
@@ -984,41 +998,77 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       relationships: '',
       interactionTargets: '',
       elementTypes: '',
-      accessibility: ''
+      accessibility: '',
+      allElementSelectors: [],
+      completeElementMap: {}
     };
 
     if (!nearbyElements || nearbyElements.length === 0) {
-      return { spatialSummary: 'no-nearby', relationships: 'isolated', interactionTargets: 'none' };
+      return { spatialSummary: 'no-nearby', relationships: 'isolated', interactionTargets: 'none', allElementSelectors: [] };
     }
 
-    // Use ALL nearby elements instead of just first 3
-    const allElements = nearbyElements.slice(0, 10); // Cap at 10 for performance
+    // 🎯 ENHANCED: Use ALL nearby elements (up to 15) with complete selector info
+    const allElements = nearbyElements.slice(0, 15); // Increased for richer context
+    
+    // 🚀 NEW: Extract complete element information including selectors
+    const completeElementInfo = allElements.map(el => {
+      return {
+        text: el.text || el.tagName || 'element',
+        tagName: el.tagName || 'unknown',
+        selector: el.selector || `${el.tagName || 'element'}`,
+        distance: el.distance || 0,
+        direction: el.direction || el.relationship || 'unknown',
+        isInteractive: el.isInteractive !== false, // Default to true if not specified
+        isVisible: el.isVisible !== false, // Default to true if not specified
+        boundingBox: el.boundingBox || null,
+        attributes: el.attributes || {},
+        elementType: el.elementType || el.tagName || 'element'
+      };
+    });
+    
+    // Store complete element map for rich context
+    context.completeElementMap = completeElementInfo.reduce((map, el, index) => {
+      map[`element_${index}`] = el;
+      return map;
+    }, {});
+    
+    // Extract all selectors for training data (THIS IS THE KEY ENHANCEMENT!)
+    context.allElementSelectors = completeElementInfo.map(el => ({
+      text: el.text,
+      selector: el.selector,
+      tagName: el.tagName,
+      distance: el.distance,
+      direction: el.direction,
+      interactive: el.isInteractive
+    }));
 
-    // Spatial summary with complete positioning
-    const spatialItems = allElements.map(el => 
-      `${el.elementType || 'element'}:${el.text?.slice(0, 15) || 'empty'} (${el.relationship}, ${el.distance || 0}px)`
-    );
+    // Enhanced spatial summary with selectors and interaction capability
+    const spatialItems = completeElementInfo.map(el => {
+      const interactivity = el.isInteractive ? '✓' : '✗';
+      const visibility = el.isVisible ? '👁' : '🚫';
+      return `${el.tagName}:${el.text.slice(0, 12)} ${interactivity}${visibility} (${el.direction}, ${el.distance}px) [${el.selector.slice(0, 20)}]`;
+    });
     context.spatialSummary = spatialItems.join(', ');
 
-    // Relationship mapping
+    // Relationship mapping using enhanced element info
     const relationships: Record<string, number> = {};
-    allElements.forEach(el => {
-      relationships[el.relationship] = (relationships[el.relationship] || 0) + 1;
+    completeElementInfo.forEach(el => {
+      relationships[el.direction] = (relationships[el.direction] || 0) + 1;
     });
     context.relationships = Object.entries(relationships)
       .map(([rel, count]) => `${rel}:${count}`)
       .join(' ');
 
-    // Interaction targets (clickable/focusable nearby elements)
-    const interactionTargets = allElements
-      .filter(el => el.isClickable || el.elementType === 'button' || el.elementType === 'link' || el.elementType === 'input')
-      .map(el => `${el.elementType}:"${el.text?.slice(0, 10) || 'btn'}"`)
-      .slice(0, 5);
+    // Enhanced interaction targets with selectors (KEY ENHANCEMENT!)
+    const interactionTargets = completeElementInfo
+      .filter(el => el.isInteractive || el.elementType === 'button' || el.elementType === 'link' || el.elementType === 'input')
+      .map(el => `${el.elementType}:"${el.text?.slice(0, 10) || 'btn'}"[${el.selector.slice(0, 15)}]`)
+      .slice(0, 8); // Increased to show more options
     context.interactionTargets = interactionTargets.join(' ');
 
-    // Element types distribution
+    // Element types distribution using enhanced info
     const elementTypes: Record<string, number> = {};
-    allElements.forEach(el => {
+    completeElementInfo.forEach(el => {
       const type = el.elementType || 'unknown';
       elementTypes[type] = (elementTypes[type] || 0) + 1;
     });
