@@ -198,6 +198,19 @@ app.get("/health", async (_req, res) => {
   }
 });
 
+// Extension config endpoint (accessible without auth)
+app.get("/config", (req, res) => {
+  logger.info('Extension config endpoint accessed');
+  res.json({
+    success: true,
+    config: {
+      apiKey: process.env.X_API_KEY,
+      apiBaseUrl: `https://${req.get('host')}`,
+      websocketUrl: `wss://${req.get('host')}/ws`
+    }
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "API healthy - Unified CodeSight v2.0",
@@ -264,6 +277,19 @@ app.get("/api/status", async (_req, res) => {
 
 // Test endpoint for development (bypasses auth)
 app.use("/api/test", testRoutes);
+
+// Extension config endpoint (public - no auth required) 
+app.get("/api/config", (req, res) => {
+  logger.info('Config endpoint accessed');
+  res.json({
+    success: true,
+    config: {
+      apiKey: process.env.X_API_KEY,
+      apiBaseUrl: `https://${req.get('host')}`,
+      websocketUrl: `wss://${req.get('host')}/ws`
+    }
+  });
+});
 
 // API Routes with middleware
 app.use("/api/sessions", authRateLimit as any, authBruteForceProtection as any, authMiddleware as any, validationMiddleware as any, sessionRoutes);
