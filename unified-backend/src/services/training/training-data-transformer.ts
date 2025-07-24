@@ -560,9 +560,9 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     const qualityJourneyExamples = journeyExamples.filter(ex => ex.quality.score >= 0.4);
     console.log(`✅ [QUALITY FILTER] ${qualityJourneyExamples.length} journey examples pass quality threshold (0.4)`);
     
-    // 🔍 INDIVIDUAL EXAMPLES: Higher quality threshold (0.6) - be selective
-    const qualityIndividualExamples = individualExamples.filter(ex => ex.quality.score >= 0.6);
-    console.log(`✅ [QUALITY FILTER] ${qualityIndividualExamples.length} individual examples pass quality threshold (0.6)`);
+    // 🔍 INDIVIDUAL EXAMPLES: Moderate quality threshold (0.5) - be selective but not too strict
+    const qualityIndividualExamples = individualExamples.filter(ex => ex.quality.score >= 0.5);
+    console.log(`✅ [QUALITY FILTER] ${qualityIndividualExamples.length} individual examples pass quality threshold (0.5)`);
     
     // 📊 PRIORITIZATION STRATEGY:
     // 1. Include ALL high-quality journey examples first

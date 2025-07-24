@@ -772,14 +772,27 @@ export class DataProcessingPipeline extends EventEmitter {
 
   // Job Queue Management
   private queueJob(job: ProcessingJob): void {
+    console.log('📥📥📥 PIPELINE DEBUG: queueJob() CALLED 📥📥📥');
+    console.log('📍 Location: DataProcessingPipeline.queueJob()');
+    console.log('🆔 JobID:', job.id);
+    console.log('📊 Job Type:', job.type);
+    console.log('🆔 SessionID:', job.sessionId);
+    console.log('🎯 Priority:', job.priority);
+    console.log('📊 Current queue size (before adding):', this.jobQueue.length);
+    
     this.jobQueue.push(job);
     this.jobQueue.sort((a, b) => a.priority - b.priority); // Higher priority first
+    
+    console.log('✅ PIPELINE DEBUG: Job added to queue successfully');
+    console.log('📊 New queue size:', this.jobQueue.length);
+    console.log('📋 Queue contents after sorting:', this.jobQueue.map(j => `${j.id}(${j.type}, P${j.priority})`).join(', '));
     
     this.logger.debug('Job queued', {
       jobId: job.id,
       type: job.type,
       priority: job.priority,
-      queueSize: this.jobQueue.length
+      queueSize: this.jobQueue.length,
+      sessionId: job.sessionId
     });
   }
 
@@ -810,6 +823,14 @@ export class DataProcessingPipeline extends EventEmitter {
     console.log('📊 Active jobs:', this.activeJobs.size);
     console.log('📊 Max concurrent:', this.maxConcurrentJobs);
     
+    // Enhanced logging for queue contents
+    if (this.jobQueue.length > 0) {
+      console.log('📋 PIPELINE DEBUG: Jobs in queue:');
+      this.jobQueue.forEach((job, index) => {
+        console.log(`   ${index + 1}. Job ${job.id} - Type: ${job.type}, SessionID: ${job.sessionId}, Priority: ${job.priority}, Status: ${job.status}`);
+      });
+    }
+    
     if (this.activeJobs.size >= this.maxConcurrentJobs) {
       console.log('⏸️  PIPELINE DEBUG: Max concurrent jobs reached, skipping processing');
       return;
@@ -819,9 +840,10 @@ export class DataProcessingPipeline extends EventEmitter {
     const jobsToProcess = this.jobQueue.splice(0, availableSlots);
     
     console.log('🎯 PIPELINE DEBUG: Processing', jobsToProcess.length, 'jobs');
+    console.log('🎯 PIPELINE DEBUG: Available slots:', availableSlots);
     
     for (const job of jobsToProcess) {
-      console.log('🚀 PIPELINE DEBUG: Starting job:', job.id, 'type:', job.type);
+      console.log('🚀 PIPELINE DEBUG: Starting job:', job.id, 'type:', job.type, 'sessionId:', job.sessionId);
       this.processJob(job);
     }
   }
@@ -895,26 +917,50 @@ export class DataProcessingPipeline extends EventEmitter {
       job.error = getErrorMessage(error);
       job.retryCount++;
 
+      console.error('❌❌❌ PIPELINE DEBUG: PROCESSING JOB FAILED ❌❌❌');
+      console.error('📍 Location: DataProcessingPipeline.processJob() - catch block');
+      console.error('🆔 JobID:', job.id);
+      console.error('📊 Job Type:', job.type);
+      console.error('🆔 SessionID:', job.sessionId);
+      console.error('🔄 Retry Count:', job.retryCount);
+      console.error('🔄 Max Retries:', job.maxRetries);
+      console.error('💥 Error Message:', getErrorMessage(error));
+      console.error('💥 Error Stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('💥 Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+
       this.logger.error('Processing job failed', error, {
         jobId: job.id,
         type: job.type,
         sessionId: job.sessionId,
-        retryCount: job.retryCount
+        retryCount: job.retryCount,
+        maxRetries: job.maxRetries,
+        errorMessage: getErrorMessage(error),
+        errorStack: error instanceof Error ? error.stack : 'No stack trace'
       });
 
       // Retry if under limit
       if (job.retryCount < job.maxRetries) {
+        console.log('🔄 PIPELINE DEBUG: Job will be retried', {
+          jobId: job.id,
+          retryCount: job.retryCount,
+          maxRetries: job.maxRetries,
+          backoffDelay: Math.pow(2, job.retryCount) * 1000
+        });
+        
         job.status = 'pending';
         setTimeout(() => {
+          console.log('🔄 PIPELINE DEBUG: Re-queuing failed job for retry:', job.id);
           this.queueJob(job);
         }, Math.pow(2, job.retryCount) * 1000); // Exponential backoff
       } else {
+        console.error('💀 PIPELINE DEBUG: Job exceeded max retries, marking as permanently failed:', job.id);
         this.notifyProcessingUpdate(job.id, {
           status: 'failed',
           error: getErrorMessage(error)
         });
       }
     } finally {
+      console.log('🧹 PIPELINE DEBUG: Cleaning up job from active jobs:', job.id);
       this.activeJobs.delete(job.id);
     }
   }
@@ -1108,6 +1154,11 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async generateTrainingData(sessionId: string): Promise<any> {
+    console.log('🎓🎓🎓 TRAINING DATA DEBUG: generateTrainingData() ENTRY 🎓🎓🎓');
+    console.log('📍 Location: DataProcessingPipeline.generateTrainingData()');
+    console.log('🆔 SessionID:', sessionId);
+    console.log('⏰ Starting at:', new Date().toISOString());
+    
     const session = await this.executeWithThrottling(() => 
       this.prisma.unifiedSession.findUnique({
         where: { id: sessionId },
@@ -1118,20 +1169,44 @@ export class DataProcessingPipeline extends EventEmitter {
     );
 
     if (!session) {
+      console.error('❌ TRAINING DATA DEBUG: Session not found in database:', sessionId);
       throw new Error('Session not found');
     }
+    
+    console.log('✅ TRAINING DATA DEBUG: Session found, details:', {
+      sessionId: session.id,
+      status: session.status,
+      processingStatus: session.processingStatus,
+      interactionCount: session.interactionCount,
+      screenshotCount: session.screenshots?.length || 0,
+      enhancedInteractionsLength: Array.isArray(session.enhancedInteractions) ? session.enhancedInteractions.length : 'not array'
+    });
 
     // Generate training data
+    console.log('🔄 TRAINING DATA DEBUG: Calling OpenAI service to generate training data...');
     const trainingData = await this.openaiService.generateTrainingData(session);
+    console.log('✅ TRAINING DATA DEBUG: OpenAI training data generation completed:', {
+      messageCount: trainingData.messages?.length || 0,
+      trainingValue: trainingData.trainingValue,
+      hasMessages: !!trainingData.messages
+    });
 
     // Save training data
     const jsonlContent = trainingData.messages.map((msg: any) => JSON.stringify(msg)).join('\n');
+    console.log('📝 TRAINING DATA DEBUG: JSONL content prepared, size:', jsonlContent.length, 'characters');
     
     // Find existing training data for this session
+    console.log('🔍 TRAINING DATA DEBUG: Checking for existing training data...');
     const existing = await this.prisma.trainingData.findFirst({
       where: { sessionId }
     });
     
+    console.log('🔍 TRAINING DATA DEBUG: Existing training data check result:', {
+      hasExisting: !!existing,
+      existingId: existing?.id || 'none'
+    });
+    
+    console.log('💾 TRAINING DATA DEBUG: Saving training data to database...');
     const trainingRecord = await this.executeWithThrottling(() => 
       existing ? 
       this.prisma.trainingData.update({
@@ -1153,6 +1228,14 @@ export class DataProcessingPipeline extends EventEmitter {
         }
       })
     );
+
+    console.log('✅ TRAINING DATA DEBUG: Training data saved successfully:', {
+      trainingRecordId: trainingRecord.id,
+      sessionId: trainingRecord.sessionId,
+      fileSize: trainingRecord.fileSize,
+      status: trainingRecord.status,
+      trainingQuality: trainingRecord.trainingQuality
+    });
 
     return trainingRecord;
   }
