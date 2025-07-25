@@ -172,7 +172,7 @@ export class DataMigrationService {
 
   private async convertToUnifiedSession(sourceSession: any): Promise<any> {
     const sessionData = sourceSession.session_data || {};
-    const analysis = sourceSession.analysis || {};
+    // const analysis = sourceSession.analysis || {};
     
     // Calculate quality scores based on available data
     const qualityScore = this.calculateQualityScore(sourceSession);

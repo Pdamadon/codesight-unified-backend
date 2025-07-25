@@ -11,8 +11,7 @@ export interface AppError extends Error {
 export const errorHandler = (
   error: AppError,
   req: Request,
-  res: Response,
-  next: NextFunction
+  res: Response
 ) => {
   // Log error details
   logger.error('Request error', {
@@ -50,7 +49,7 @@ export const errorHandler = (
 
   // Prisma specific errors
   if (error.name === 'PrismaClientKnownRequestError') {
-    const prismaError = error as any;
+    const prismaError = error as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     switch (prismaError.code) {
       case 'P2002':
         statusCode = 409;
@@ -74,7 +73,7 @@ export const errorHandler = (
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV === 'development';
   
-  const errorResponse: any = {
+  const errorResponse: Record<string, any> = {
     success: false,
     error: message,
     timestamp: new Date().toISOString(),

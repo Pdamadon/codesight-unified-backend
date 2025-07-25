@@ -5,7 +5,7 @@ import { prisma } from '../lib/database';
 import { QualityControlService } from '../services/quality-control-clean';
 import { StorageManager } from '../services/storage-manager-clean';
 import { requireAdmin } from '../middleware/auth';
-import { getErrorMessage, AuthenticatedRequest } from '../utils/type-helpers';
+import { getErrorMessage } from '../utils/type-helpers';
 
 const router = Router();
 const logger = new Logger('AdminRoutes');

@@ -1,0 +1,50 @@
+{
+  "summary": {
+    "totalExamples": 26,
+    "journeyExamples": 13,
+    "taskExamples": 0,
+    "decisionExamples": 0,
+    "otherExamples": 13
+  },
+  "sampleJourney": {
+    "prompt": "JOURNEY (general-task): User Intent: \"Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.\" | Goal: complete-user-intent | Flow: START: element (interact) progressing → STEP: View Bag (interact) progressing → STEP: element (interact) progressing → STEP: element (interact) progressing → CONVERT: Checkout (interact) converting",
+    "completion": "// Complete general-task journey: Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.\nawait page.click('element'); // User starts journey: Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.\nawait page.click('//div[@id='modal-root']/div/div/div/div[2]/div/section/div[3]/a'); // User progressing toward: Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.\nawait page.click('element'); // User progressing toward: Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.\nawait page.click('element'); // User progressing toward: Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.\nawait page.click('[aria-label=\"Checkout\"]'); // User reaches conversion endpoint: Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.",
+    "context": {
+      "pageType": "journey-sequence",
+      "userJourney": "general-task",
+      "journeyGoal": "complete-user-intent",
+      "userIntent": "Explore the running shoes category on Adidas website and select a pair of running shoes priced under $100. Add them to your cart for future purchase.",
+      "journeyLength": 5,
+      "businessContext": "unknown"
+    },
+    "quality": {
+      "score": 0.9999999999999999,
+      "factors": {
+        "hasReliableSelector": true,
+        "hasSpatialContext": true,
+        "hasBusinessContext": false,
+        "hasVisualContext": true,
+        "hasAccessibilityContext": false,
+        "hasPerformanceContext": false,
+        "hasStateContext": true,
+        "hasFormContext": false,
+        "hasSEOContext": false,
+        "hasAnalyticsContext": false,
+        "hasTimingContext": false,
+        "hasNetworkContext": false,
+        "hasErrorContext": false,
+        "hasUserContext": false,
+        "hasCompleteNearbyElements": true,
+        "hasDesignSystemContext": false,
+        "hasBehaviorPatternsContext": false,
+        "multiStepJourney": true,
+        "funnelProgression": false,
+        "conversionComplete": true,
+        "clearUserIntent": false,
+        "journeyPrioritized": true
+      }
+    }
+  },
+  "sampleTask": null,
+  "sampleDecision": null
+}

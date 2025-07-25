@@ -32,8 +32,8 @@ export class UnifiedWebSocketServer {
   private sessionClients: Map<string, Set<string>> = new Map();
   private logger: Logger;
   private dataProcessingPipeline: DataProcessingPipeline;
-  private heartbeatInterval?: NodeJS.Timeout;
-  private cleanupInterval?: NodeJS.Timeout;
+  private heartbeatInterval?: ReturnType<typeof setInterval>;
+  private cleanupInterval?: ReturnType<typeof setInterval>;
   private maxConnections: number = 100;
   private connectionTimeout: number = 300000; // 5 minutes
 
@@ -48,7 +48,7 @@ export class UnifiedWebSocketServer {
   private readonly MAX_QUEUE_SIZE = 1000;
   private readonly QUEUE_PROCESS_INTERVAL = 100; // Process every 100ms
   private readonly MAX_RETRIES = 3;
-  private queueProcessingInterval?: NodeJS.Timeout;
+  private queueProcessingInterval?: ReturnType<typeof setInterval>;
 
   constructor(server: HttpServer, dataProcessingPipeline: DataProcessingPipeline) {
     this.logger = new Logger('WebSocketServer');

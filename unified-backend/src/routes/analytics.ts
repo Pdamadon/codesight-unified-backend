@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MonitoringAnalyticsService } from '../services/monitoring-analytics';
 import { Logger } from '../utils/logger';
-import { getErrorMessage } from '../utils/type-helpers';
+// import { getErrorMessage } from '../utils/type-helpers';
 
 const router = Router();
 const logger = new Logger('AnalyticsRoutes');

@@ -277,7 +277,7 @@ export const validateFileUpload = (req: Request, res: Response, next: NextFuncti
     return next();
   }
 
-  let file: Express.Multer.File | undefined;
+  let file: any | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
   
   if (req.file) {
     file = req.file;

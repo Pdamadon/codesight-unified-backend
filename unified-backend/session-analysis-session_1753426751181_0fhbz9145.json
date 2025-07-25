@@ -1,0 +1,18 @@
+{
+  "sessionId": "session_1753426751181_0fhbz9145",
+  "pageTypes": {},
+  "navigationFlow": [],
+  "semanticZones": {},
+  "patterns": {
+    "commonSelectors": {},
+    "interactionSequences": [],
+    "userJourneyType": "unknown"
+  },
+  "quality": {
+    "completeness": 0,
+    "reliability": 0,
+    "analysisConfidence": 0
+  },
+  "exportedAt": "2025-07-25T08:39:03.141Z",
+  "version": "1.0"
+}

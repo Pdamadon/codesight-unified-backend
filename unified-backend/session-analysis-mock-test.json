@@ -1,0 +1,764 @@
+{
+  "sessionId": "mock_session_adidas_test",
+  "pageTypes": {
+    "homepage_1753426756000": {
+      "url": "https://www.adidas.com/us/",
+      "pageType": "homepage",
+      "confidence": 0.045000000000000005,
+      "matchedPatterns": [
+        {
+          "type": "text",
+          "pattern": "featured"
+        }
+      ],
+      "zones": [
+        {
+          "name": "navigation",
+          "confidence": 0.8999999999999999,
+          "matchedSelectors": [
+            "nav",
+            ".nav",
+            ".main-nav"
+          ],
+          "patterns": {
+            "selectors": [
+              "nav",
+              ".nav",
+              ".navigation",
+              ".menu",
+              ".navbar",
+              ".header",
+              ".top-nav",
+              ".main-nav",
+              ".primary-nav",
+              "[role=\"navigation\"]",
+              "[data-testid*=\"nav\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        },
+        {
+          "name": "productGrid",
+          "confidence": 0.3,
+          "matchedSelectors": [
+            ".products"
+          ],
+          "patterns": {
+            "selectors": [
+              ".product-grid",
+              ".products",
+              ".product-list",
+              ".grid",
+              ".catalog",
+              ".items",
+              ".tiles",
+              "[data-testid*=\"product-grid\"]",
+              "[data-testid*=\"products\"]"
+            ],
+            "childPatterns": [
+              ".product-card",
+              ".product-item",
+              ".tile"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "pageTitle": "adidas Official Website | adidas US",
+        "timestamp": "1753426756000",
+        "interactionType": "CLICK"
+      }
+    },
+    "categoryPage_1753426758000": {
+      "url": "https://www.adidas.com/us/men-running-shoes",
+      "pageType": "categoryPage",
+      "confidence": 0.425,
+      "matchedPatterns": [
+        {
+          "type": "url",
+          "pattern": "\\/men"
+        },
+        {
+          "type": "text",
+          "pattern": "filter"
+        },
+        {
+          "type": "text",
+          "pattern": "products"
+        }
+      ],
+      "zones": [
+        {
+          "name": "productGrid",
+          "confidence": 0.8999999999999999,
+          "matchedSelectors": [
+            ".product-grid",
+            ".products",
+            ".grid"
+          ],
+          "patterns": {
+            "selectors": [
+              ".product-grid",
+              ".products",
+              ".product-list",
+              ".grid",
+              ".catalog",
+              ".items",
+              ".tiles",
+              "[data-testid*=\"product-grid\"]",
+              "[data-testid*=\"products\"]"
+            ],
+            "childPatterns": [
+              ".product-card",
+              ".product-item",
+              ".tile"
+            ]
+          }
+        },
+        {
+          "name": "filterSidebar",
+          "confidence": 0.8,
+          "matchedSelectors": [
+            ".filters",
+            ".filter-panel"
+          ],
+          "patterns": {
+            "selectors": [
+              ".filters",
+              ".filter-panel",
+              ".sidebar",
+              ".facets",
+              ".refinements",
+              ".filter-options",
+              ".sort-options",
+              "[data-testid*=\"filter\"]",
+              "[data-testid*=\"sidebar\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "pageTitle": "Men's Running Shoes | adidas US",
+        "timestamp": "1753426758000",
+        "interactionType": "CLICK"
+      }
+    },
+    "productDetailPage_1753426760000": {
+      "url": "https://www.adidas.com/us/men-running-shoes?price=0-100",
+      "pageType": "productDetailPage",
+      "confidence": 0.4275,
+      "matchedPatterns": [
+        {
+          "type": "url",
+          "pattern": "\\/[^\\/]+\\/[^\\/]+\\/(.*\\d+.*)"
+        },
+        {
+          "type": "text",
+          "pattern": "\\$\\d+"
+        }
+      ],
+      "zones": [
+        {
+          "name": "productGrid",
+          "confidence": 0.6,
+          "matchedSelectors": [
+            ".product-grid",
+            ".grid"
+          ],
+          "patterns": {
+            "selectors": [
+              ".product-grid",
+              ".products",
+              ".product-list",
+              ".grid",
+              ".catalog",
+              ".items",
+              ".tiles",
+              "[data-testid*=\"product-grid\"]",
+              "[data-testid*=\"products\"]"
+            ],
+            "childPatterns": [
+              ".product-card",
+              ".product-item",
+              ".tile"
+            ]
+          }
+        },
+        {
+          "name": "filterSidebar",
+          "confidence": 0.5,
+          "matchedSelectors": [
+            ".filters"
+          ],
+          "patterns": {
+            "selectors": [
+              ".filters",
+              ".filter-panel",
+              ".sidebar",
+              ".facets",
+              ".refinements",
+              ".filter-options",
+              ".sort-options",
+              "[data-testid*=\"filter\"]",
+              "[data-testid*=\"sidebar\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "pageTitle": "Men's Running Shoes Under $100 | adidas US",
+        "timestamp": "1753426760000",
+        "interactionType": "CLICK"
+      }
+    },
+    "productDetailPage_1753426762000": {
+      "url": "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+      "pageType": "productDetailPage",
+      "confidence": 0.4275,
+      "matchedPatterns": [
+        {
+          "type": "url",
+          "pattern": "\\/[^\\/]+\\/[^\\/]+\\/(.*\\d+.*)"
+        },
+        {
+          "type": "text",
+          "pattern": "size"
+        }
+      ],
+      "zones": [
+        {
+          "name": "productDetails",
+          "confidence": 1,
+          "matchedSelectors": [
+            ".product-details",
+            ".specifications"
+          ],
+          "patterns": {
+            "selectors": [
+              ".product-details",
+              ".product-info",
+              ".item-details",
+              ".specifications",
+              ".description",
+              ".features",
+              "[data-testid*=\"product-detail\"]",
+              "[data-testid*=\"description\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        },
+        {
+          "name": "actionButtons",
+          "confidence": 0.6,
+          "matchedSelectors": [
+            ".add-to-cart",
+            ".add-to-bag"
+          ],
+          "patterns": {
+            "selectors": [
+              ".add-to-cart",
+              ".add-to-bag",
+              ".buy-now",
+              ".purchase",
+              ".checkout",
+              ".proceed",
+              ".continue",
+              ".next",
+              "[data-testid*=\"add-to-cart\"]",
+              "[data-testid*=\"buy\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "pageTitle": "Runfalcon 5 Running Shoes | adidas US",
+        "timestamp": "1753426762000",
+        "interactionType": "CLICK"
+      }
+    },
+    "productDetailPage_1753426764000": {
+      "url": "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+      "pageType": "productDetailPage",
+      "confidence": 0.475,
+      "matchedPatterns": [
+        {
+          "type": "url",
+          "pattern": "\\/[^\\/]+\\/[^\\/]+\\/(.*\\d+.*)"
+        },
+        {
+          "type": "text",
+          "pattern": "size"
+        },
+        {
+          "type": "text",
+          "pattern": "color"
+        }
+      ],
+      "zones": [
+        {
+          "name": "actionButtons",
+          "confidence": 0.3,
+          "matchedSelectors": [
+            ".add-to-bag"
+          ],
+          "patterns": {
+            "selectors": [
+              ".add-to-cart",
+              ".add-to-bag",
+              ".buy-now",
+              ".purchase",
+              ".checkout",
+              ".proceed",
+              ".continue",
+              ".next",
+              "[data-testid*=\"add-to-cart\"]",
+              "[data-testid*=\"buy\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "pageTitle": "Runfalcon 5 Running Shoes | adidas US",
+        "timestamp": "1753426764000",
+        "interactionType": "CLICK"
+      }
+    },
+    "cartPage_1753426766000": {
+      "url": "https://www.adidas.com/us/cart",
+      "pageType": "cartPage",
+      "confidence": 0.45,
+      "matchedPatterns": [
+        {
+          "type": "url",
+          "pattern": "\\/cart"
+        },
+        {
+          "type": "text",
+          "pattern": "shopping cart"
+        },
+        {
+          "type": "text",
+          "pattern": "checkout"
+        }
+      ],
+      "zones": [
+        {
+          "name": "actionButtons",
+          "confidence": 0.8,
+          "matchedSelectors": [
+            ".checkout",
+            ".proceed"
+          ],
+          "patterns": {
+            "selectors": [
+              ".add-to-cart",
+              ".add-to-bag",
+              ".buy-now",
+              ".purchase",
+              ".checkout",
+              ".proceed",
+              ".continue",
+              ".next",
+              "[data-testid*=\"add-to-cart\"]",
+              "[data-testid*=\"buy\"]"
+            ],
+            "textPatterns": [
+              {},
+              {},
+              {},
+              {}
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "pageTitle": "Shopping Cart | adidas US",
+        "timestamp": "1753426766000",
+        "interactionType": "CLICK"
+      }
+    }
+  },
+  "navigationFlow": [
+    {
+      "timestamp": "1753426756000",
+      "url": "https://www.adidas.com/us/",
+      "pageType": "homepage",
+      "confidence": 0.045000000000000005,
+      "interactionType": "CLICK"
+    },
+    {
+      "timestamp": "1753426758000",
+      "url": "https://www.adidas.com/us/men-running-shoes",
+      "pageType": "categoryPage",
+      "confidence": 0.425,
+      "interactionType": "CLICK"
+    },
+    {
+      "timestamp": "1753426760000",
+      "url": "https://www.adidas.com/us/men-running-shoes?price=0-100",
+      "pageType": "productDetailPage",
+      "confidence": 0.4275,
+      "interactionType": "CLICK"
+    },
+    {
+      "timestamp": "1753426762000",
+      "url": "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+      "pageType": "productDetailPage",
+      "confidence": 0.4275,
+      "interactionType": "CLICK"
+    },
+    {
+      "timestamp": "1753426764000",
+      "url": "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+      "pageType": "productDetailPage",
+      "confidence": 0.475,
+      "interactionType": "CLICK"
+    },
+    {
+      "timestamp": "1753426766000",
+      "url": "https://www.adidas.com/us/cart",
+      "pageType": "cartPage",
+      "confidence": 0.45,
+      "interactionType": "CLICK"
+    }
+  ],
+  "semanticZones": {
+    "1753426756000": [
+      {
+        "name": "navigation",
+        "confidence": 0.8999999999999999,
+        "matchedSelectors": [
+          "nav",
+          ".nav",
+          ".main-nav"
+        ],
+        "patterns": {
+          "selectors": [
+            "nav",
+            ".nav",
+            ".navigation",
+            ".menu",
+            ".navbar",
+            ".header",
+            ".top-nav",
+            ".main-nav",
+            ".primary-nav",
+            "[role=\"navigation\"]",
+            "[data-testid*=\"nav\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      {
+        "name": "productGrid",
+        "confidence": 0.3,
+        "matchedSelectors": [
+          ".products"
+        ],
+        "patterns": {
+          "selectors": [
+            ".product-grid",
+            ".products",
+            ".product-list",
+            ".grid",
+            ".catalog",
+            ".items",
+            ".tiles",
+            "[data-testid*=\"product-grid\"]",
+            "[data-testid*=\"products\"]"
+          ],
+          "childPatterns": [
+            ".product-card",
+            ".product-item",
+            ".tile"
+          ]
+        }
+      }
+    ],
+    "1753426758000": [
+      {
+        "name": "productGrid",
+        "confidence": 0.8999999999999999,
+        "matchedSelectors": [
+          ".product-grid",
+          ".products",
+          ".grid"
+        ],
+        "patterns": {
+          "selectors": [
+            ".product-grid",
+            ".products",
+            ".product-list",
+            ".grid",
+            ".catalog",
+            ".items",
+            ".tiles",
+            "[data-testid*=\"product-grid\"]",
+            "[data-testid*=\"products\"]"
+          ],
+          "childPatterns": [
+            ".product-card",
+            ".product-item",
+            ".tile"
+          ]
+        }
+      },
+      {
+        "name": "filterSidebar",
+        "confidence": 0.8,
+        "matchedSelectors": [
+          ".filters",
+          ".filter-panel"
+        ],
+        "patterns": {
+          "selectors": [
+            ".filters",
+            ".filter-panel",
+            ".sidebar",
+            ".facets",
+            ".refinements",
+            ".filter-options",
+            ".sort-options",
+            "[data-testid*=\"filter\"]",
+            "[data-testid*=\"sidebar\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      }
+    ],
+    "1753426760000": [
+      {
+        "name": "productGrid",
+        "confidence": 0.6,
+        "matchedSelectors": [
+          ".product-grid",
+          ".grid"
+        ],
+        "patterns": {
+          "selectors": [
+            ".product-grid",
+            ".products",
+            ".product-list",
+            ".grid",
+            ".catalog",
+            ".items",
+            ".tiles",
+            "[data-testid*=\"product-grid\"]",
+            "[data-testid*=\"products\"]"
+          ],
+          "childPatterns": [
+            ".product-card",
+            ".product-item",
+            ".tile"
+          ]
+        }
+      },
+      {
+        "name": "filterSidebar",
+        "confidence": 0.5,
+        "matchedSelectors": [
+          ".filters"
+        ],
+        "patterns": {
+          "selectors": [
+            ".filters",
+            ".filter-panel",
+            ".sidebar",
+            ".facets",
+            ".refinements",
+            ".filter-options",
+            ".sort-options",
+            "[data-testid*=\"filter\"]",
+            "[data-testid*=\"sidebar\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      }
+    ],
+    "1753426762000": [
+      {
+        "name": "productDetails",
+        "confidence": 1,
+        "matchedSelectors": [
+          ".product-details",
+          ".specifications"
+        ],
+        "patterns": {
+          "selectors": [
+            ".product-details",
+            ".product-info",
+            ".item-details",
+            ".specifications",
+            ".description",
+            ".features",
+            "[data-testid*=\"product-detail\"]",
+            "[data-testid*=\"description\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      },
+      {
+        "name": "actionButtons",
+        "confidence": 0.6,
+        "matchedSelectors": [
+          ".add-to-cart",
+          ".add-to-bag"
+        ],
+        "patterns": {
+          "selectors": [
+            ".add-to-cart",
+            ".add-to-bag",
+            ".buy-now",
+            ".purchase",
+            ".checkout",
+            ".proceed",
+            ".continue",
+            ".next",
+            "[data-testid*=\"add-to-cart\"]",
+            "[data-testid*=\"buy\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      }
+    ],
+    "1753426764000": [
+      {
+        "name": "actionButtons",
+        "confidence": 0.3,
+        "matchedSelectors": [
+          ".add-to-bag"
+        ],
+        "patterns": {
+          "selectors": [
+            ".add-to-cart",
+            ".add-to-bag",
+            ".buy-now",
+            ".purchase",
+            ".checkout",
+            ".proceed",
+            ".continue",
+            ".next",
+            "[data-testid*=\"add-to-cart\"]",
+            "[data-testid*=\"buy\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      }
+    ],
+    "1753426766000": [
+      {
+        "name": "actionButtons",
+        "confidence": 0.8,
+        "matchedSelectors": [
+          ".checkout",
+          ".proceed"
+        ],
+        "patterns": {
+          "selectors": [
+            ".add-to-cart",
+            ".add-to-bag",
+            ".buy-now",
+            ".purchase",
+            ".checkout",
+            ".proceed",
+            ".continue",
+            ".next",
+            "[data-testid*=\"add-to-cart\"]",
+            "[data-testid*=\"buy\"]"
+          ],
+          "textPatterns": [
+            {},
+            {},
+            {},
+            {}
+          ]
+        }
+      }
+    ]
+  },
+  "patterns": {
+    "commonSelectors": {
+      "//nav/a[contains(text(), \"Men\")]": 1,
+      "//div[@id=\"__next\"]//div[contains(text(), \"Running\")]": 1,
+      "//h4[@id=\"Price_label\"]": 1,
+      "//img[@alt=\"Runfalcon 5 Running Shoes\"]": 1,
+      "//div[@id=\"add-to-bag\"]/button": 1,
+      "//button[contains(@class, \"checkout\")]": 1
+    },
+    "interactionSequences": [],
+    "userJourneyType": "ecommerce-purchase"
+  },
+  "quality": {
+    "completeness": 1,
+    "reliability": 0.38,
+    "analysisConfidence": 1
+  },
+  "exportedAt": "2025-07-25T08:42:12.446Z",
+  "version": "1.0"
+}

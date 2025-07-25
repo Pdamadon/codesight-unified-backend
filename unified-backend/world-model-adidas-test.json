@@ -1,0 +1,455 @@
+{
+  "siteDomain": "adidas.com",
+  "version": "1.0",
+  "createdAt": "2025-07-25T09:57:01.873Z",
+  "siteArchitecture": {
+    "domainInfo": {
+      "domain": "www.adidas.com",
+      "siteType": "general",
+      "totalUrls": 12,
+      "uniqueUrls": 8,
+      "sampleUrls": [
+        "https://www.adidas.com/us/",
+        "https://www.adidas.com/us/men-running-shoes",
+        "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+        "https://www.adidas.com/us/cart",
+        "https://www.adidas.com/us/women-shoes"
+      ]
+    },
+    "urlStructure": {
+      "commonPatterns": [
+        {
+          "pattern": "us",
+          "count": 3
+        },
+        {
+          "pattern": "us/runfalcon-5-running-shoes/ID8844.html",
+          "count": 2
+        },
+        {
+          "pattern": "us/stan-smith-shoes/M20324.html",
+          "count": 2
+        },
+        {
+          "pattern": "us/men-running-shoes",
+          "count": 1
+        },
+        {
+          "pattern": "us/cart",
+          "count": 1
+        },
+        {
+          "pattern": "us/women-shoes",
+          "count": 1
+        },
+        {
+          "pattern": "us/search",
+          "count": 1
+        },
+        {
+          "pattern": "us/ultraboost-22-shoes/GX3131.html",
+          "count": 1
+        }
+      ],
+      "pathDepthDistribution": {
+        "1": 3,
+        "2": 4,
+        "3": 5
+      },
+      "averagePathDepth": 2.2
+    },
+    "pageHierarchy": {
+      "pageTypes": {
+        "unknown": {
+          "count": 2,
+          "uniqueUrls": 1,
+          "uniqueTitles": 0,
+          "sampleUrls": [
+            "https://www.adidas.com/us/"
+          ],
+          "sampleTitles": []
+        },
+        "categoryPage": {
+          "count": 2,
+          "uniqueUrls": 2,
+          "uniqueTitles": 0,
+          "sampleUrls": [
+            "https://www.adidas.com/us/men-running-shoes",
+            "https://www.adidas.com/us/women-shoes"
+          ],
+          "sampleTitles": []
+        },
+        "productDetailPage": {
+          "count": 5,
+          "uniqueUrls": 3,
+          "uniqueTitles": 0,
+          "sampleUrls": [
+            "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+            "https://www.adidas.com/us/stan-smith-shoes/M20324.html",
+            "https://www.adidas.com/us/ultraboost-22-shoes/GX3131.html"
+          ],
+          "sampleTitles": []
+        },
+        "cartPage": {
+          "count": 1,
+          "uniqueUrls": 1,
+          "uniqueTitles": 0,
+          "sampleUrls": [
+            "https://www.adidas.com/us/cart"
+          ],
+          "sampleTitles": []
+        },
+        "homepage": {
+          "count": 1,
+          "uniqueUrls": 1,
+          "uniqueTitles": 0,
+          "sampleUrls": [
+            "https://www.adidas.com/us/"
+          ],
+          "sampleTitles": []
+        },
+        "searchResults": {
+          "count": 1,
+          "uniqueUrls": 1,
+          "uniqueTitles": 0,
+          "sampleUrls": [
+            "https://www.adidas.com/us/search?q=ultraboost"
+          ],
+          "sampleTitles": []
+        }
+      },
+      "commonTransitions": [
+        {
+          "transition": "categoryPage->productDetailPage",
+          "count": 2
+        },
+        {
+          "transition": "productDetailPage->productDetailPage",
+          "count": 2
+        },
+        {
+          "transition": "unknown->categoryPage",
+          "count": 1
+        },
+        {
+          "transition": "productDetailPage->cartPage",
+          "count": 1
+        },
+        {
+          "transition": "homepage->categoryPage",
+          "count": 1
+        },
+        {
+          "transition": "unknown->searchResults",
+          "count": 1
+        },
+        {
+          "transition": "searchResults->productDetailPage",
+          "count": 1
+        }
+      ],
+      "totalTransitions": 7
+    },
+    "commonLayouts": [
+      {
+        "zones": [
+          "actionButtons"
+        ],
+        "occurrences": 5,
+        "confidence": 0.5
+      },
+      {
+        "zones": [
+          "navigation"
+        ],
+        "occurrences": 3,
+        "confidence": 0.3
+      },
+      {
+        "zones": [
+          "productGrid",
+          "filterSidebar"
+        ],
+        "occurrences": 2,
+        "confidence": 0.2
+      }
+    ]
+  },
+  "pageTypePatterns": {
+    "unknown": {
+      "totalOccurrences": 2,
+      "averageConfidence": 0,
+      "urlPatterns": [
+        {
+          "pattern": "/us/",
+          "count": 2
+        }
+      ],
+      "domPatterns": [],
+      "commonZones": [
+        {
+          "zone": "navigation",
+          "averageConfidence": 0.8999999999999999,
+          "occurrences": 2
+        }
+      ],
+      "selectorPatterns": []
+    },
+    "categoryPage": {
+      "totalOccurrences": 2,
+      "averageConfidence": 0.425,
+      "urlPatterns": [
+        {
+          "pattern": "/us/{slug}",
+          "count": 2
+        }
+      ],
+      "domPatterns": [],
+      "commonZones": [
+        {
+          "zone": "productGrid",
+          "averageConfidence": 0.8999999999999999,
+          "occurrences": 2
+        },
+        {
+          "zone": "filterSidebar",
+          "averageConfidence": 0.8,
+          "occurrences": 2
+        }
+      ],
+      "selectorPatterns": []
+    },
+    "productDetailPage": {
+      "totalOccurrences": 5,
+      "averageConfidence": 0.38,
+      "urlPatterns": [
+        {
+          "pattern": "/us/{slug}/ID8844.html",
+          "count": 2
+        },
+        {
+          "pattern": "/us/{slug}/M20324.html",
+          "count": 2
+        },
+        {
+          "pattern": "/us/{slug}/GX3131.html",
+          "count": 1
+        }
+      ],
+      "domPatterns": [],
+      "commonZones": [
+        {
+          "zone": "actionButtons",
+          "averageConfidence": 0.36,
+          "occurrences": 4
+        },
+        {
+          "zone": "productDetails",
+          "averageConfidence": 0.2,
+          "occurrences": 1
+        }
+      ],
+      "selectorPatterns": []
+    }
+  },
+  "componentPatterns": {
+    "navigation": [
+      {
+        "type": "navigation",
+        "occurrences": 2,
+        "averageConfidence": 0.8999999999999999,
+        "commonSelectors": [
+          {
+            "selector": "nav",
+            "occurrences": 2
+          },
+          {
+            "selector": ".nav",
+            "occurrences": 2
+          },
+          {
+            "selector": ".main-nav",
+            "occurrences": 2
+          }
+        ],
+        "reliability": 0.4
+      },
+      {
+        "type": "navigation",
+        "occurrences": 1,
+        "averageConfidence": 1,
+        "commonSelectors": [
+          {
+            "selector": "nav",
+            "occurrences": 1
+          },
+          {
+            "selector": ".nav",
+            "occurrences": 1
+          },
+          {
+            "selector": ".navigation",
+            "occurrences": 1
+          },
+          {
+            "selector": ".main-nav",
+            "occurrences": 1
+          }
+        ],
+        "reliability": 0.2
+      }
+    ],
+    "productCards": [
+      {
+        "type": "productCard",
+        "occurrences": 2,
+        "averageConfidence": 0.8999999999999999,
+        "commonSelectors": [
+          {
+            "selector": ".product-grid",
+            "occurrences": 2
+          },
+          {
+            "selector": ".products",
+            "occurrences": 2
+          },
+          {
+            "selector": ".grid",
+            "occurrences": 2
+          }
+        ],
+        "reliability": 0.6666666666666666
+      }
+    ],
+    "forms": [],
+    "buttons": [
+      {
+        "type": "actionButton",
+        "occurrences": 1,
+        "averageConfidence": 0.8,
+        "commonSelectors": [
+          {
+            "selector": ".checkout",
+            "occurrences": 1
+          },
+          {
+            "selector": ".proceed",
+            "occurrences": 1
+          }
+        ],
+        "reliability": 0.3333333333333333
+      }
+    ],
+    "filters": [
+      {
+        "type": "filterSidebar",
+        "occurrences": 2,
+        "averageConfidence": 0.8,
+        "commonSelectors": [
+          {
+            "selector": ".filters",
+            "occurrences": 2
+          },
+          {
+            "selector": ".filter-panel",
+            "occurrences": 2
+          }
+        ],
+        "reliability": 0.6666666666666666
+      }
+    ]
+  },
+  "navigationPatterns": {
+    "commonFlows": [],
+    "entryPoints": [
+      {
+        "pageType": "unknown",
+        "url": "https://www.adidas.com/us/",
+        "occurrences": 2
+      },
+      {
+        "pageType": "homepage",
+        "url": "https://www.adidas.com/us/",
+        "occurrences": 1
+      }
+    ],
+    "exitPoints": [
+      {
+        "pageType": "productDetailPage",
+        "url": "https://www.adidas.com/us/runfalcon-5-running-shoes/ID8844.html",
+        "occurrences": 1
+      },
+      {
+        "pageType": "productDetailPage",
+        "url": "https://www.adidas.com/us/stan-smith-shoes/M20324.html",
+        "occurrences": 1
+      },
+      {
+        "pageType": "productDetailPage",
+        "url": "https://www.adidas.com/us/ultraboost-22-shoes/GX3131.html",
+        "occurrences": 1
+      }
+    ],
+    "conversionPaths": {
+      "add-to-cart": {
+        "totalOccurrences": 2,
+        "averageSteps": 4,
+        "averageDuration": 7000,
+        "commonJourneyTypes": [
+          "product-research"
+        ]
+      }
+    }
+  },
+  "interactionPatterns": {
+    "selectorPatterns": [],
+    "interactionSequences": [],
+    "elementPatterns": [],
+    "reliabilityScores": {}
+  },
+  "businessPatterns": {
+    "conversionFunnels": {},
+    "userBehaviorSegments": [
+      {
+        "type": "research-oriented",
+        "count": 2
+      },
+      {
+        "type": "quick-converter",
+        "count": 2
+      }
+    ],
+    "dropoffAnalysis": [],
+    "performanceMetrics": {
+      "totalJourneys": 3,
+      "completionRate": 0.6666666666666666,
+      "averageDuration": 6000,
+      "averageSteps": 3.6666666666666665,
+      "efficiency": 0.18181818181818182
+    }
+  },
+  "modelQuality": {
+    "patternCoverage": 0,
+    "patternReliability": 0.2966666666666667,
+    "journeyCompleteness": 0,
+    "modelConfidence": 0.0988888888888889
+  },
+  "usageStats": {
+    "totalSessions": 3,
+    "totalJourneys": 3,
+    "totalPages": 12,
+    "averageSessionQuality": 1,
+    "generationDate": "2025-07-25T09:57:01.876Z"
+  },
+  "validation": {
+    "completenessScore": 1,
+    "accuracyScore": 0.0988888888888889,
+    "consistencyScore": 0.8,
+    "usabilityScore": 0.5,
+    "overallScore": 0.5997222222222223,
+    "issues": [],
+    "recommendations": [
+      "Improve pattern accuracy thresholds"
+    ]
+  }
+}
