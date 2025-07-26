@@ -1941,8 +1941,18 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
    */
   private extractUserIntent(journey: EnhancedInteractionData[]): string {
     // PRIORITY 1: Check for AI-generated task from session data
+    console.log('🔍 [DEBUG] Checking for generated task in sessionData:', {
+      hasSessionData: !!this.sessionData,
+      hasConfig: !!this.sessionData?.config,
+      hasGeneratedTask: !!this.sessionData?.config?.generatedTask,
+      sessionDataKeys: this.sessionData ? Object.keys(this.sessionData) : 'none',
+      configKeys: this.sessionData?.config ? Object.keys(this.sessionData.config) : 'none'
+    });
+    
     if (this.sessionData?.config?.generatedTask) {
       const generatedTask = this.sessionData.config.generatedTask;
+      console.log('🎯 [TRAINING DATA] Found generated task:', generatedTask);
+      
       // Use task description as user intent
       if (generatedTask.description) {
         console.log('🎯 [TRAINING DATA] Using generated task as user intent:', generatedTask.description);
