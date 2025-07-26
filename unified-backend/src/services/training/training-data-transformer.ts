@@ -66,16 +66,15 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     }
     console.log(`✅ [INDIVIDUAL EXAMPLES] Generated ${allExamples.length} individual training examples`);
 
-    // Create sequence and task-driven examples
-    console.log(`\n🛤️ [JOURNEY EXAMPLES] Creating sequence examples...`);
-    const sequenceExamples = this.createSequenceExamples(enhancedInteractions);
-    console.log(`✅ [JOURNEY EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
+    // 🎯 ENHANCED TRAINING: Using only DOM-grounded individual examples with journey context
+    // Legacy sequence examples disabled - our enhanced individual examples already include journey progression
+    console.log(`\n🛤️ [JOURNEY EXAMPLES] Skipping legacy sequence examples - using enhanced individual examples with journey context`);
     
-    console.log(`🎯 [TASK EXAMPLES] Creating task-driven examples...`);
+    console.log(`🎯 [TASK EXAMPLES] Creating enhanced task-driven examples...`);
     const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
     console.log(`✅ [TASK EXAMPLES] Generated ${taskExamples.length} task examples`);
     
-    allExamples.push(...sequenceExamples, ...taskExamples);
+    allExamples.push(...taskExamples);
     console.log(`📈 [TOTAL EXAMPLES] Combined total: ${allExamples.length} training examples`);
 
     // 🎯 JOURNEY-PRIORITIZED QUALITY FILTERING
