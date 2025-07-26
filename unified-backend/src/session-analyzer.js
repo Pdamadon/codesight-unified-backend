@@ -210,15 +210,32 @@ class SessionAnalyzer {
 
     // Process each interaction for page analysis
     for (const interaction of interactions) {
-      const pageAnalysis = await this.analyzePage(
-        interaction.context?.domSnapshot,
-        interaction.context?.url,
-        {
-          pageTitle: interaction.context?.pageTitle,
+      let pageAnalysis;
+      
+      // Check if we have pre-classified page type from real data
+      if (interaction.data?.preClassifiedPageType) {
+        const mappedPageType = this.mapPreClassifiedPageType(interaction.data.preClassifiedPageType);
+        console.log(`    🎯 Using pre-classified: ${interaction.data.preClassifiedPageType} -> ${mappedPageType}`);
+        pageAnalysis = {
+          pageType: mappedPageType,
+          confidence: 0.9,
+          url: interaction.context?.url,
+          title: interaction.context?.pageTitle,
           timestamp: interaction.timestamp,
-          interactionType: interaction.type
-        }
-      );
+          semanticZones: this.extractSemanticZones(interaction.context?.domSnapshot)
+        };
+      } else {
+        // Fall back to original analysis
+        pageAnalysis = await this.analyzePage(
+          interaction.context?.domSnapshot,
+          interaction.context?.url,
+          {
+            pageTitle: interaction.context?.pageTitle,
+            timestamp: interaction.timestamp,
+            interactionType: interaction.type
+          }
+        );
+      }
 
       if (pageAnalysis.pageType) {
         const pageKey = `${pageAnalysis.pageType}_${interaction.timestamp}`;
@@ -520,6 +537,48 @@ class SessionAnalyzer {
     );
 
     return outputPath;
+  }
+
+  // Helper method to map pre-classified page types to our taxonomy
+  mapPreClassifiedPageType(preClassifiedType) {
+    const mapping = {
+      'homepage': 'homepage',
+      'home': 'homepage',
+      'search': 'searchResults', 
+      'category': 'categoryPage',
+      'product': 'productDetailPage',
+      'cart': 'cartPage',
+      'checkout': 'checkoutPage',
+      'listing': 'categoryPage',
+      'detail': 'productDetailPage'
+    };
+    
+    return mapping[preClassifiedType?.toLowerCase()] || 'unknown';
+  }
+
+  // Helper method to extract semantic zones from page structure
+  extractSemanticZones(pageStructure) {
+    if (!pageStructure) return new Map();
+    
+    const zones = new Map();
+    
+    if (pageStructure.hasNavigation) {
+      zones.set('navigation', { confidence: 1.0, elements: ['nav'] });
+    }
+    
+    if (pageStructure.hasProductGrid) {
+      zones.set('productGrid', { confidence: 1.0, elements: ['.product-grid'] });
+    }
+    
+    if (pageStructure.hasFilters) {
+      zones.set('filterSidebar', { confidence: 1.0, elements: ['.filters'] });
+    }
+    
+    if (pageStructure.hasShoppingCart) {
+      zones.set('actionButtons', { confidence: 0.8, elements: ['.cart'] });
+    }
+    
+    return zones;
   }
 }
 

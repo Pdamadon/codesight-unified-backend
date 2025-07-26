@@ -1,7 +1,7 @@
 {
   "siteDomain": "adidas.com",
   "version": "1.0",
-  "createdAt": "2025-07-25T10:03:35.660Z",
+  "createdAt": "2025-07-25T13:34:47.602Z",
   "siteArchitecture": {
     "domainInfo": {
       "domain": "www.adidas.com",
@@ -146,30 +146,7 @@
       ],
       "totalTransitions": 6
     },
-    "commonLayouts": [
-      {
-        "zones": [
-          "productGrid",
-          "filterSidebar"
-        ],
-        "occurrences": 2,
-        "confidence": 0.2
-      },
-      {
-        "zones": [
-          "actionButtons"
-        ],
-        "occurrences": 2,
-        "confidence": 0.2
-      },
-      {
-        "zones": [
-          "productDetails"
-        ],
-        "occurrences": 2,
-        "confidence": 0.2
-      }
-    ]
+    "commonLayouts": []
   },
   "pageTypePatterns": {
     "homepage": {
@@ -182,18 +159,7 @@
         }
       ],
       "domPatterns": [],
-      "commonZones": [
-        {
-          "zone": "navigation",
-          "averageConfidence": 1,
-          "occurrences": 2
-        },
-        {
-          "zone": "productGrid",
-          "averageConfidence": 0.15,
-          "occurrences": 1
-        }
-      ],
+      "commonZones": [],
       "selectorPatterns": []
     },
     "categoryPage": {
@@ -206,18 +172,7 @@
         }
       ],
       "domPatterns": [],
-      "commonZones": [
-        {
-          "zone": "productGrid",
-          "averageConfidence": 1,
-          "occurrences": 2
-        },
-        {
-          "zone": "filterSidebar",
-          "averageConfidence": 1,
-          "occurrences": 2
-        }
-      ],
+      "commonZones": [],
       "selectorPatterns": []
     },
     "productDetailPage": {
@@ -242,184 +197,16 @@
         }
       ],
       "domPatterns": [],
-      "commonZones": [
-        {
-          "zone": "productDetails",
-          "averageConfidence": 0.6,
-          "occurrences": 3
-        },
-        {
-          "zone": "actionButtons",
-          "averageConfidence": 0.32,
-          "occurrences": 2
-        },
-        {
-          "zone": "filterSidebar",
-          "averageConfidence": 0.1,
-          "occurrences": 1
-        }
-      ],
+      "commonZones": [],
       "selectorPatterns": []
     }
   },
   "componentPatterns": {
-    "navigation": [
-      {
-        "type": "navigation",
-        "occurrences": 1,
-        "averageConfidence": 1,
-        "commonSelectors": [
-          {
-            "selector": "nav",
-            "occurrences": 1
-          },
-          {
-            "selector": ".nav",
-            "occurrences": 1
-          },
-          {
-            "selector": ".navigation",
-            "occurrences": 1
-          },
-          {
-            "selector": ".header",
-            "occurrences": 1
-          },
-          {
-            "selector": ".main-nav",
-            "occurrences": 1
-          }
-        ],
-        "reliability": 0.2
-      },
-      {
-        "type": "navigation",
-        "occurrences": 1,
-        "averageConfidence": 1,
-        "commonSelectors": [
-          {
-            "selector": "nav",
-            "occurrences": 1
-          },
-          {
-            "selector": ".nav",
-            "occurrences": 1
-          },
-          {
-            "selector": ".navigation",
-            "occurrences": 1
-          },
-          {
-            "selector": ".main-nav",
-            "occurrences": 1
-          }
-        ],
-        "reliability": 0.2
-      }
-    ],
-    "productCards": [
-      {
-        "type": "productCard",
-        "occurrences": 2,
-        "averageConfidence": 1,
-        "commonSelectors": [
-          {
-            "selector": ".product-grid",
-            "occurrences": 2
-          },
-          {
-            "selector": ".products",
-            "occurrences": 2
-          },
-          {
-            "selector": ".grid",
-            "occurrences": 2
-          },
-          {
-            "selector": ".catalog",
-            "occurrences": 2
-          }
-        ],
-        "reliability": 0.6666666666666666
-      }
-    ],
+    "navigation": [],
+    "productCards": [],
     "forms": [],
-    "buttons": [
-      {
-        "type": "actionButton",
-        "occurrences": 1,
-        "averageConfidence": 1,
-        "commonSelectors": [
-          {
-            "selector": ".add-to-cart",
-            "occurrences": 1
-          },
-          {
-            "selector": ".add-to-bag",
-            "occurrences": 1
-          },
-          {
-            "selector": ".purchase",
-            "occurrences": 1
-          }
-        ],
-        "reliability": 0.3333333333333333
-      },
-      {
-        "type": "actionButton",
-        "occurrences": 1,
-        "averageConfidence": 0.8,
-        "commonSelectors": [
-          {
-            "selector": ".checkout",
-            "occurrences": 1
-          },
-          {
-            "selector": ".proceed",
-            "occurrences": 1
-          }
-        ],
-        "reliability": 0.3333333333333333
-      }
-    ],
-    "filters": [
-      {
-        "type": "filterSidebar",
-        "occurrences": 2,
-        "averageConfidence": 1,
-        "commonSelectors": [
-          {
-            "selector": ".filters",
-            "occurrences": 2
-          },
-          {
-            "selector": ".filter-panel",
-            "occurrences": 2
-          },
-          {
-            "selector": ".sidebar",
-            "occurrences": 2
-          }
-        ],
-        "reliability": 0.6666666666666666
-      },
-      {
-        "type": "filterSidebar",
-        "occurrences": 1,
-        "averageConfidence": 0.8,
-        "commonSelectors": [
-          {
-            "selector": ".filters",
-            "occurrences": 1
-          },
-          {
-            "selector": ".sidebar",
-            "occurrences": 1
-          }
-        ],
-        "reliability": 0.3333333333333333
-      }
-    ]
+    "buttons": [],
+    "filters": []
   },
   "navigationPatterns": {
     "commonFlows": [],
@@ -500,15 +287,15 @@
     "totalSessions": 3,
     "totalJourneys": 3,
     "totalPages": 12,
-    "averageSessionQuality": 1,
-    "generationDate": "2025-07-25T10:03:35.662Z"
+    "averageSessionQuality": 0.6999999999999998,
+    "generationDate": "2025-07-25T13:34:47.603Z"
   },
   "validation": {
     "completenessScore": 1,
     "accuracyScore": 0.09999999999999999,
     "consistencyScore": 0.8,
-    "usabilityScore": 0.5,
-    "overallScore": 0.6000000000000001,
+    "usabilityScore": 0,
+    "overallScore": 0.47500000000000003,
     "issues": [],
     "recommendations": [
       "Improve pattern accuracy thresholds"

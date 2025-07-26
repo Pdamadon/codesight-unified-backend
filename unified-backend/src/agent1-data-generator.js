@@ -186,6 +186,7 @@ Provide a step-by-step navigation plan with reasoning.`;
     const pageType = pageAnalysis.pageType;
     const url = pageAnalysis.url;
     const zones = pageAnalysis.zones || [];
+    const matchedPatterns = pageAnalysis.matchedPatterns || [];
     
     const prompt = `SITE ANALYSIS: Classify page type and identify site structure
 
@@ -196,7 +197,7 @@ SEMANTIC ZONES DETECTED:
 ${zones.map(zone => `- ${zone.name} (confidence: ${zone.confidence.toFixed(2)})`).join('\n')}
 
 MATCHED PATTERNS:
-${pageAnalysis.matchedPatterns.map(pattern => `- ${pattern.type}: ${pattern.pattern}`).join('\n')}
+${matchedPatterns.map(pattern => `- ${pattern.type}: ${pattern.pattern}`).join('\n')}
 
 Analyze this page within the site architecture context and provide:
 1. Page type classification with reasoning
@@ -265,19 +266,22 @@ ARCHITECTURAL UNDERSTANDING:
    * Create site architecture understanding example
    */
   createSiteArchitectureExample(architecture) {
+    const commonTransitions = architecture.pageHierarchy?.commonTransitions || [];
+    const commonLayouts = architecture.commonLayouts || [];
+    
     const prompt = `SITE ARCHITECTURE ANALYSIS: Understand the overall structure and organization
 
 DOMAIN INFO:
-- Site: ${architecture.domainInfo.domain}
-- Type: ${architecture.domainInfo.siteType}
-- URL Patterns: ${architecture.urlStructure.commonPatterns.length} identified
-- Page Hierarchy: ${Object.keys(architecture.pageHierarchy.pageTypes).length} page types
+- Site: ${architecture.domainInfo?.domain || 'unknown'}
+- Type: ${architecture.domainInfo?.siteType || 'unknown'}
+- URL Patterns: ${architecture.urlStructure?.commonPatterns?.length || 0} identified
+- Page Hierarchy: ${Object.keys(architecture.pageHierarchy?.pageTypes || {}).length} page types
 
 COMMON TRANSITIONS:
-${architecture.pageHierarchy.commonTransitions.map(t => `- ${t.transition}: ${t.count} times`).join('\n')}
+${commonTransitions.map(t => `- ${t.transition}: ${t.count} times`).join('\n')}
 
 LAYOUT PATTERNS:
-${architecture.commonLayouts.map(layout => `- Zones: ${layout.zones.join(' + ')} (${layout.occurrences} occurrences)`).join('\n')}
+${commonLayouts.map(layout => `- Zones: ${layout.zones.join(' + ')} (${layout.occurrences} occurrences)`).join('\n')}
 
 Provide a comprehensive analysis of this site's architecture, including:
 1. Overall site strategy and business model
@@ -348,19 +352,22 @@ STRATEGIC INSIGHTS:
    * Create journey pattern recognition example
    */
   createJourneyPatternExample(journey) {
+    const pageTypeSequence = journey.pageTypeSequence || [];
+    const conversionPoints = journey.conversionPoints || [];
+    
     const prompt = `JOURNEY PATTERN ANALYSIS: Understand user behavior and intent patterns
 
 USER JOURNEY:
-- Intent: "${journey.userIntent}"
-- Type: ${journey.journeyType}
-- Steps: ${journey.stepCount}
-- Duration: ${Math.round(journey.duration / 1000)}s
+- Intent: "${journey.userIntent || 'unknown'}"
+- Type: ${journey.journeyType || 'unknown'}
+- Steps: ${journey.stepCount || 0}
+- Duration: ${Math.round((journey.duration || 0) / 1000)}s
 
 PAGE SEQUENCE:
-${journey.pageTypeSequence.map((page, i) => `${i + 1}. ${page}`).join('\n')}
+${pageTypeSequence.map((page, i) => `${i + 1}. ${page}`).join('\n')}
 
 CONVERSION POINTS:
-${journey.conversionPoints.map(cp => `- ${cp.type} at step ${cp.stepIndex}`).join('\n') || 'None detected'}
+${conversionPoints.map(cp => `- ${cp.type} at step ${cp.stepIndex}`).join('\n') || 'None detected'}
 
 Analyze this journey pattern and provide insights on:
 1. User behavior characteristics

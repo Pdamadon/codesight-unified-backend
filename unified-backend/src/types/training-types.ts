@@ -308,6 +308,7 @@ export interface TrainingExample {
     reliability?: number;
     spatialContext?: string;
     businessContext?: string;
+    journeyContext?: any;
     
     // 🆕 COMPREHENSIVE context for richer training
     visual?: {

@@ -105,10 +105,12 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   }
 
   /**
-   * 🎯 COMPLETELY REWRITTEN: COMPREHENSIVE context extraction with ALL data
+   * 🛤️ JOURNEY-AWARE TRAINING EXAMPLES: Generate both micro-actions and journey progression
    * 
-   * Uses ALL available rich data: visual, spatial, business, accessibility, 
-   * performance, state, form, SEO, analytics, timing, network, errors
+   * Creates training examples that maintain:
+   * 1. Detailed DOM-grounded micro interactions (ChatGPT's approach)
+   * 2. Sequential journey progression toward conversion goals
+   * 3. Step-by-step navigation context and goal advancement
    */
   createFineTuningExamples(interaction: EnhancedInteractionData): TrainingExample[] {
     const examples: TrainingExample[] = [];
@@ -139,13 +141,93 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     const designSystemContext = this.extractDesignSystemContext(interaction.visual?.designSystem);
     const behaviorPatternsContext = this.extractBehaviorPatternsContext(interaction.business?.user);
     
+    // 🛤️ JOURNEY CONTEXT EXTRACTION
+    const journeyContext = this.extractJourneyContext(interaction);
+    
     // Generate Playwright action with reliable selector
     const playwrightAction = this.selectorStrategy.getPlaywrightAction(
       actionType as any, 
       bestSelector !== 'element' ? bestSelector : (interaction.interaction?.selector || 'element')
     );
 
-    // 🎯 EXAMPLE 1: ULTRA-COMPREHENSIVE site-specific pattern with NEW DATA
+    // 🛤️ EXAMPLE 1: JOURNEY-AWARE MICRO ACTION (maintains journey progression + DOM details)
+    if (bestSelector !== 'element') {
+      const boundingBox = interaction.visual?.boundingBox;
+      const nearbyElements = interaction.element?.nearbyElements?.slice(0, 5) || [];
+      const domAncestors = interaction.context?.ancestors?.slice(0, 3) || [];
+      
+      examples.push({
+        prompt: `JOURNEY STEP ${journeyContext.currentStep}/${journeyContext.totalSteps}: ${journeyContext.stepDescription}
+
+GOAL: ${journeyContext.overallGoal}
+PROGRESS: ${journeyContext.previousSteps.join(' → ')} → [${journeyContext.currentStepName}] → ${journeyContext.nextSteps.join(' → ')}
+CURRENT TASK: On ${url}, ${journeyContext.actionDescription}
+
+DOM CONTEXT:
+- Element: <${interaction.element?.tag || 'button'} ${Object.entries(interaction.element?.attributes || {}).map(([k, v]) => `${k}="${v}"`).join(' ')}>${elementText}</${interaction.element?.tag || 'button'}>
+- Bounding Box: {x: ${boundingBox?.x || 0}, y: ${boundingBox?.y || 0}, width: ${boundingBox?.width || 0}, height: ${boundingBox?.height || 0}}
+- Page Type: ${interaction.context?.pageType || 'unknown'}
+
+SPATIAL CONTEXT:
+${nearbyElements.map((el: any) => `- ${el.direction || 'near'}: "${el.text}" (${el.distance || 0}px) [${el.elementType || 'element'}]`).join('\n')}
+
+SELECTORS (reliability):
+1. ${bestSelector} (${reliability.toFixed(2)})
+${backupSelectors.slice(0, 2).map((sel: string, i: number) => `${i + 2}. ${sel} (estimated)`).join('\n')}
+
+JOURNEY CONTEXT: ${journeyContext.funnelStage} | ${businessContext.ecommerce} | Step ${journeyContext.currentStep} of ${journeyContext.totalSteps}`,
+        completion: `{
+  "action": "${actionType}",
+  "selector": "${bestSelector}",
+  "reasoning": "${this.getSelectorReasoningText(bestSelector, reliability)} - ${journeyContext.actionReasoning}",
+  "confidence": ${reliability.toFixed(2)},
+  "journey_impact": {
+    "current_step": "${journeyContext.currentStepName}",
+    "next_step": "${journeyContext.nextStepName}",
+    "goal_progress": "${journeyContext.progressPercent}%",
+    "expected_outcome": "${journeyContext.expectedOutcome}"
+  },
+  "fallbacks": [${backupSelectors.slice(0, 2).map(s => `"${s}"`).join(', ')}],
+  "coordinates": {"x": ${boundingBox?.x || 0}, "y": ${boundingBox?.y || 0}}
+}`,
+        context: {
+          pageType: interaction.context?.pageType,
+          userJourney: interaction.context?.userJourney,
+          reliability,
+          journeyContext,
+          businessContext: businessContext.conversion,
+          visual: { ...visualContext, designSystem: designSystemContext.summary },
+          element: { 
+            ...elementContext, 
+            nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
+            spatialRelationships: nearbyElementsContext.relationships
+          },
+          page: pageContext,
+          state: stateContext,
+          business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns },
+          technical: technicalContext
+        },
+        quality: this.calculateComprehensiveQuality(interaction),
+        rawData: {
+          originalInteraction: interaction,
+          processingTime: Date.now() - startTime,
+          dataCompletion: this.calculateDataCompletion(interaction),
+          enhancementFlags: this.getEnhancementFlags(interaction)
+        },
+        journeyMetadata: {
+          journeyType: journeyContext.journeyType,
+          journeyGoal: journeyContext.overallGoal,
+          userIntent: journeyContext.userIntent,
+          stepNumber: journeyContext.currentStep,
+          totalSteps: journeyContext.totalSteps,
+          isJourneyStart: journeyContext.currentStep === 1,
+          isJourneyEnd: journeyContext.currentStep === journeyContext.totalSteps,
+          journeyProgress: journeyContext.progressPercent + '%'
+        }
+      });
+    }
+
+    // 🎯 EXAMPLE 2: ULTRA-COMPREHENSIVE site-specific pattern with ALL DATA
     if (bestSelector !== 'element') {
       examples.push({
         prompt: `${hostname.toUpperCase()}: "${elementText}" ${actionType} | ${visualContext.layout} ${designSystemContext.componentLibrary} | ${elementContext.formContext} | ${nearbyElementsContext.spatialSummary} | ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} user | ${pageContext.performance} performance`,
@@ -179,7 +261,54 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
       });
     }
 
-    // 🎯 EXAMPLE 2: VISUAL + SPATIAL + ACCESSIBILITY context
+    // 🎯 EXAMPLE 3: INPUT INTERACTION with FORM CONTEXT (ChatGPT micro-level approach for forms)
+    if (actionType === 'input' || actionType === 'type' || elementContext.formContext) {
+      const formElement = interaction.element;
+      const formAttributes = formElement?.attributes || {};
+      const formBoundingBox = interaction.visual?.boundingBox;
+      const formNearbyElements = interaction.element?.nearbyElements || [];
+      
+      examples.push({
+        prompt: `FORM INPUT: Enter text in "${elementText}" field on ${url}
+
+FORM CONTEXT:
+- Field: <${formElement?.tag || 'input'} type="${formAttributes.type || 'text'}" name="${formAttributes.name || ''}" placeholder="${formAttributes.placeholder || ''}" ${formAttributes.required ? 'required' : ''}>
+- Form: ${elementContext.formContext || 'unknown form'}
+- Validation: ${formAttributes.pattern ? 'has pattern validation' : 'basic validation'}
+- Bounding Box: {x: ${formBoundingBox?.x || 0}, y: ${formBoundingBox?.y || 0}, width: ${formBoundingBox?.width || 0}, height: ${formBoundingBox?.height || 0}}
+
+NEARBY FIELDS:
+${formNearbyElements.filter((el: any) => el.elementType === 'input' || el.text?.includes('field')).map((el: any) => `- ${el.text} (${el.direction} ${el.distance}px)`).join('\n') || '- No nearby form fields'}
+
+SELECTOR OPTIONS:
+1. ${bestSelector} (reliability: ${reliability.toFixed(2)})
+${backupSelectors.slice(0, 2).map((sel: string, i: number) => `${i + 2}. ${sel}`).join('\n')}
+
+FORM STATE: ${stateContext.before || 'clean form'}`,
+        completion: `{
+  "action": "fill",
+  "selector": "${bestSelector}",
+  "reasoning": "Using ${this.getSelectorReasoningText(bestSelector, reliability)} for form field interaction",
+  "confidence": ${reliability.toFixed(2)},
+  "validation": "Expect ${elementContext.formContext || 'form validation'} and field state update",
+  "inputContext": {
+    "fieldType": "${formAttributes.type || 'text'}",
+    "required": ${formAttributes.required || false},
+    "hasValidation": ${!!formAttributes.pattern}
+  }
+}`,
+        context: {
+          pageType: interaction.context?.pageType,
+          userJourney: interaction.context?.userJourney,
+          reliability,
+          element: elementContext,
+          state: stateContext
+        },
+        quality: this.calculateComprehensiveQuality(interaction)
+      });
+    }
+
+    // 🎯 EXAMPLE 4: VISUAL + SPATIAL + ACCESSIBILITY context
     if (visualContext.positioning && elementContext.ariaContext) {
       examples.push({
         prompt: `VISUAL-A11Y: "${elementText}" ${visualContext.positioning} | ${visualContext.colors} | ARIA: ${elementContext.ariaContext} | ${pageContext.accessibility} on ${hostname}`,
@@ -2591,6 +2720,277 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     if (fromTask.includes('general') && !toTask.includes('general')) return 'task-focus';
     
     return 'task-shift';
+  }
+
+  /**
+   * Helper methods for enhanced DOM-grounded training examples
+   */
+  private getSelectorReasoningText(selector: string, reliability: number): string {
+    if (selector.includes('data-testid') || selector.includes('data-test')) {
+      return 'data-testid provides stable semantic identification';
+    }
+    if (selector.includes('#') && !selector.includes(' ')) {
+      return 'unique ID selector offers high specificity';
+    }
+    if (selector.startsWith('//') || selector.startsWith('/')) {
+      return `XPath selector with ${reliability > 0.8 ? 'strong' : 'moderate'} DOM stability`;
+    }
+    if (selector.includes('[aria-label') || selector.includes('[role')) {
+      return 'accessibility attributes provide semantic context';
+    }
+    if (selector.includes('.') && selector.split('.').length <= 3) {
+      return 'class-based selector with reasonable specificity';
+    }
+    return `generic selector with ${reliability.toFixed(2)} reliability score`;
+  }
+
+  private getExpectedOutcome(interaction: EnhancedInteractionData): string {
+    const actionType = interaction.interaction?.type?.toLowerCase() || 'click';
+    const pageType = interaction.context?.pageType || 'unknown';
+    const elementText = interaction.element?.text || '';
+    
+    // Business-specific outcomes
+    if (elementText.toLowerCase().includes('add to cart') || elementText.toLowerCase().includes('add to bag')) {
+      return 'product added to cart, cart counter update';
+    }
+    if (elementText.toLowerCase().includes('checkout') || elementText.toLowerCase().includes('proceed')) {
+      return 'navigation to checkout/payment page';
+    }
+    if (elementText.toLowerCase().includes('search') || elementText.toLowerCase().includes('find')) {
+      return 'search results display, page content update';
+    }
+    if (elementText.toLowerCase().includes('sign up') || elementText.toLowerCase().includes('register')) {
+      return 'navigation to registration form';
+    }
+    if (elementText.toLowerCase().includes('login') || elementText.toLowerCase().includes('sign in')) {
+      return 'authentication modal or login page';
+    }
+    
+    // Action-specific outcomes
+    if (actionType === 'input' || actionType === 'type') {
+      return 'form field populated, validation feedback';
+    }
+    if (actionType === 'select') {
+      return 'dropdown selection, form state update';
+    }
+    if (actionType === 'hover') {
+      return 'tooltip display, visual state change';
+    }
+    
+    // Page-specific outcomes
+    if (pageType === 'product') {
+      return 'product detail interaction, state change';
+    }
+    if (pageType === 'category') {
+      return 'category navigation, filtered results';
+    }
+    if (pageType === 'cart') {
+      return 'cart modification, total update';
+    }
+    
+    return 'page state change, UI update';
+  }
+
+  /**
+   * 🛤️ JOURNEY CONTEXT EXTRACTION: Understand where user is in conversion journey
+   */
+  private extractJourneyContext(interaction: EnhancedInteractionData): any {
+    const url = interaction.context?.pageUrl || '';
+    const pageType = interaction.context?.pageType || 'unknown';
+    const elementText = interaction.element?.text || '';
+    const funnelStage = interaction.business?.conversion?.funnelStage || 'unknown';
+    const funnelPosition = interaction.business?.conversion?.funnelPosition || 0;
+    const productName = interaction.business?.ecommerce?.productName || '';
+    const userJourney = interaction.context?.userJourney || '';
+
+    // Determine journey type and goal based on context
+    const journeyType = this.determineJourneyType(url, pageType, elementText, funnelStage);
+    const overallGoal = this.determineOverallGoal(journeyType, productName, funnelStage);
+    
+    // Extract journey progression
+    const journeySteps = this.extractJourneySteps(url, pageType, funnelStage, journeyType);
+    const currentStep = Math.max(1, funnelPosition || this.inferCurrentStep(pageType, url));
+    const totalSteps = journeySteps.length;
+    
+    // Determine step context
+    const currentStepName = journeySteps[currentStep - 1] || pageType;
+    const nextStepName = journeySteps[currentStep] || 'completion';
+    const previousSteps = journeySteps.slice(0, currentStep - 1);
+    const nextSteps = journeySteps.slice(currentStep);
+    
+    // Calculate progress
+    const progressPercent = Math.round((currentStep / totalSteps) * 100);
+    
+    // Action descriptions
+    const actionDescription = this.generateActionDescription(elementText, currentStepName, nextStepName);
+    const actionReasoning = this.generateActionReasoning(elementText, currentStepName, overallGoal);
+    const stepDescription = this.generateStepDescription(currentStepName, overallGoal);
+    const expectedOutcome = this.generateJourneyExpectedOutcome(elementText, currentStepName, nextStepName);
+    
+    return {
+      journeyType,
+      overallGoal,
+      userIntent: userJourney || this.inferUserIntent(journeyType, elementText),
+      currentStep,
+      totalSteps,
+      currentStepName,
+      nextStepName,
+      previousSteps,
+      nextSteps,
+      progressPercent,
+      funnelStage,
+      stepDescription,
+      actionDescription,
+      actionReasoning,
+      expectedOutcome
+    };
+  }
+
+  private determineJourneyType(url: string, pageType: string, elementText: string, funnelStage: string): string {
+    const lowerUrl = url.toLowerCase();
+    const lowerElement = elementText.toLowerCase();
+    
+    // E-commerce journeys
+    if (lowerUrl.includes('shop') || lowerUrl.includes('product') || lowerElement.includes('cart') || lowerElement.includes('buy')) {
+      return 'ecommerce-purchase';
+    }
+    
+    // SaaS/subscription journeys
+    if (lowerUrl.includes('pricing') || lowerElement.includes('sign up') || lowerElement.includes('subscribe')) {
+      return 'saas-subscription';
+    }
+    
+    // Booking/reservation journeys
+    if (lowerUrl.includes('book') || lowerUrl.includes('reserve') || lowerElement.includes('appointment')) {
+      return 'booking-reservation';
+    }
+    
+    // Content/research journeys
+    if (pageType === 'article' || pageType === 'blog' || lowerElement.includes('read more')) {
+      return 'content-engagement';
+    }
+    
+    return 'general-navigation';
+  }
+
+  private determineOverallGoal(journeyType: string, productName: string, funnelStage: string): string {
+    switch (journeyType) {
+      case 'ecommerce-purchase':
+        return productName ? `Purchase ${productName}` : 'Complete product purchase';
+      case 'saas-subscription':
+        return 'Sign up for service subscription';
+      case 'booking-reservation':
+        return 'Complete booking/reservation';
+      case 'content-engagement':
+        return 'Read and engage with content';
+      default:
+        return 'Navigate and complete user goal';
+    }
+  }
+
+  private extractJourneySteps(url: string, pageType: string, funnelStage: string, journeyType: string): string[] {
+    switch (journeyType) {
+      case 'ecommerce-purchase':
+        return ['homepage', 'category-browse', 'product-detail', 'add-to-cart', 'cart-review', 'checkout', 'payment', 'confirmation'];
+      case 'saas-subscription':
+        return ['homepage', 'pricing', 'plan-selection', 'signup', 'payment', 'onboarding'];
+      case 'booking-reservation':
+        return ['homepage', 'service-browse', 'date-selection', 'details-entry', 'confirmation', 'payment'];
+      case 'content-engagement':
+        return ['homepage', 'content-discovery', 'article-reading', 'engagement'];
+      default:
+        return ['homepage', 'navigation', 'interaction', 'completion'];
+    }
+  }
+
+  private inferCurrentStep(pageType: string, url: string): number {
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl.includes('checkout') || lowerUrl.includes('payment')) return 6;
+    if (lowerUrl.includes('cart')) return 5;
+    if (pageType === 'product' || lowerUrl.includes('product')) return 3;
+    if (pageType === 'category' || lowerUrl.includes('category')) return 2;
+    if (pageType === 'homepage' || lowerUrl === '/' || lowerUrl.endsWith('.com') || lowerUrl.endsWith('.com/')) return 1;
+    
+    return 3; // Default to middle step
+  }
+
+  private generateActionDescription(elementText: string, currentStep: string, nextStep: string): string {
+    const lowerElement = elementText.toLowerCase();
+    
+    if (lowerElement.includes('add to cart') || lowerElement.includes('add to bag')) {
+      return `click "${elementText}" to add product to cart`;
+    }
+    if (lowerElement.includes('checkout') || lowerElement.includes('proceed')) {
+      return `click "${elementText}" to proceed to checkout`;
+    }
+    if (lowerElement.includes('search')) {
+      return `use search to find desired products`;
+    }
+    if (lowerElement.includes('sign up') || lowerElement.includes('register')) {
+      return `click "${elementText}" to begin registration`;
+    }
+    
+    return `interact with "${elementText}" to progress from ${currentStep} to ${nextStep}`;
+  }
+
+  private generateActionReasoning(elementText: string, currentStep: string, overallGoal: string): string {
+    const lowerElement = elementText.toLowerCase();
+    
+    if (lowerElement.includes('add to cart')) {
+      return `Adding product to cart advances toward purchase completion`;
+    }
+    if (lowerElement.includes('checkout')) {
+      return `Proceeding to checkout moves closer to transaction completion`;
+    }
+    if (lowerElement.includes('search')) {
+      return `Search helps locate specific products needed for purchase goal`;
+    }
+    
+    return `This action progresses the user journey toward: ${overallGoal}`;
+  }
+
+  private generateStepDescription(currentStep: string, overallGoal: string): string {
+    switch (currentStep) {
+      case 'product-detail':
+        return 'Evaluate product details and specifications';
+      case 'add-to-cart':
+        return 'Add selected product to shopping cart';
+      case 'cart-review':
+        return 'Review cart contents and quantities';
+      case 'checkout':
+        return 'Proceed through checkout process';
+      case 'category-browse':
+        return 'Browse product categories and options';
+      default:
+        return `${currentStep.replace('-', ' ')} stage of ${overallGoal}`;
+    }
+  }
+
+  private generateJourneyExpectedOutcome(elementText: string, currentStep: string, nextStep: string): string {
+    const lowerElement = elementText.toLowerCase();
+    
+    if (lowerElement.includes('add to cart')) {
+      return 'Product added to cart, advance to cart review';
+    }
+    if (lowerElement.includes('checkout')) {
+      return 'Navigate to checkout page, begin payment process';
+    }
+    if (lowerElement.includes('search')) {
+      return 'Display search results, enable product discovery';
+    }
+    
+    return `Complete ${currentStep} and advance to ${nextStep}`;
+  }
+
+  private inferUserIntent(journeyType: string, elementText: string): string {
+    if (journeyType === 'ecommerce-purchase') {
+      return elementText.toLowerCase().includes('add to cart') ? 'purchase-intent' : 'browse-intent';
+    }
+    if (journeyType === 'saas-subscription') {
+      return 'subscription-intent';
+    }
+    return 'general-navigation';
   }
 }
 
