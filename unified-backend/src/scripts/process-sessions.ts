@@ -169,12 +169,12 @@ async function processRealSessions() {
           userIntent: 'browse products',
           journeyType: 'product-research',
           stepCount: data.analysis.pageTypes?.size || 0,
-          navigationFlow: Array.from(data.analysis.pageTypes?.values() || []).map(page => ({
+          navigationFlow: Array.from(data.analysis.pageTypes?.values() || []).map((page: any) => ({
             pageType: page.pageType,
             timestamp: page.timestamp,
             url: page.url
           })),
-          pageTypeSequence: Array.from(data.analysis.pageTypes?.values() || []).map(p => p.pageType),
+          pageTypeSequence: Array.from(data.analysis.pageTypes?.values() || []).map((p: any) => p.pageType),
           conversionPoints: []
         }
       ]
