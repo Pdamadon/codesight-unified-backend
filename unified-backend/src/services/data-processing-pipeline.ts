@@ -1191,6 +1191,19 @@ export class DataProcessingPipeline extends EventEmitter {
 
     // Generate training data
     console.log('🔄 TRAINING DATA DEBUG: Calling OpenAI service to generate training data...');
+    // Parse config from JsonValue to access generatedTask
+    const parsedConfig = session.config ? (typeof session.config === 'object' ? session.config as any : JSON.parse(session.config as string)) : null;
+    
+    console.log('🎯 [PIPELINE DEBUG] Session object being passed to OpenAI service:', {
+      sessionId: session.id,
+      hasConfig: !!session.config,
+      configKeys: parsedConfig ? Object.keys(parsedConfig) : 'none',
+      hasGeneratedTask: !!parsedConfig?.generatedTask,
+      generatedTaskPreview: parsedConfig?.generatedTask ? {
+        title: parsedConfig.generatedTask.title,
+        description: parsedConfig.generatedTask.description?.substring(0, 100) + '...'
+      } : 'none'
+    });
     const trainingData = await this.openaiService.generateTrainingData(session);
     console.log('✅ TRAINING DATA DEBUG: OpenAI training data generation completed:', {
       exampleCount: trainingData.examples?.length || 0,

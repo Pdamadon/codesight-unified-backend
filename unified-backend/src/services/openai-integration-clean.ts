@@ -133,7 +133,27 @@ export class OpenAIIntegrationService {
         interactionCount: sessionInteractions.length 
       });
       
-      const result = await this.trainingTransformer.generateTrainingData(sessionId, sessionInteractions, sessionData);
+      // Parse config if it's a JsonValue from Prisma
+      const parsedConfig = sessionData?.config ? 
+        (typeof sessionData.config === 'object' ? sessionData.config as any : JSON.parse(sessionData.config as string)) : null;
+      
+      console.log('🎯 [OPENAI DEBUG] About to pass sessionData to training transformer:', {
+        sessionId: sessionId,
+        hasSessionData: !!sessionData,
+        sessionDataKeys: sessionData ? Object.keys(sessionData) : 'none',
+        hasConfig: !!sessionData?.config,
+        configKeys: parsedConfig ? Object.keys(parsedConfig) : 'none',
+        hasGeneratedTask: !!parsedConfig?.generatedTask,
+        generatedTaskTitle: parsedConfig?.generatedTask?.title || 'none'
+      });
+      
+      // Fix sessionData config parsing for training transformer
+      const fixedSessionData = sessionData ? {
+        ...sessionData,
+        config: parsedConfig || sessionData.config
+      } : sessionData;
+      
+      const result = await this.trainingTransformer.generateTrainingData(sessionId, sessionInteractions, fixedSessionData);
       console.log(`✅ [OPENAI INTEGRATION] Generated ${result.examples.length} training examples`);
       return result;
     }
