@@ -167,6 +167,9 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     const designSystemContext = this.extractDesignSystemContext(interaction.visual?.designSystem);
     const behaviorPatternsContext = this.extractBehaviorPatternsContext(interaction.business?.user);
     
+    // 🎯 HOVER-SPECIFIC CONTEXT EXTRACTION
+    const hoverContext = this.extractHoverContext(interaction, undefined, undefined);
+    
     // 🛤️ JOURNEY CONTEXT EXTRACTION
     const journeyContext = this.extractJourneyContext(interaction);
     
@@ -201,11 +204,15 @@ SELECTORS (reliability):
 1. ${bestSelector} (${reliability.toFixed(2)})
 ${backupSelectors.slice(0, 2).map((sel: string, i: number) => `${i + 2}. ${sel} (estimated)`).join('\n')}
 
-JOURNEY CONTEXT: ${journeyContext.funnelStage} | ${businessContext.ecommerce} | Step ${journeyContext.currentStep} of ${journeyContext.totalSteps}`,
-        completion: `{
+JOURNEY CONTEXT: ${journeyContext.funnelStage} | ${businessContext.ecommerce} | Step ${journeyContext.currentStep} of ${journeyContext.totalSteps}${hoverContext.wasRevealedByHover ? `
+HOVER CONTEXT: Element revealed by hover on "${hoverContext.dropdownContext}" - requires dropdown navigation` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `// Hover sequence required for dropdown navigation
+hover('${hoverContext.dropdownContext}') // Reveal dropdown content
+wait(200) // Allow dropdown animation
+` : ''}{
   "action": "${actionType}",
   "selector": "${bestSelector}",
-  "reasoning": "${this.getSelectorReasoningText(bestSelector, reliability)} - ${journeyContext.actionReasoning}",
+  "reasoning": "${this.getSelectorReasoningText(bestSelector, reliability)} - ${journeyContext.actionReasoning}${hoverContext.wasRevealedByHover ? ' | Element revealed by hover' : ''}",
   "confidence": ${reliability.toFixed(2)},
   "journey_impact": {
     "current_step": "${journeyContext.currentStepName}",
@@ -256,8 +263,8 @@ JOURNEY CONTEXT: ${journeyContext.funnelStage} | ${businessContext.ecommerce} | 
     // 🎯 EXAMPLE 2: ULTRA-COMPREHENSIVE site-specific pattern with ALL DATA
     if (bestSelector !== 'element') {
       examples.push({
-        prompt: `${hostname.toUpperCase()}: "${elementText}" ${actionType} | ${visualContext.layout} ${designSystemContext.componentLibrary} | ${elementContext.formContext} | ${nearbyElementsContext.spatialSummary} | ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} user | ${pageContext.performance} performance`,
-        completion: `${playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length} | NearbyOptions: ${nearbyElementsContext.allElementSelectors.slice(0, 5).map((el: any) => `${el.text}[${el.selector.slice(0, 15)}]`).join(',')}`,
+        prompt: `${hostname.toUpperCase()}: "${elementText}" ${actionType} | ${visualContext.layout} ${designSystemContext.componentLibrary} | ${elementContext.formContext} | ${nearbyElementsContext.spatialSummary} | ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} user | ${pageContext.performance} performance${hoverContext.isHoverInteraction ? ` | Hover Context: ${hoverContext.hoverSequence}` : ''}${hoverContext.wasRevealedByHover ? ` | Element revealed by hover on "${hoverContext.dropdownContext}"` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `// Element revealed by hover - need complete sequence\nhover('${hoverContext.dropdownContext}') // Reveal dropdown navigation\nwait(200) // Allow dropdown to appear\n${playwrightAction.action} // Click revealed element` : playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length} | NearbyOptions: ${nearbyElementsContext.allElementSelectors.slice(0, 5).map((el: any) => `${el.text}[${el.selector.slice(0, 15)}]`).join(',')}`,
         context: {
           pageType: interaction.context?.pageType,
           userJourney: interaction.context?.userJourney,
@@ -337,8 +344,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     // 🎯 EXAMPLE 4: VISUAL + SPATIAL + ACCESSIBILITY context
     if (visualContext.positioning && elementContext.ariaContext) {
       examples.push({
-        prompt: `VISUAL-A11Y: "${elementText}" ${visualContext.positioning} | ${visualContext.colors} | ARIA: ${elementContext.ariaContext} | ${pageContext.accessibility} on ${hostname}`,
-        completion: `${playwrightAction.action} // Visual: ${visualContext.deviceType} | A11y: WCAG-${pageContext.accessibility} | Colors: ${visualContext.colors}`,
+        prompt: `VISUAL-A11Y: "${elementText}" ${visualContext.positioning} | ${visualContext.colors} | ARIA: ${elementContext.ariaContext} | ${pageContext.accessibility} on ${hostname}${hoverContext.wasRevealedByHover ? ` | Hover revealed` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal dropdown for accessibility
+wait(200)
+` : ''}${playwrightAction.action} // Visual: ${visualContext.deviceType} | A11y: WCAG-${pageContext.accessibility} | Colors: ${visualContext.colors}${hoverContext.wasRevealedByHover ? ' | Dropdown element' : ''}`,
         context: {
           spatialContext: `${visualContext.positioning} with ${elementContext.ariaContext}`,
           visual: visualContext,
@@ -352,8 +361,8 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     // 🎯 EXAMPLE 3: BUSINESS + E-COMMERCE + CONVERSION context  
     if (businessContext.ecommerce && businessContext.conversion) {
       examples.push({
-        prompt: `E-COMMERCE: ${businessContext.ecommerce} | Funnel: ${businessContext.conversion} | User: ${businessContext.user} | "${elementText}" ${actionType}`,
-        completion: `${playwrightAction.action} // Product: ${businessContext.ecommerce} | Stage: ${businessContext.conversion} | Timing: ${technicalContext.timing}`,
+        prompt: `E-COMMERCE: ${businessContext.ecommerce} | Funnel: ${businessContext.conversion} | User: ${businessContext.user} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Revealed by hover on "${hoverContext.dropdownContext}"` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}')\nwait(200)\n${playwrightAction.action} // Click revealed dropdown element` : playwrightAction.action} // Product: ${businessContext.ecommerce} | Stage: ${businessContext.conversion} | Timing: ${technicalContext.timing}`,
         context: {
           businessContext: `${businessContext.ecommerce} at ${businessContext.conversion}`,
           business: businessContext,
@@ -366,8 +375,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     // 🎯 EXAMPLE 4: PERFORMANCE + NETWORK + SEO context
     if (pageContext.performance && technicalContext.network) {
       examples.push({
-        prompt: `PERFORMANCE: ${pageContext.performance} | Network: ${technicalContext.network} | SEO: ${pageContext.seo} | "${elementText}" ${actionType}`,
-        completion: `${playwrightAction.action} // Load: ${pageContext.performance} | Requests: ${technicalContext.network} | ${pageContext.seo}`,
+        prompt: `PERFORMANCE: ${pageContext.performance} | Network: ${technicalContext.network} | SEO: ${pageContext.seo} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Hover dropdown` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal for interaction
+wait(200)
+` : ''}${playwrightAction.action} // Load: ${pageContext.performance} | Requests: ${technicalContext.network} | ${pageContext.seo}${hoverContext.wasRevealedByHover ? ' | Hover-revealed element' : ''}`,
         context: {
           page: pageContext,
           technical: technicalContext
@@ -379,8 +390,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     // 🎯 EXAMPLE 5: STATE + FORM + INTERACTION context
     if (stateContext.before && elementContext.formContext) {
       examples.push({
-        prompt: `FORM-STATE: ${elementContext.formContext} | Before: ${stateContext.before} | Changes: ${stateContext.changes} | "${elementText}" ${actionType}`,
-        completion: `${playwrightAction.action} // Form: ${elementContext.formContext} | State: ${stateContext.before} → ${stateContext.after}`,
+        prompt: `FORM-STATE: ${elementContext.formContext} | Before: ${stateContext.before} | Changes: ${stateContext.changes} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Hover revealed` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal form options
+wait(200)
+` : ''}${playwrightAction.action} // Form: ${elementContext.formContext} | State: ${stateContext.before} → ${stateContext.after}${hoverContext.wasRevealedByHover ? ' | Dropdown option' : ''}`,
         context: {
           element: elementContext,
           state: stateContext
@@ -393,8 +406,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     if (elementContext.domHierarchy && interaction.element?.siblingElements?.length) {
       const siblings = interaction.element.siblingElements.slice(0, 3).map(s => s.text).join(', ');
       examples.push({
-        prompt: `DOM-COMPLETE: ${elementContext.domHierarchy} | Siblings: ${siblings} | Attrs: ${elementContext.attributes} | "${elementText}" ${actionType}`,
-        completion: `${playwrightAction.action} // Path: ${elementContext.domHierarchy} | Near: ${siblings} | Computed: ${elementContext.computedStyles}`,
+        prompt: `DOM-COMPLETE: ${elementContext.domHierarchy} | Siblings: ${siblings} | Attrs: ${elementContext.attributes} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Dropdown element` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal DOM element
+wait(200)
+` : ''}${playwrightAction.action} // Path: ${elementContext.domHierarchy} | Near: ${siblings} | Computed: ${elementContext.computedStyles}${hoverContext.wasRevealedByHover ? ' | Revealed by hover' : ''}`,
         context: {
           element: elementContext,
           spatialContext: `in ${elementContext.domHierarchy} with siblings: ${siblings}`
@@ -406,8 +421,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     // 🎯 EXAMPLE 7: ANALYTICS + TRACKING + USER context
     if (pageContext.analytics && businessContext.user) {
       examples.push({
-        prompt: `ANALYTICS: ${pageContext.analytics} | User: ${businessContext.user} | Session: ${technicalContext.timing} | "${elementText}" ${actionType}`,
-        completion: `${playwrightAction.action} // Track: ${pageContext.analytics} | User: ${businessContext.user} | Time: ${technicalContext.timing}`,
+        prompt: `ANALYTICS: ${pageContext.analytics} | User: ${businessContext.user} | Session: ${technicalContext.timing} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Hover interaction` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Track hover interaction
+wait(200)
+` : ''}${playwrightAction.action} // Track: ${pageContext.analytics} | User: ${businessContext.user} | Time: ${technicalContext.timing}${hoverContext.wasRevealedByHover ? ' | Dropdown analytics' : ''}`,
         context: {
           page: pageContext,
           business: businessContext,
@@ -420,8 +437,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     // 🎯 EXAMPLE 8: NEW ENHANCED DATA - Complete Nearby Elements + Design System + Behavior Patterns
     if (nearbyElementsContext.interactionTargets && designSystemContext.componentLibrary && behaviorPatternsContext.patterns) {
       examples.push({
-        prompt: `ENHANCED-COMPLETE: "${elementText}" ${actionType} | Design: ${designSystemContext.componentLibrary} ${designSystemContext.brandColors} | Nearby: ${nearbyElementsContext.spatialSummary} (${nearbyElementsContext.interactionTargets}) | User: ${behaviorPatternsContext.preferredCategories} ${behaviorPatternsContext.purchasePattern} | on ${hostname}`,
-        completion: `${playwrightAction.action} // UI: ${designSystemContext.componentLibrary} ${designSystemContext.designPatterns} | Spatial: ${nearbyElementsContext.relationships} | PersonalizedFor: ${behaviorPatternsContext.personalization} | PurchaseContext: ${behaviorPatternsContext.purchaseHistory}`,
+        prompt: `ENHANCED-COMPLETE: "${elementText}" ${actionType} | Design: ${designSystemContext.componentLibrary} ${designSystemContext.brandColors} | Nearby: ${nearbyElementsContext.spatialSummary} (${nearbyElementsContext.interactionTargets}) | User: ${behaviorPatternsContext.preferredCategories} ${behaviorPatternsContext.purchasePattern} | on ${hostname}${hoverContext.wasRevealedByHover ? ` | Hover-revealed element` : ''}`,
+        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal enhanced element
+wait(200)
+` : ''}${playwrightAction.action} // UI: ${designSystemContext.componentLibrary} ${designSystemContext.designPatterns} | Spatial: ${nearbyElementsContext.relationships} | PersonalizedFor: ${behaviorPatternsContext.personalization} | PurchaseContext: ${behaviorPatternsContext.purchaseHistory}${hoverContext.wasRevealedByHover ? ' | Dropdown interaction' : ''}`,
         context: {
           visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
           element: { 
@@ -1790,8 +1809,32 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
       // 🆕 NEW ENHANCED DATA QUALITY FACTORS
       hasCompleteNearbyElements: !!(interaction.element?.nearbyElements?.length && interaction.element.nearbyElements.length > 3),
       hasDesignSystemContext: !!interaction.visual?.designSystem,
-      hasBehaviorPatternsContext: !!interaction.business?.user?.behaviorPatterns
+      hasBehaviorPatternsContext: !!interaction.business?.user?.behaviorPatterns,
+      
+      // 🎯 HOVER-SPECIFIC QUALITY FACTORS (Enhanced)
+      hasHoverContext: interaction.interaction?.type === 'HOVER',
+      hasHoverClickSequence: false, // Will be set below
+      hasDropdownRevealContext: false, // Will be set below
+      
+      // 🚀 ENHANCED HOVER QUALITY FACTORS (PHASE 4C)
+      hasCompleteHoverSequence: false,     // Full hover→reveal→click sequence
+      hasMegaMenuContext: false,           // Complex mega-menu interactions
+      hasOptimalHoverTiming: false,        // Good timing between hover and click
+      hasRichDropdownContext: false,       // Rich context captured during hover
+      hasHoverFailurePattern: false,       // Failed or incomplete hover sequences
+      hasMultiLevelDropdown: false,        // Nested dropdown navigation
+      hasHoverAccessibilityContext: false, // ARIA/accessibility info from hover
+      hasDropdownCategorization: false     // Semantic categorization of revealed items
     };
+
+    // Extract hover context for quality assessment
+    const hoverContext = this.extractHoverContext(interaction, undefined, undefined);
+    factors.hasHoverClickSequence = hoverContext.isHoverClickSequence;
+    factors.hasDropdownRevealContext = !!(hoverContext.revealedElements?.length > 0 || hoverContext.wasRevealedByHover);
+    
+    // 🚀 ENHANCED HOVER QUALITY ASSESSMENT (PHASE 4C)
+    const enhancedHoverFactors = this.assessEnhancedHoverQuality(interaction, hoverContext, undefined, undefined);
+    Object.assign(factors, enhancedHoverFactors);
 
     // Calculate weighted score with ALL comprehensive factors
     let score = 0;
@@ -1814,6 +1857,23 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     if (factors.hasCompleteNearbyElements) score += 0.15;  // High value - complete spatial context
     if (factors.hasDesignSystemContext) score += 0.12;     // High value - UI pattern recognition  
     if (factors.hasBehaviorPatternsContext) score += 0.08; // Good value - interaction patterns
+    
+    // 🎯 HOVER-SPECIFIC SCORING (very high value for e-commerce automation!)
+    if (factors.hasHoverContext) score += 0.08;            // Base hover interaction value
+    if (factors.hasHoverClickSequence) score += 0.12;      // Good hover→click sequences
+    if (factors.hasDropdownRevealContext) score += 0.10;   // Dropdown content revelation
+    
+    // 🚀 ENHANCED HOVER SCORING (PHASE 4C) - Premium scoring for sophisticated hover patterns
+    if (factors.hasCompleteHoverSequence) score += 0.18;      // HIGHEST - Complete hover→reveal→click sequences
+    if (factors.hasMegaMenuContext) score += 0.15;            // Very high - Complex mega-menu navigation
+    if (factors.hasOptimalHoverTiming) score += 0.12;         // High - Well-timed hover interactions
+    if (factors.hasRichDropdownContext) score += 0.10;        // Good - Rich context capture
+    if (factors.hasMultiLevelDropdown) score += 0.14;         // Very high - Nested dropdown complexity
+    if (factors.hasHoverAccessibilityContext) score += 0.08;  // Good - Accessibility context
+    if (factors.hasDropdownCategorization) score += 0.06;     // Decent - Semantic categorization
+    
+    // 🚨 HOVER QUALITY PENALTIES
+    if (factors.hasHoverFailurePattern) score -= 0.15;        // Penalty for failed hover sequences
 
     return {
       score,
@@ -2057,6 +2117,299 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     context.patterns = patterns.join(' ') || 'standard-behavior';
 
     return context;
+  }
+
+  /**
+   * 🎯 Extract hover-specific context for dropdown navigation training
+   */
+  private extractHoverContext(interaction: any, allInteractions?: any[], interactionIndex?: number): any {
+    const context: any = {
+      isHoverInteraction: false,
+      hoverSequence: '',
+      dropdownContext: '',
+      revealedElements: [],
+      isHoverClickSequence: false,
+      hoverPurpose: ''
+    };
+
+    // Check if this is a hover interaction
+    const interactionType = interaction.interaction?.type;
+    if (interactionType === 'HOVER') {
+      context.isHoverInteraction = true;
+      
+      // Extract hover-specific data from hoverContext
+      const hoverData = interaction.hoverContext;
+      if (hoverData) {
+        context.dropdownContext = hoverData.dropdownTarget || '';
+        context.revealedElements = hoverData.revealedElements || [];
+        
+        // Check if next interaction is a click (hover→click sequence)
+        if (allInteractions && interactionIndex !== undefined && interactionIndex < allInteractions.length - 1) {
+          const nextInteraction = allInteractions[interactionIndex + 1];
+          if (nextInteraction?.interaction?.type === 'CLICK') {
+            context.isHoverClickSequence = true;
+            context.hoverPurpose = 'Enable subsequent click action';
+            
+            // Build sequence description
+            const nextElementText = nextInteraction.element?.text || '';
+            context.hoverSequence = `Hover over "${context.dropdownContext}" reveals menu, then click "${nextElementText}"`;
+          } else {
+            context.hoverSequence = `Hover over "${context.dropdownContext}" reveals dropdown menu`;
+            context.hoverPurpose = 'Reveal dropdown navigation options';
+          }
+        } else {
+          context.hoverSequence = `Hover over "${context.dropdownContext}" to reveal navigation`;
+          context.hoverPurpose = 'Display hidden navigation elements';
+        }
+        
+        // Add revealed elements to context
+        if (context.revealedElements.length > 0) {
+          const revealedTexts = context.revealedElements.map((el: any) => el.text).slice(0, 3);
+          context.hoverSequence += ` (reveals: ${revealedTexts.join(', ')})`;
+        }
+      }
+    }
+    // Check if this is a click that follows a hover (part of hover→click sequence)
+    else if (interactionType === 'CLICK' && allInteractions && interactionIndex !== undefined && interactionIndex > 0) {
+      const prevInteraction = allInteractions[interactionIndex - 1];
+      const clickedElementText = interaction.element?.text || '';
+      
+      if (prevInteraction?.interaction?.type === 'HOVER') {
+        const hoverData = prevInteraction.hoverContext;
+        const revealedElements = hoverData?.revealedElements || [];
+        
+        // Check if clicked element was revealed by the hover
+        const wasRevealed = revealedElements.some((el: any) => 
+          el.text && clickedElementText && el.text.trim() === clickedElementText.trim()
+        );
+        
+        if (wasRevealed) {
+          context.isHoverClickSequence = true;
+          context.hoverSequence = `Element "${clickedElementText}" revealed by hover on "${hoverData?.dropdownTarget || 'navigation'}", then clicked`;
+          context.hoverPurpose = 'Click on dynamically revealed dropdown element';
+          context.dropdownContext = hoverData?.dropdownTarget || '';
+          context.wasRevealedByHover = true;
+        } else {
+          // Click after hover but not on revealed element
+          context.isHoverClickSequence = true;
+          context.hoverSequence = `Click after hover on "${hoverData?.dropdownTarget || 'navigation'}"`;
+          context.hoverPurpose = 'Complete hover-initiated navigation sequence';
+        }
+      }
+      
+      // Also check interactions within the last 2-3 interactions for hover context
+      // (in case there are other interactions between hover and click)
+      if (!context.isHoverClickSequence && interactionIndex > 1) {
+        for (let i = Math.max(0, interactionIndex - 3); i < interactionIndex; i++) {
+          const checkInteraction = allInteractions[i];
+          if (checkInteraction?.interaction?.type === 'HOVER') {
+            const hoverData = checkInteraction.hoverContext;
+            const revealedElements = hoverData?.revealedElements || [];
+            
+            const wasRevealed = revealedElements.some((el: any) => 
+              el.text && clickedElementText && el.text.trim() === clickedElementText.trim()
+            );
+            
+            if (wasRevealed) {
+              context.isHoverClickSequence = true;
+              context.hoverSequence = `Element "${clickedElementText}" revealed by earlier hover on "${hoverData?.dropdownTarget || 'navigation'}", now clicked`;
+              context.hoverPurpose = 'Click on dynamically revealed dropdown element (delayed)';
+              context.dropdownContext = hoverData?.dropdownTarget || '';
+              context.wasRevealedByHover = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return context;
+  }
+
+  /**
+   * 🚀 ENHANCED HOVER QUALITY ASSESSMENT (PHASE 4C)
+   * Sophisticated analysis of hover interaction patterns for premium training data quality
+   */
+  private assessEnhancedHoverQuality(interaction: any, hoverContext: any, allInteractions?: any[], interactionIndex?: number): any {
+    const factors: any = {
+      hasCompleteHoverSequence: false,
+      hasMegaMenuContext: false,
+      hasOptimalHoverTiming: false,
+      hasRichDropdownContext: false,
+      hasHoverFailurePattern: false,
+      hasMultiLevelDropdown: false,
+      hasHoverAccessibilityContext: false,
+      hasDropdownCategorization: false
+    };
+
+    // 🔍 ANALYSIS 1: Complete Hover Sequence Detection
+    if (hoverContext.isHoverClickSequence && hoverContext.wasRevealedByHover) {
+      // Check for complete sequence: hover → dropdown appears → element clicked
+      const hasRevealedElements = hoverContext.revealedElements?.length > 0;
+      const hasDropdownTarget = !!hoverContext.dropdownContext;
+      const hasClickTarget = !!hoverContext.hoverPurpose;
+      
+      if (hasRevealedElements && hasDropdownTarget && hasClickTarget) {
+        factors.hasCompleteHoverSequence = true;
+      }
+    }
+
+    // 🔍 ANALYSIS 2: Mega-Menu Complexity Detection
+    if (hoverContext.revealedElements?.length > 0) {
+      const numRevealedElements = hoverContext.revealedElements.length;
+      
+      // Mega-menu indicators
+      const hasManyItems = numRevealedElements >= 8;
+      const hasCategories = hoverContext.revealedElements.some((el: any) => 
+        el.role === 'heading' || el.tag === 'h1' || el.tag === 'h2' || el.tag === 'h3'
+      );
+      const hasComplexStructure = hoverContext.revealedElements.some((el: any) => 
+        el.text?.includes('|') || el.classes?.includes('mega') || el.classes?.includes('grid')
+      );
+      
+      if (hasManyItems || hasCategories || hasComplexStructure) {
+        factors.hasMegaMenuContext = true;
+      }
+    }
+
+    // 🔍 ANALYSIS 3: Hover Timing Analysis
+    if (allInteractions && interactionIndex !== undefined && hoverContext.isHoverClickSequence) {
+      // Find the hover and subsequent click
+      let hoverTimestamp = null;
+      let clickTimestamp = null;
+      
+      if (interaction.interaction?.type === 'HOVER') {
+        hoverTimestamp = interaction.interaction?.timestamp;
+        // Look for next click
+        for (let i = interactionIndex + 1; i < Math.min(interactionIndex + 3, allInteractions.length); i++) {
+          if (allInteractions[i]?.interaction?.type === 'CLICK') {
+            clickTimestamp = allInteractions[i].interaction?.timestamp;
+            break;
+          }
+        }
+      } else if (interaction.interaction?.type === 'CLICK') {
+        clickTimestamp = interaction.interaction?.timestamp;
+        // Look for previous hover
+        for (let i = Math.max(0, interactionIndex - 3); i < interactionIndex; i++) {
+          if (allInteractions[i]?.interaction?.type === 'HOVER') {
+            hoverTimestamp = allInteractions[i].interaction?.timestamp;
+          }
+        }
+      }
+      
+      if (hoverTimestamp && clickTimestamp) {
+        const timeDiff = Math.abs(clickTimestamp - hoverTimestamp);
+        // Optimal timing: 200ms - 2000ms (not too fast, not too slow)
+        if (timeDiff >= 200 && timeDiff <= 2000) {
+          factors.hasOptimalHoverTiming = true;
+        }
+        // Failure pattern: too fast (< 100ms) suggests accidental hover
+        if (timeDiff < 100) {
+          factors.hasHoverFailurePattern = true;
+        }
+      }
+    }
+
+    // 🔍 ANALYSIS 4: Rich Dropdown Context Assessment
+    const contextRichness = this.assessHoverContextRichness(hoverContext, interaction);
+    factors.hasRichDropdownContext = contextRichness.isRich;
+    factors.hasMultiLevelDropdown = contextRichness.hasNesting;
+    factors.hasDropdownCategorization = contextRichness.hasCategorization;
+
+    // 🔍 ANALYSIS 5: Accessibility Context Detection
+    const hoverData = interaction.hoverContext;
+    if (hoverData) {
+      const hasAriaLabels = hoverContext.revealedElements?.some((el: any) => 
+        el.ariaLabel || el.ariaDescribedBy || el.role
+      );
+      const hasFocusManagement = hoverData.focusContext || hoverData.keyboardNavigation;
+      const hasAccessibleStructure = hoverContext.revealedElements?.some((el: any) => 
+        el.role === 'menuitem' || el.role === 'button' || el.role === 'link'
+      );
+      
+      if (hasAriaLabels || hasFocusManagement || hasAccessibleStructure) {
+        factors.hasHoverAccessibilityContext = true;
+      }
+    }
+
+    // 🔍 ANALYSIS 6: Failure Pattern Detection
+    if (!factors.hasHoverFailurePattern) {
+      // Check for other failure patterns
+      const isIncompleteSequence = hoverContext.isHoverInteraction && !hoverContext.isHoverClickSequence;
+      const hasNoRevealedElements = hoverContext.isHoverInteraction && (!hoverContext.revealedElements || hoverContext.revealedElements.length === 0);
+      const hasEmptyDropdownContext = hoverContext.isHoverInteraction && !hoverContext.dropdownContext;
+      
+      if (isIncompleteSequence || hasNoRevealedElements || hasEmptyDropdownContext) {
+        factors.hasHoverFailurePattern = true;
+      }
+    }
+
+    return factors;
+  }
+
+  /**
+   * 🎯 Assess richness of hover context for quality scoring
+   */
+  private assessHoverContextRichness(hoverContext: any, interaction: any): any {
+    const assessment = {
+      isRich: false,
+      hasNesting: false,
+      hasCategorization: false,
+      contextScore: 0
+    };
+
+    const revealedElements = hoverContext.revealedElements || [];
+    
+    // Rich context indicators
+    let richnessFactor = 0;
+    
+    // 1. Number of revealed elements
+    if (revealedElements.length >= 5) richnessFactor += 2;
+    else if (revealedElements.length >= 3) richnessFactor += 1;
+    
+    // 2. Element diversity
+    const elementTypes = new Set(revealedElements.map((el: any) => el.tag));
+    if (elementTypes.size >= 3) richnessFactor += 2;
+    
+    // 3. Semantic structure
+    const hasHeaders = revealedElements.some((el: any) => ['h1', 'h2', 'h3', 'h4'].includes(el.tag));
+    const hasLists = revealedElements.some((el: any) => ['ul', 'ol', 'li'].includes(el.tag));
+    const hasNavigation = revealedElements.some((el: any) => el.role === 'navigation' || el.tag === 'nav');
+    
+    if (hasHeaders) richnessFactor += 1;
+    if (hasLists) richnessFactor += 1;
+    if (hasNavigation) richnessFactor += 1;
+    
+    // 4. Multi-level nesting detection
+    const hasNestedStructure = revealedElements.some((el: any) => 
+      el.classes?.includes('sub') || el.classes?.includes('nested') || 
+      el.parentElement?.classes?.includes('dropdown')
+    );
+    if (hasNestedStructure) {
+      assessment.hasNesting = true;
+      richnessFactor += 2;
+    }
+    
+    // 5. Categorization detection
+    const categoryKeywords = ['men', 'women', 'kids', 'sale', 'new', 'category', 'collection'];
+    const hasCategoryStructure = revealedElements.some((el: any) => 
+      categoryKeywords.some(keyword => el.text?.toLowerCase().includes(keyword))
+    );
+    if (hasCategoryStructure) {
+      assessment.hasCategorization = true;
+      richnessFactor += 1;
+    }
+
+    // 6. Business context richness
+    const businessContext = interaction.business;
+    if (businessContext?.ecommerce?.product || businessContext?.ecommerce?.navigation) {
+      richnessFactor += 1;
+    }
+
+    assessment.contextScore = richnessFactor;
+    assessment.isRich = richnessFactor >= 4; // Threshold for "rich" context
+
+    return assessment;
   }
 
   /**

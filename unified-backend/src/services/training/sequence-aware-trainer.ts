@@ -18,13 +18,15 @@ import {
 
 export interface ShoppingSequence {
   interactions: EnhancedInteractionData[];
-  sequenceType: 'browse_to_cart' | 'search_to_cart' | 'navigation_flow' | 'product_configuration';
+  sequenceType: 'browse_to_cart' | 'search_to_cart' | 'navigation_flow' | 'product_configuration' | 'hover_navigation';
   startUrl: string;
   endUrl: string;
   productContext?: ProductConfigurationState;
   completionGoal: string;
   userIntent: string;
   sequenceQuality: number;
+  conversionComplete: boolean;
+  hasHoverSequences?: boolean; // Simple flag indicating hover→click sequences present
 }
 
 export interface SequenceStage {
@@ -80,7 +82,8 @@ export class SequenceAwareTrainer {
   }
 
   /**
-   * Identify complete shopping sequences from interactions
+   * 🚀 ENHANCED SEQUENCE IDENTIFICATION (PHASE 5): Now includes hover→dropdown navigation patterns
+   * Identify complete shopping sequences from interactions including hover-guided navigation
    */
   private identifyShoppingSequences(interactions: EnhancedInteractionData[]): ShoppingSequence[] {
     const sequences: ShoppingSequence[] = [];
@@ -152,8 +155,14 @@ export class SequenceAwareTrainer {
     const userIntent = this.extractUserIntent(interactions);
     const completionGoal = this.extractCompletionGoal(interactions);
     
+    // 🎯 SIMPLIFIED: Check for hover sequences
+    const hasHoverSequences = this.hasSimpleHoverClickSequences(interactions);
+    
     // Calculate sequence quality
-    const sequenceQuality = this.calculateSequenceQuality(interactions, productContext);
+    const sequenceQuality = this.calculateSequenceQuality(interactions, productContext, hasHoverSequences);
+    
+    // Determine if conversion was completed
+    const conversionComplete = interactions.some(i => this.isSequenceEnd(i));
     
     return {
       interactions,
@@ -163,7 +172,9 @@ export class SequenceAwareTrainer {
       productContext,
       completionGoal,
       userIntent,
-      sequenceQuality
+      sequenceQuality,
+      conversionComplete,
+      hasHoverSequences
     };
   }
 
@@ -182,14 +193,27 @@ export class SequenceAwareTrainer {
       return `${stepType} on ${pageType}: "${elementText}"`;
     });
     
-    // Build completion with detailed actions
+    // Build completion with detailed actions (enhanced for hover→click sequences)
     const actions = sequence.interactions.map((interaction, i) => {
       const actionType = interaction.interaction?.type || 'interact';
       const elementText = interaction.element?.text || '';
       const reasoning = this.getActionReasoning(interaction, sequence, i);
       
-      return `Step ${i + 1}: ${actionType} "${elementText}" // ${reasoning}`;
-    });
+      // 🎯 HOVER→CLICK SEQUENCE ENHANCEMENT: Generate proper hover→click completions
+      const hoverContext = this.getHoverClickSequenceContext(interaction, sequence.interactions, i);
+      
+      if (hoverContext.isHoverClickAction && actionType === 'CLICK') {
+        // Generate complete hover→click sequence for clicks on revealed elements
+        return `Step ${i}: hover('${hoverContext.hoverTarget}') // Reveal dropdown\n` +
+               `Step ${i + 1}: wait(200) // Allow dropdown to appear\n` +
+               `Step ${i + 1}: click('${elementText}') // ${reasoning}`;
+      } else if (hoverContext.isHoverClickAction && actionType === 'HOVER') {
+        // For hovers that will reveal content, just note it (the click will handle the full sequence)
+        return `// Hover revealing dropdown for next interaction`;
+      } else {
+        return `Step ${i + 1}: ${actionType.toLowerCase()}('${elementText}') // ${reasoning}`;
+      }
+    }).filter(action => !action.startsWith('//')); // Remove hover-only comments
     
     // Include product configuration if available
     let productConfigContext = '';
@@ -197,9 +221,18 @@ export class SequenceAwareTrainer {
       productConfigContext = `\n\n[PRODUCT CONFIGURATION]\n${this.formatProductState(sequence.productContext)}`;
     }
     
+    // Add semantic journey context
+    const journeyContext = this.buildSemanticJourneyContext(sequence);
+    
+    // 🎯 SIMPLIFIED: Add hover context if present
+    let hoverContext = '';
+    if (sequence.hasHoverSequences) {
+      hoverContext = '\n[HOVER NAVIGATION] Sequence includes hover→click dropdown navigation patterns';
+    }
+    
     return {
-      prompt: `[COMPLETE SHOPPING FLOW]\nUser Intent: ${sequence.userIntent}\nGoal: ${sequence.completionGoal}\nSequence: ${sequenceSteps.join(' → ')}${productConfigContext}`,
-      completion: `// Complete ${sequence.sequenceType} flow\n${actions.join('\n')}`,
+      prompt: `[SEMANTIC JOURNEY] ${journeyContext}\n[SHOPPING FLOW] User Intent: ${sequence.userIntent} | Goal: ${sequence.completionGoal}${hoverContext}\n[SEQUENCE] ${sequenceSteps.join(' → ')}${productConfigContext}`,
+      completion: `// Complete ${sequence.sequenceType} flow${sequence.hasHoverSequences ? ' with hover navigation' : ''}\n${actions.join('\n')}`,
       context: {
         pageType: 'shopping-sequence',
         userJourney: sequence.sequenceType,
@@ -228,9 +261,12 @@ export class SequenceAwareTrainer {
           hasBehaviorPatternsContext: false,
           multiStepJourney: true,
           funnelProgression: true,
-          conversionComplete: sequence.completionGoal.includes('cart'),
+          conversionComplete: sequence.completionGoal.includes('cart') || sequence.completionGoal.includes('Add item'),
           clearUserIntent: true,
-          journeyPrioritized: true
+          journeyPrioritized: true,
+          
+          // Note: Hover-specific quality factors are tracked in sequence metadata
+          // They don't need to be part of the standard quality factors interface
         }
       }
     };
@@ -295,62 +331,127 @@ export class SequenceAwareTrainer {
   }
 
   /**
-   * Helper methods for sequence analysis
+   * Helper methods for sequence analysis - Using semantic DOM analysis
    */
   private isSequenceStart(interaction: EnhancedInteractionData): boolean {
-    const url = interaction.context?.pageUrl || '';
+    const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
     const elementText = interaction.element?.text || '';
+    const domSnapshot = (interaction.context as any)?.pageContext?.domSnapshot;
     
-    return url.includes('/search') || 
-           url.includes('/category') || 
-           url.includes('/browse') ||
-           elementText.toLowerCase().includes('shop') ||
-           elementText.toLowerCase().includes('browse');
+    // Semantic analysis for sequence start detection
+    const pageClassification = this.classifyPageSemantically(interaction);
+    
+    // Sequence starts are typically category/browse pages or homepage navigation
+    if (pageClassification.pageType === 'category' || pageClassification.pageType === 'homepage') {
+      return pageClassification.confidence > 0.6;
+    }
+    
+    // Fallback to element text analysis for navigation elements
+    const navigationTexts = ['shop', 'browse', 'category', 'sale', 'men', 'women', 'all items'];
+    const text = elementText.toLowerCase();
+    const hasNavigationText = navigationTexts.some(navText => text.includes(navText));
+    
+    // Light URL pattern hints (non-site-specific)
+    const hasGenericBrowseUrl = url.includes('/search') || url.includes('/category') || 
+                               url.includes('/browse') || url.includes('/sale');
+    
+    return hasNavigationText || hasGenericBrowseUrl;
   }
 
   private isSequenceContinuation(interaction: EnhancedInteractionData, currentSequence: EnhancedInteractionData[]): boolean {
     if (currentSequence.length === 0) return false;
     
-    // Handle both pageUrl and url field formats
     const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
     const lastUrl = currentSequence[currentSequence.length - 1].context?.pageUrl || 
                     (currentSequence[currentSequence.length - 1].context as any)?.url || '';
     
-    // Skip if either URL is empty or invalid
-    if (!url || !lastUrl) return false;
+    // Semantic analysis for sequence continuation
+    const pageClassification = this.classifyPageSemantically(interaction);
+    const lastPageClassification = this.classifyPageSemantically(currentSequence[currentSequence.length - 1]);
     
-    try {
-      // Same domain and related pages
-      const currentHostname = new URL(url).hostname;
-      const lastHostname = new URL(lastUrl).hostname;
-      
-      return currentHostname === lastHostname &&
-             (url.includes('/product') || url.includes('/category') || url.includes('/search'));
-    } catch (error) {
-      // Invalid URLs - skip this comparison
-      return false;
+    // Check if we're progressing through a logical shopping flow
+    const isLogicalProgression = this.isLogicalShoppingProgression(lastPageClassification, pageClassification);
+    if (isLogicalProgression) return true;
+    
+    // Same domain check with better error handling
+    if (url && lastUrl) {
+      try {
+        const currentHostname = new URL(url).hostname;
+        const lastHostname = new URL(lastUrl).hostname;
+        
+        // Same domain + shopping-related page types
+        const isShoppingRelated = pageClassification.pageType === 'product' || 
+                                 pageClassification.pageType === 'category' ||
+                                 pageClassification.pageType === 'search';
+        
+        return currentHostname === lastHostname && isShoppingRelated;
+      } catch (error) {
+        // Invalid URLs - fall back to semantic analysis only
+        return isLogicalProgression;
+      }
     }
+    
+    return isLogicalProgression;
   }
 
   private isSequenceEnd(interaction: EnhancedInteractionData): boolean {
     const elementText = interaction.element?.text || '';
-    const url = interaction.context?.pageUrl || '';
+    const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
+    const attributes = interaction.element?.attributes || {};
     
-    return elementText.toLowerCase().includes('add to cart') ||
-           elementText.toLowerCase().includes('add to bag') ||
-           url.includes('/cart') ||
-           url.includes('/checkout');
+    // Semantic analysis for conversion actions
+    const pageClassification = this.classifyPageSemantically(interaction);
+    
+    // Cart page detection
+    if (pageClassification.pageType === 'cart' && pageClassification.confidence > 0.7) {
+      return true;
+    }
+    
+    // Conversion action detection (more comprehensive than hardcoded text)
+    const conversionTexts = [
+      'add to cart', 'add to bag', 'add to basket', 'buy now', 'purchase now',
+      'checkout', 'place order', 'complete purchase', 'proceed to checkout'
+    ];
+    
+    const text = elementText.toLowerCase();
+    const hasConversionText = conversionTexts.some(convText => text.includes(convText));
+    
+    // Check attributes for cart-related actions
+    const hasConversionAttributes = attributes.class?.includes('add-to-cart') ||
+                                   attributes.class?.includes('buy-now') ||
+                                   attributes.id?.includes('add-cart') ||
+                                   attributes['data-action']?.includes('cart');
+    
+    // URL-based detection (generic patterns)
+    const hasCartUrl = url.includes('/cart') || url.includes('/checkout') || url.includes('/bag');
+    
+    return hasConversionText || hasConversionAttributes || hasCartUrl;
   }
 
   private determineSequenceType(interactions: EnhancedInteractionData[]): ShoppingSequence['sequenceType'] {
-    const urls = interactions.map(i => i.context?.pageUrl || '');
-    const hasSearch = urls.some(url => url.includes('/search'));
-    const hasBrowse = urls.some(url => url.includes('/browse') || url.includes('/category'));
-    const hasProduct = urls.some(url => url.includes('/product'));
+    // Use semantic analysis for sequence type detection
+    const pageClassifications = interactions.map(i => this.classifyPageSemantically(i));
     
-    if (hasSearch && hasProduct) return 'search_to_cart';
-    if (hasBrowse && hasProduct) return 'browse_to_cart';
-    if (hasProduct) return 'product_configuration';
+    const hasSearch = pageClassifications.some(c => c.pageType === 'search');
+    const hasBrowse = pageClassifications.some(c => c.pageType === 'category' || c.pageType === 'homepage');
+    const hasProduct = pageClassifications.some(c => c.pageType === 'product');
+    const hasCart = pageClassifications.some(c => c.pageType === 'cart');
+    
+    // Check for conversion actions semantically
+    const hasAddToCart = interactions.some(i => this.isSequenceEnd(i));
+    
+    // 🎯 SIMPLIFIED: Check for hover→click patterns
+    const hasHoverClickSequences = this.hasSimpleHoverClickSequences(interactions);
+    
+    // If sequence contains significant hover navigation, classify accordingly
+    if (hasHoverClickSequences && (hasAddToCart || hasCart || hasProduct)) {
+      return 'hover_navigation';
+    }
+    
+    // Traditional sequence types
+    if (hasSearch && hasProduct && (hasAddToCart || hasCart)) return 'search_to_cart';
+    if (hasBrowse && hasProduct && (hasAddToCart || hasCart)) return 'browse_to_cart';
+    if (hasProduct && (hasAddToCart || hasCart)) return 'product_configuration';
     return 'navigation_flow';
   }
 
@@ -370,13 +471,13 @@ export class SequenceAwareTrainer {
     const lastInteraction = interactions[interactions.length - 1];
     const elementText = lastInteraction.element?.text || '';
     
-    if (elementText.toLowerCase().includes('add to cart')) return 'Add item to cart';
+    if (elementText.toLowerCase().includes('add to cart') || elementText.toLowerCase().includes('add to bag')) return 'Add item to cart';
     if (elementText.toLowerCase().includes('buy now')) return 'Purchase item immediately';
     
     return 'Complete product selection';
   }
 
-  private calculateSequenceQuality(interactions: EnhancedInteractionData[], productContext?: ProductConfigurationState): number {
+  private calculateSequenceQuality(interactions: EnhancedInteractionData[], productContext?: ProductConfigurationState, hasHoverSequences?: boolean): number {
     let quality = 0.5; // Base quality
     
     // Length bonus (but diminishing returns)
@@ -394,6 +495,11 @@ export class SequenceAwareTrainer {
       (i.element?.text || '').toLowerCase().includes('add to cart')
     );
     if (hasCompletion) quality += 0.2;
+    
+    // 🎯 SIMPLIFIED: Hover sequence bonus
+    if (hasHoverSequences) {
+      quality += 0.15;  // Bonus for hover→click navigation patterns
+    }
     
     return Math.min(1.0, quality);
   }
@@ -498,23 +604,6 @@ export class SequenceAwareTrainer {
     return 'page';
   }
 
-  private getActionReasoning(interaction: EnhancedInteractionData, sequence: ShoppingSequence, index: number): string {
-    const elementText = interaction.element?.text || '';
-    
-    if (elementText.toLowerCase().includes('add to cart')) {
-      return `Complete purchase decision for ${sequence.productContext?.productName || 'selected item'}`;
-    }
-    
-    if (this.patternMatcher.detectSize(elementText)) {
-      return `Select size for product configuration`;
-    }
-    
-    if (this.patternMatcher.detectColor(elementText)) {
-      return `Choose color preference`;
-    }
-    
-    return `Progress toward ${sequence.completionGoal}`;
-  }
 
   private formatProductState(productContext: ProductConfigurationState): string {
     const lines = [`Product: ${productContext.productName} (ID: ${productContext.productId})`];
@@ -541,5 +630,334 @@ export class SequenceAwareTrainer {
   private createConfigurationExample(interaction: EnhancedInteractionData, sequence: ShoppingSequence): TrainingExample | null {
     // Implementation for product configuration examples
     return null; // Placeholder
+  }
+
+  /**
+   * Semantic page classification methods
+   */
+  private classifyPageSemantically(interaction: EnhancedInteractionData): { pageType: string; confidence: number; indicators: string[] } {
+    const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
+    const pageTitle = interaction.context?.pageTitle || '';
+    const elementText = interaction.element?.text || '';
+    const elementAttributes = interaction.element?.attributes || {};
+    const domSnapshot = (interaction.context as any)?.pageContext?.domSnapshot;
+
+    let pageType = 'unknown';
+    let confidence = 0.5;
+    const indicators: string[] = [];
+
+    // Product page detection
+    if (this.detectProductPage(url, pageTitle, elementText, elementAttributes, domSnapshot)) {
+      pageType = 'product';
+      confidence = 0.85;
+      indicators.push('product details detected');
+    }
+    // Category page detection
+    else if (this.detectCategoryPage(url, pageTitle, elementText, domSnapshot)) {
+      pageType = 'category';
+      confidence = 0.8;
+      indicators.push('category structure detected');
+    }
+    // Cart page detection
+    else if (this.detectCartPage(url, pageTitle, elementText, elementAttributes)) {
+      pageType = 'cart';
+      confidence = 0.9;
+      indicators.push('cart functionality detected');
+    }
+    // Search page detection
+    else if (this.detectSearchPage(url, pageTitle, elementText)) {
+      pageType = 'search';
+      confidence = 0.8;
+      indicators.push('search results detected');
+    }
+    // Homepage detection
+    else if (this.detectHomepage(url, pageTitle, elementText, domSnapshot)) {
+      pageType = 'homepage';
+      confidence = 0.7;
+      indicators.push('homepage navigation detected');
+    }
+
+    return { pageType, confidence, indicators };
+  }
+
+  private detectProductPage(url: string, pageTitle: string, elementText: string, attributes: any, domSnapshot: any): boolean {
+    // URL patterns (generic)
+    const hasProductUrl = url.includes('/product') || url.includes('/p/') || url.includes('/item/') || 
+                         url.includes('/productpage') || !!url.match(/\/[\w-]+\.\d+\.html$/);
+    
+    // Element-based detection
+    const hasVariantSelectors = !!this.patternMatcher.detectSize(elementText, { attributes }) ||
+                               !!this.patternMatcher.detectColor(elementText, { attributes });
+    
+    const hasProductTitle = elementText.length > 20 && elementText.includes('-') && 
+                           (elementText.includes('$') || elementText.includes('Size') || elementText.includes('Color'));
+    
+    const hasAddToCart = elementText.toLowerCase().includes('add to cart') || 
+                        elementText.toLowerCase().includes('add to bag');
+
+    return hasProductUrl || hasVariantSelectors || hasProductTitle || hasAddToCart;
+  }
+
+  private detectCategoryPage(url: string, pageTitle: string, elementText: string, domSnapshot: any): boolean {
+    // Category indicators
+    const hasCategoryUrl = url.includes('/category') || url.includes('/c/') || url.includes('/browse') ||
+                          url.includes('/sale') || url.includes('/men') || url.includes('/women');
+    
+    const hasCategoryTitle = pageTitle.toLowerCase().includes('category') || 
+                            pageTitle.toLowerCase().includes('browse') ||
+                            pageTitle.toLowerCase().includes('shop');
+    
+    // Multiple product elements suggest category page
+    const hasMultipleProducts = elementText.includes('-') && elementText.length > 100;
+    
+    return hasCategoryUrl || hasCategoryTitle || hasMultipleProducts;
+  }
+
+  private detectCartPage(url: string, pageTitle: string, elementText: string, attributes: any): boolean {
+    const hasCartUrl = url.includes('/cart') || url.includes('/bag') || url.includes('/checkout');
+    const hasCartTitle = pageTitle.toLowerCase().includes('cart') || pageTitle.toLowerCase().includes('bag');
+    const hasCartText = elementText.toLowerCase().includes('cart') || elementText.toLowerCase().includes('checkout');
+    
+    return hasCartUrl || hasCartTitle || hasCartText;
+  }
+
+  private detectSearchPage(url: string, pageTitle: string, elementText: string): boolean {
+    const hasSearchUrl = url.includes('/search') || url.includes('?q=') || url.includes('query=');
+    const hasSearchTitle = pageTitle.toLowerCase().includes('search') || pageTitle.toLowerCase().includes('results');
+    const hasSearchText = elementText.toLowerCase().includes('search results') || 
+                         elementText.toLowerCase().includes('showing results');
+    
+    return hasSearchUrl || hasSearchTitle || hasSearchText;
+  }
+
+  private detectHomepage(url: string, pageTitle: string, elementText: string, domSnapshot: any): boolean {
+    const isRootUrl = url === '/' || url.includes('/index') || !!url.match(/^https?:\/\/[^\/]+\/?$/);
+    const hasHomeTitle = pageTitle.toLowerCase().includes('home') || pageTitle.toLowerCase().includes('welcome');
+    
+    // Navigation-heavy content suggests homepage
+    const hasNavigation = elementText.toLowerCase().includes('shop') || 
+                         elementText.toLowerCase().includes('browse') ||
+                         elementText.toLowerCase().includes('category');
+    
+    return isRootUrl || hasHomeTitle || (hasNavigation && !this.detectProductPage(url, pageTitle, elementText, {}, domSnapshot));
+  }
+
+  private isLogicalShoppingProgression(lastPageType: { pageType: string }, currentPageType: { pageType: string }): boolean {
+    // Define logical shopping progressions
+    const progressions = [
+      ['homepage', 'category'],
+      ['homepage', 'search'],
+      ['category', 'product'],
+      ['search', 'product'],
+      ['product', 'product'], // same product, different variants
+      ['product', 'cart']
+    ];
+
+    return progressions.some(([from, to]) => 
+      lastPageType.pageType === from && currentPageType.pageType === to
+    );
+  }
+
+  /**
+   * Build semantic journey context for training prompts
+   */
+  private buildSemanticJourneyContext(sequence: ShoppingSequence): string {
+    const pageClassifications = sequence.interactions.map(i => this.classifyPageSemantically(i));
+    
+    // Build journey narrative
+    const journeySteps: string[] = [];
+    let currentPageType = '';
+    
+    pageClassifications.forEach((classification, i) => {
+      if (classification.pageType !== currentPageType) {
+        currentPageType = classification.pageType;
+        
+        const behaviorDescription = this.getSemanticBehaviorDescription(classification.pageType, sequence.interactions[i]);
+        journeySteps.push(`${classification.pageType}: ${behaviorDescription}`);
+      }
+    });
+    
+    // Add completion insight
+    const completionInsight = sequence.conversionComplete ? 
+      'Successfully completed purchase intent' : 
+      'Explored product options without completion';
+    
+    return `${journeySteps.join(' → ')} | ${completionInsight}`;
+  }
+
+  /**
+   * Get semantic behavior description for page types
+   */
+  private getSemanticBehaviorDescription(pageType: string, interaction: EnhancedInteractionData): string {
+    const elementText = interaction.element?.text || '';
+    
+    switch (pageType) {
+      case 'homepage':
+        return 'User starting shopping journey, exploring main navigation';
+      case 'category':
+        return `User browsing product category (${elementText.length > 20 ? elementText.substring(0, 20) + '...' : elementText})`;
+      case 'product':
+        return this.patternMatcher.detectSize(elementText) || this.patternMatcher.detectColor(elementText) ?
+          'User configuring product variants (size/color selection)' :
+          'User examining product details and options';
+      case 'cart':
+        return 'User in cart/checkout flow, finalizing purchase';
+      case 'search':
+        return 'User searching for specific products';
+      default:
+        return 'User navigating through shopping interface';
+    }
+  }
+
+  /**
+   * Enhanced action reasoning with semantic + technical context + hover sequences
+   */
+  private getActionReasoning(interaction: EnhancedInteractionData, sequence: ShoppingSequence, index: number): string {
+    const elementText = interaction.element?.text || '';
+    const pageClassification = this.classifyPageSemantically(interaction);
+    const attributes = interaction.element?.attributes || {};
+    
+    // 🎯 HOVER SEQUENCE DETECTION: Check if this action was part of hover→click sequence
+    const hoverClickSequence = this.getHoverClickSequenceContext(interaction, sequence.interactions, index);
+    
+    // Semantic reasoning (enhanced with hover context)
+    let semanticReason = '';
+    if (hoverClickSequence.isHoverClickAction) {
+      semanticReason = `${hoverClickSequence.sequenceDescription}`;
+    } else if (elementText.toLowerCase().includes('add to cart') || elementText.toLowerCase().includes('add to bag')) {
+      semanticReason = `Complete purchase decision for ${sequence.productContext?.productName || 'selected item'}`;
+    } else if (this.patternMatcher.detectSize(elementText)) {
+      semanticReason = `Configure product size (${elementText}) for purchase readiness`;
+    } else if (this.patternMatcher.detectColor(elementText)) {
+      semanticReason = `Select color preference (${elementText}) for product customization`;
+    } else if (pageClassification.pageType === 'category') {
+      semanticReason = `Navigate to product details from category browsing`;
+    } else {
+      semanticReason = `Progress toward ${sequence.completionGoal}`;
+    }
+    
+    // Technical context
+    const technicalContext = this.buildTechnicalActionContext(interaction);
+    
+    return `${semanticReason} | ${technicalContext}`;
+  }
+
+  /**
+   * 🎯 Get hover→click sequence context for enhanced completions
+   */
+  private getHoverClickSequenceContext(interaction: EnhancedInteractionData, allInteractions: EnhancedInteractionData[], index: number): {
+    isHoverClickAction: boolean;
+    sequenceDescription: string;
+    hoverTarget?: string;
+    clickTarget?: string;
+  } {
+    const interactionType = interaction.interaction?.type;
+    const elementText = interaction.element?.text || '';
+    
+    // Check if this is a click that follows a hover
+    if (interactionType === 'CLICK' && index > 0) {
+      const prevInteraction = allInteractions[index - 1];
+      
+      if (prevInteraction?.interaction?.type === 'HOVER') {
+        const hoverData = (prevInteraction as any).hoverContext;
+        const hoverTarget = hoverData?.dropdownTarget || prevInteraction.element?.text || 'navigation';
+        
+        // Check if clicked element was revealed by the hover
+        if (hoverData?.revealedElements?.some((revealed: any) => 
+            revealed.text && elementText && revealed.text.trim() === elementText.trim()
+        )) {
+          return {
+            isHoverClickAction: true,
+            sequenceDescription: `Hover over "${hoverTarget}" to reveal dropdown, then click "${elementText}"`,
+            hoverTarget,
+            clickTarget: elementText
+          };
+        }
+      }
+    }
+    
+    // Check if this is a hover that will reveal content for next click
+    if (interactionType === 'HOVER' && index < allInteractions.length - 1) {
+      const nextInteraction = allInteractions[index + 1];
+      
+      if (nextInteraction?.interaction?.type === 'CLICK') {
+        const hoverData = (interaction as any).hoverContext;
+        const hoverTarget = hoverData?.dropdownTarget || elementText || 'navigation';
+        const nextElementText = nextInteraction.element?.text || '';
+        
+        // Check if next click will be on element revealed by this hover
+        if (hoverData?.revealedElements?.some((revealed: any) => 
+            revealed.text && nextElementText && revealed.text.trim() === nextElementText.trim()
+        )) {
+          return {
+            isHoverClickAction: true,
+            sequenceDescription: `Hover over "${hoverTarget}" to reveal dropdown for next click`,
+            hoverTarget,
+            clickTarget: nextElementText
+          };
+        }
+      }
+    }
+    
+    return {
+      isHoverClickAction: false,
+      sequenceDescription: ''
+    };
+  }
+
+  /**
+   * Build technical context for actions (selector, position, attributes)
+   */
+  private buildTechnicalActionContext(interaction: EnhancedInteractionData): string {
+    const contextParts: string[] = [];
+    
+    // Selector information
+    if (interaction.selectors?.primary) {
+      contextParts.push(`Selector: ${interaction.selectors.primary}`);
+    }
+    
+    // Visual position
+    if (interaction.visual?.boundingBox) {
+      const box = interaction.visual.boundingBox;
+      contextParts.push(`Position: (${box.x},${box.y})`);
+    }
+    
+    // Element attributes
+    const attributes = interaction.element?.attributes || {};
+    const keyAttributes = Object.entries(attributes)
+      .filter(([key, value]) => key !== 'style' && value && value.length < 50)
+      .slice(0, 2)
+      .map(([key, value]) => `${key}="${value}"`)
+      .join(' ');
+    if (keyAttributes) {
+      contextParts.push(`Attrs: ${keyAttributes}`);
+    }
+    
+    return contextParts.length > 0 ? contextParts.join(' | ') : 'Standard interaction';
+  }
+
+  /**
+   * 🎯 SIMPLIFIED HOVER DETECTION (PHASE 5)
+   * Simple method to check if sequence contains hover→click patterns
+   */
+  private hasSimpleHoverClickSequences(interactions: EnhancedInteractionData[]): boolean {
+    for (let i = 0; i < interactions.length - 1; i++) {
+      const current = interactions[i];
+      const next = interactions[i + 1];
+      
+      // Look for hover→click pairs where click was on revealed element
+      if (current.interaction?.type === 'HOVER' && next.interaction?.type === 'CLICK') {
+        const hoverData = (current as any).hoverContext;
+        const clickedText = next.element?.text || '';
+        
+        // Check if click was on element revealed by hover
+        if (hoverData?.revealedElements?.some((revealed: any) => 
+            revealed.text && clickedText && revealed.text.trim() === clickedText.trim()
+        )) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
