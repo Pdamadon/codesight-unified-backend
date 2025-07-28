@@ -46,13 +46,13 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     let selectorEnhancements = 0;
     let contextEnhancements = 0;
 
-    // Process each interaction with enhanced context extraction
-    console.log(`\n🔄 [INDIVIDUAL EXAMPLES] Processing ${enhancedInteractions.length} individual interactions...`);
+    // 🎯 OPENAI RECOMMENDED: Generate structured examples using new format
+    console.log(`\n🧠 [OPENAI FORMAT] Processing ${enhancedInteractions.length} interactions with OpenAI-recommended structure...`);
     for (const interaction of enhancedInteractions) {
       try {
-        // 🎯 CRITICAL FIX: Use SelectorStrategyService for reliable selectors
-        const fineTuningExamples = this.createFineTuningExamples(interaction);
-        allExamples.push(...fineTuningExamples);
+        // Generate examples using the new OpenAI-recommended structure
+        const structuredExamples = this.createOpenAIStructuredExamples(interaction);
+        allExamples.push(...structuredExamples);
         
         if (interaction.selectors?.reliability) {
           selectorEnhancements++;
@@ -61,10 +61,10 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
           contextEnhancements++;
         }
       } catch (error) {
-        console.warn(`❌ [INDIVIDUAL EXAMPLES] Failed to process interaction:`, error);
+        console.warn(`❌ [OPENAI FORMAT] Failed to process interaction:`, error);
       }
     }
-    console.log(`✅ [INDIVIDUAL EXAMPLES] Generated ${allExamples.length} individual training examples`);
+    console.log(`✅ [OPENAI FORMAT] Generated ${allExamples.length} structured training examples`);
 
     // 🎯 ENHANCED TRAINING: Using only DOM-grounded individual examples with journey context
     // Legacy sequence examples disabled - our enhanced individual examples already include journey progression
@@ -412,6 +412,173 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     }
 
     return examples;
+  }
+
+  /**
+   * 🧠 OPENAI RECOMMENDED: Create structured training examples using OpenAI's recommended format
+   * This format uses clear section labels for better AI comprehension and learning efficiency
+   */
+  createOpenAIStructuredExamples(interaction: EnhancedInteractionData): TrainingExample[] {
+    const examples: TrainingExample[] = [];
+    const startTime = Date.now();
+
+    // Extract reliable selectors using SelectorStrategyService
+    const selectorResult = this.selectorStrategy.getBestSelectorWithScore(interaction.selectors || {});
+    const bestSelector = selectorResult.bestSelector;
+    const backupSelectors = selectorResult.backupSelectors;
+    const reliability = selectorResult.reliability;
+
+    // Only generate examples for reliable interactions
+    if (reliability < 0.3 || bestSelector === 'element') {
+      return examples;
+    }
+
+    // Extract all context data
+    const url = interaction.context?.pageUrl || '';
+    const hostname = url ? new URL(url).hostname : 'unknown-site';
+    const elementText = interaction.element?.text || '';
+    const actionType = interaction.interaction?.type?.toLowerCase() || 'interact';
+    
+    // Extract comprehensive context
+    const visualContext = this.extractVisualContext(interaction.visual);
+    const elementContext = this.extractElementContext(interaction.element);
+    const pageContext = this.extractPageContext(interaction.context);
+    const stateContext = this.extractStateContext(interaction.state);
+    const businessContext = this.extractBusinessContext(interaction.business, hostname);
+    const technicalContext = this.extractTechnicalContext(interaction);
+    const nearbyElementsContext = this.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
+    const journeyContext = this.extractJourneyContext(interaction);
+
+    // Get user goal from session data if available
+    const userGoal = this.sessionData?.config?.generatedTask?.title || 
+                    this.sessionData?.config?.userGoal || 
+                    journeyContext.overallGoal || 
+                    'Navigate and complete user goal';
+
+    // 🎯 OPENAI STRUCTURED EXAMPLE: Clear section-based format
+    const boundingBox = interaction.visual?.boundingBox;
+    const element = interaction.element;
+    const attributes = element?.attributes || {};
+    
+    examples.push({
+      prompt: `[USER GOAL]
+${userGoal}
+
+[JOURNEY]
+Step: ${journeyContext.currentStep}/${journeyContext.totalSteps}
+Progress: ${journeyContext.previousSteps.join(' → ')} → [${journeyContext.currentStepName}] → ${journeyContext.nextSteps.join(' → ')}
+Task: ${journeyContext.actionDescription}
+
+[PAGE CONTEXT]
+Site: ${hostname}
+URL: ${url}
+Page Type: ${pageContext.pageType || 'unknown'}
+Loading State: ${stateContext.loadingComplete ? 'Complete' : 'Loading'}
+
+[DOM CONTEXT]
+Element: <${element?.tag || 'button'} ${Object.entries(attributes).map(([k, v]) => `${k}="${v}"`).join(' ')}>${elementText}</${element?.tag || 'button'}>
+Text Content: "${elementText}"
+Element Type: ${elementContext.elementType || 'Interactive Element'}
+Bounding Box: {x: ${boundingBox?.x || 0}, y: ${boundingBox?.y || 0}, width: ${boundingBox?.width || 0}, height: ${boundingBox?.height || 0}}
+Visibility: ${visualContext.visibility || 'Visible'}, ${elementContext.clickable ? 'Clickable' : 'Not Clickable'}
+
+[SPATIAL CONTEXT]
+${nearbyElementsContext.spatialSummary || 'No nearby elements detected'}
+Parent Container: ${elementContext.parentContainer || 'Unknown container'}
+
+[SELECTORS]
+${[bestSelector, ...backupSelectors.slice(0, 2)].map((sel, i) => `${i + 1}. ${sel} ${i === 0 ? `(${reliability.toFixed(2)})` : ''}`).join('\n')}`,
+
+      completion: `[ACTION]
+${this.mapActionType(actionType)}
+
+[SELECTOR]
+${bestSelector}
+
+[REASONING]
+${this.getSelectorReasoningText(bestSelector, reliability)} - This action progresses the user journey toward: ${userGoal}
+
+[CONFIDENCE]
+${reliability.toFixed(2)}
+
+[JOURNEY IMPACT]
+Current Step: ${journeyContext.currentStepName}
+Next Step: ${journeyContext.nextSteps[0] || 'Completion'}
+Goal Progress: ${journeyContext.progressPercent}%
+Expected Outcome: ${journeyContext.expectedOutcome || 'Advance to next step'}
+
+[FALLBACKS]
+${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
+
+[COORDINATES]
+{x: ${boundingBox?.x || 0}, y: ${boundingBox?.y || 0}}`,
+
+      context: {
+        pageType: pageContext.pageType,
+        userJourney: journeyContext.journeyType,
+        reliability,
+        spatialContext: nearbyElementsContext.spatialSummary,
+        businessContext: businessContext.conversion,
+        journeyContext: journeyContext
+      },
+      quality: this.calculateComprehensiveQuality(interaction),
+      rawData: {
+        originalInteraction: interaction,
+        processingTime: Date.now() - startTime,
+        dataCompletion: this.calculateDataCompletion(interaction),
+        enhancementFlags: ['openai-structured', 'section-based', 'enhanced-context']
+      },
+      journeyMetadata: {
+        journeyType: journeyContext.journeyType,
+        journeyGoal: journeyContext.overallGoal,
+        userIntent: journeyContext.userIntent,
+        stepNumber: journeyContext.currentStep,
+        totalSteps: journeyContext.totalSteps,
+        isJourneyStart: journeyContext.currentStep === 1,
+        isJourneyEnd: journeyContext.currentStep === journeyContext.totalSteps,
+        journeyProgress: journeyContext.progressPercent + '%'
+      }
+    });
+
+    return examples;
+  }
+
+  /**
+   * Helper method to map action types to clear action names
+   */
+  private mapActionType(actionType: string): string {
+    const actionMap: { [key: string]: string } = {
+      'click': 'Click',
+      'input': 'Fill',
+      'type': 'Fill', 
+      'select': 'Select',
+      'hover': 'Hover',
+      'scroll': 'Scroll',
+      'navigate': 'Navigate',
+      'interact': 'Interact'
+    };
+    return actionMap[actionType] || 'Interact';
+  }
+
+  /**
+   * Calculate quality score for OpenAI structured examples
+   */
+  private calculateOpenAIStructuredQuality(interaction: EnhancedInteractionData, reliability: number): number {
+    let score = 0.6; // Base score for structured format
+    
+    // Reliability bonus
+    score += reliability * 0.3;
+    
+    // Data completeness bonus
+    if (interaction.element?.text) score += 0.05;
+    if (interaction.visual?.boundingBox) score += 0.05;
+    if (interaction.element?.nearbyElements?.length) score += 0.05;
+    if (interaction.context?.pageUrl) score += 0.05;
+    
+    // User goal alignment bonus
+    if (this.sessionData?.config?.generatedTask) score += 0.1;
+    
+    return Math.min(1.0, score);
   }
 
   /**
