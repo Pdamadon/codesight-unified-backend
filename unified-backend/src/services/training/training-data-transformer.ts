@@ -453,7 +453,13 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     const elementContext = this.extractElementContext(interaction.element);
     const pageContext = this.extractPageContext(interaction.context);
     const stateContext = this.extractStateContext(interaction.state);
-    const businessContext = this.extractBusinessContext(interaction.business, hostname);
+    
+    // 🔧 FIX: Use real URL and hostname from pageContext
+    const realUrl = pageContext.url || url;
+    const realHostname = realUrl ? (realUrl.includes('://') ? new URL(realUrl).hostname : realUrl) : hostname;
+    const realPageTitle = pageContext.pageTitle || 'Unknown Page';
+    
+    const businessContext = this.extractBusinessContext(interaction.business, realHostname);
     const technicalContext = this.extractTechnicalContext(interaction);
     const nearbyElementsContext = this.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
     
@@ -469,6 +475,15 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     const element = interaction.element;
     const attributes = element?.attributes || {};
     
+    // 🔧 DEBUG: Log element data to understand structure
+    if (interactionIndex < 3) {
+      console.log(`🔍 [DEBUG] Element data for interaction ${interactionIndex}:`, {
+        tag: element?.tag,
+        attributes: attributes,
+        hasAttributes: Object.keys(attributes).length > 0
+      });
+    }
+    
     examples.push({
       prompt: `[USER GOAL]
 ${userGoal}
@@ -480,8 +495,9 @@ Current Focus: ${realJourneyContext.behavioralContext.userFocus}
 Navigation: ${realJourneyContext.navigationFlow.previousPages.join(' → ')} → [${realJourneyContext.navigationFlow.currentPage}]
 
 [PAGE CONTEXT]
-Site: ${hostname}
-URL: ${url}
+Site: ${realHostname}
+URL: ${realUrl}
+Page Title: ${realPageTitle}
 Page Type: ${pageContext.pageType || 'unknown'}
 Loading State: ${stateContext.loadingComplete ? 'Complete' : 'Loading'}
 
@@ -1078,18 +1094,91 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
       context.formContext = `${element.formContext.formName || 'form'}.${element.formContext.fieldName || 'field'} (${element.formContext.fieldType || 'text'})${element.formContext.required ? ' *required' : ''}`;
     }
     
-    // Build DOM hierarchy from ancestors
+    // Build DOM hierarchy from ancestors (legacy)
     if (element?.ancestors) {
       context.domHierarchy = element.ancestors.slice(-3).map((a: any) => 
         `${a.tag}${a.classes?.length ? `.${a.classes[0]}` : ''}`
       ).join(' > ');
     }
     
+    // 🔧 FIX: Extract parent container from parentElements (rich interaction data)
+    if (element?.parentElements && element.parentElements.length > 0) {
+      const immediateParent = element.parentElements[0];
+      context.parentContainer = immediateParent.id ? 
+        `#${immediateParent.id}` : 
+        `.${immediateParent.className || immediateParent.tagName}`;
+        
+      // Build full DOM hierarchy from parentElements
+      context.domHierarchy = element.parentElements
+        .slice(0, 3)
+        .map((p: any) => p.id ? `#${p.id}` : `${p.tagName}${p.className ? `.${p.className}` : ''}`)
+        .reverse()
+        .join(' > ');
+    }
+    
+    // Set element type based on tag and attributes
+    context.elementType = this.determineElementType(element);
+    context.clickable = this.isElementClickable(element);
+    
     return context;
+  }
+
+  private determineElementType(element: any): string {
+    if (!element?.tag) return 'Interactive Element';
+    
+    const tag = element.tag.toLowerCase();
+    const attributes = element.attributes || {};
+    
+    if (tag === 'button') return 'Button';
+    if (tag === 'a') return 'Link';
+    if (tag === 'input') {
+      const type = attributes.type || 'text';
+      return `Input (${type})`;
+    }
+    if (tag === 'select') return 'Dropdown';
+    if (tag === 'textarea') return 'Text Area';
+    if (tag === 'form') return 'Form';
+    if (['div', 'span'].includes(tag) && attributes.onclick) return 'Clickable Container';
+    
+    return `${tag.charAt(0).toUpperCase() + tag.slice(1)} Element`;
+  }
+
+  private isElementClickable(element: any): boolean {
+    if (!element?.tag) return false;
+    
+    const tag = element.tag.toLowerCase();
+    const attributes = element.attributes || {};
+    
+    // Inherently clickable elements
+    if (['button', 'a', 'input', 'select', 'textarea'].includes(tag)) return true;
+    
+    // Elements with click handlers
+    if (attributes.onclick || attributes['data-testid']) return true;
+    
+    // Elements with specific roles
+    if (attributes.role && ['button', 'link', 'tab', 'menuitem'].includes(attributes.role)) return true;
+    
+    return false;
   }
 
   private extractPageContext(contextData: any): any {
     const context: any = {};
+    
+    // 🔧 FIX: Extract real page data from context
+    context.url = contextData?.url || contextData?.pageUrl || '';
+    context.pageTitle = contextData?.pageTitle || '';
+    
+    // Determine page type from URL
+    if (context.url) {
+      const url = context.url.toLowerCase();
+      if (url.includes('/search')) context.pageType = 'search-results';
+      else if (url.includes('/product') || url.includes('/p/')) context.pageType = 'product-detail';
+      else if (url.includes('/cart') || url.includes('/bag')) context.pageType = 'cart';
+      else if (url.includes('/checkout')) context.pageType = 'checkout';
+      else if (url.includes('/browse') || url.includes('/category')) context.pageType = 'category';
+      else if (url.match(/\.\w+\/$/) || url.match(/\.\w+$/)) context.pageType = 'homepage';
+      else context.pageType = 'content';
+    }
     
     if (contextData?.performance) {
       context.performance = `load:${contextData.performance.loadTime || 'unknown'}ms fcp:${contextData.performance.firstContentfulPaint || 'unknown'}ms`;
