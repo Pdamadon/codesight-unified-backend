@@ -8,6 +8,7 @@
  */
 
 import { SelectorStrategyService } from '../selectors/selector-strategy';
+import { HybridJourneyTracker } from '../journey/hybrid-journey-tracker';
 import { 
   EnhancedInteractionData, 
   TrainingExample, 
@@ -26,10 +27,13 @@ export interface TrainingDataTransformerService {
 
 export class TrainingDataTransformerImpl implements TrainingDataTransformerService {
   private sessionData?: any; // Store session data for access in methods
+  private journeyTracker: HybridJourneyTracker; // Real journey tracking
 
   constructor(
     private selectorStrategy: SelectorStrategyService
-  ) {}
+  ) {
+    this.journeyTracker = new HybridJourneyTracker();
+  }
 
   /**
    * Main orchestration method - extracted from openai-integration-clean.ts
@@ -42,16 +46,20 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     // Store session data for use in user intent extraction
     this.sessionData = sessionData;
     
+    // 🎯 REAL JOURNEY TRACKING: Initialize hybrid tracker with actual session data
+    this.journeyTracker.initializeForSession(sessionData, enhancedInteractions);
+    
     const allExamples: TrainingExample[] = [];
     let selectorEnhancements = 0;
     let contextEnhancements = 0;
 
-    // 🎯 OPENAI RECOMMENDED: Generate structured examples using new format
+    // 🎯 OPENAI RECOMMENDED: Generate structured examples using new format with REAL journey tracking
     console.log(`\n🧠 [OPENAI FORMAT] Processing ${enhancedInteractions.length} interactions with OpenAI-recommended structure...`);
-    for (const interaction of enhancedInteractions) {
+    for (let i = 0; i < enhancedInteractions.length; i++) {
+      const interaction = enhancedInteractions[i];
       try {
-        // Generate examples using the new OpenAI-recommended structure
-        const structuredExamples = this.createOpenAIStructuredExamples(interaction);
+        // Generate examples using the new OpenAI-recommended structure with REAL journey context
+        const structuredExamples = this.createOpenAIStructuredExamples(interaction, i);
         allExamples.push(...structuredExamples);
         
         if (interaction.selectors?.reliability) {
@@ -61,7 +69,7 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
           contextEnhancements++;
         }
       } catch (error) {
-        console.warn(`❌ [OPENAI FORMAT] Failed to process interaction:`, error);
+        console.warn(`❌ [OPENAI FORMAT] Failed to process interaction ${i}:`, error);
       }
     }
     console.log(`✅ [OPENAI FORMAT] Generated ${allExamples.length} structured training examples`);
@@ -417,8 +425,9 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
   /**
    * 🧠 OPENAI RECOMMENDED: Create structured training examples using OpenAI's recommended format
    * This format uses clear section labels for better AI comprehension and learning efficiency
+   * 🎯 NEW: Uses REAL journey tracking instead of fake step templates
    */
-  createOpenAIStructuredExamples(interaction: EnhancedInteractionData): TrainingExample[] {
+  createOpenAIStructuredExamples(interaction: EnhancedInteractionData, interactionIndex: number): TrainingExample[] {
     const examples: TrainingExample[] = [];
     const startTime = Date.now();
 
@@ -447,12 +456,12 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     const businessContext = this.extractBusinessContext(interaction.business, hostname);
     const technicalContext = this.extractTechnicalContext(interaction);
     const nearbyElementsContext = this.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
-    const journeyContext = this.extractJourneyContext(interaction);
+    
+    // 🎯 REAL JOURNEY TRACKING: Get actual journey context instead of fake templates
+    const realJourneyContext = this.journeyTracker.getJourneyContextForInteraction(interaction, interactionIndex);
 
-    // Get user goal from session data if available
+    // Get user goal from session data
     const userGoal = this.sessionData?.config?.generatedTask?.title || 
-                    this.sessionData?.config?.userGoal || 
-                    journeyContext.overallGoal || 
                     'Navigate and complete user goal';
 
     // 🎯 OPENAI STRUCTURED EXAMPLE: Clear section-based format
@@ -465,9 +474,10 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
 ${userGoal}
 
 [JOURNEY]
-Step: ${journeyContext.currentStep}/${journeyContext.totalSteps}
-Progress: ${journeyContext.previousSteps.join(' → ')} → [${journeyContext.currentStepName}] → ${journeyContext.nextSteps.join(' → ')}
-Task: ${journeyContext.actionDescription}
+Step: ${realJourneyContext.sessionStep}/${realJourneyContext.totalSteps}
+Task Progress: ${realJourneyContext.taskProgress.currentTaskName} (${realJourneyContext.taskProgress.currentTaskIndex + 1}/${realJourneyContext.taskProgress.totalTasks})
+Current Focus: ${realJourneyContext.behavioralContext.userFocus}
+Navigation: ${realJourneyContext.navigationFlow.previousPages.join(' → ')} → [${realJourneyContext.navigationFlow.currentPage}]
 
 [PAGE CONTEXT]
 Site: ${hostname}
@@ -496,16 +506,16 @@ ${this.mapActionType(actionType)}
 ${bestSelector}
 
 [REASONING]
-${this.getSelectorReasoningText(bestSelector, reliability)} - This action progresses the user journey toward: ${userGoal}
+${realJourneyContext.currentIntent.reasoning} - ${realJourneyContext.behavioralContext.userFocus}
 
 [CONFIDENCE]
 ${reliability.toFixed(2)}
 
 [JOURNEY IMPACT]
-Current Step: ${journeyContext.currentStepName}
-Next Step: ${journeyContext.nextSteps[0] || 'Completion'}
-Goal Progress: ${journeyContext.progressPercent}%
-Expected Outcome: ${journeyContext.expectedOutcome || 'Advance to next step'}
+Current Task: ${realJourneyContext.taskProgress.currentTaskName}
+Next Actions: ${realJourneyContext.behavioralContext.nextPredictedActions.slice(0, 2).join(', ')}
+Task Progress: ${realJourneyContext.taskProgress.progressPercent}% (${realJourneyContext.taskProgress.currentTaskIndex + 1}/${realJourneyContext.taskProgress.totalTasks})
+Decision Factors: ${realJourneyContext.behavioralContext.decisionFactors.slice(0, 2).join(', ')}
 
 [FALLBACKS]
 ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
@@ -515,11 +525,17 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
 
       context: {
         pageType: pageContext.pageType,
-        userJourney: journeyContext.journeyType,
+        userJourney: realJourneyContext.navigationFlow.currentPage,
         reliability,
         spatialContext: nearbyElementsContext.spatialSummary,
         businessContext: businessContext.conversion,
-        journeyContext: journeyContext
+        journeyContext: {
+          sessionPosition: `${realJourneyContext.sessionStep}/${realJourneyContext.totalSteps}`,
+          currentTask: realJourneyContext.taskProgress.currentTaskName,
+          taskProgress: realJourneyContext.taskProgress.progressPercent,
+          userIntent: realJourneyContext.currentIntent.action,
+          conversionLikelihood: realJourneyContext.behavioralContext.conversionLikelihood
+        }
       },
       quality: this.calculateComprehensiveQuality(interaction),
       rawData: {
@@ -529,14 +545,14 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
         enhancementFlags: ['openai-structured', 'section-based', 'enhanced-context']
       },
       journeyMetadata: {
-        journeyType: journeyContext.journeyType,
-        journeyGoal: journeyContext.overallGoal,
-        userIntent: journeyContext.userIntent,
-        stepNumber: journeyContext.currentStep,
-        totalSteps: journeyContext.totalSteps,
-        isJourneyStart: journeyContext.currentStep === 1,
-        isJourneyEnd: journeyContext.currentStep === journeyContext.totalSteps,
-        journeyProgress: journeyContext.progressPercent + '%'
+        journeyType: 'real-user-session',
+        journeyGoal: userGoal,
+        userIntent: realJourneyContext.behavioralContext.userFocus,
+        stepNumber: realJourneyContext.sessionStep,
+        totalSteps: realJourneyContext.totalSteps,
+        isJourneyStart: realJourneyContext.sessionStep === 1,
+        isJourneyEnd: realJourneyContext.sessionStep === realJourneyContext.totalSteps,
+        journeyProgress: Math.round((realJourneyContext.sessionStep / realJourneyContext.totalSteps) * 100) + '%'
       }
     });
 
