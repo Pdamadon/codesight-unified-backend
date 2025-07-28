@@ -9,6 +9,10 @@
 
 import { SelectorStrategyService } from '../selectors/selector-strategy';
 import { HybridJourneyTracker } from '../journey/hybrid-journey-tracker';
+import { ProductContextBuilder, CartInteraction } from './product-context-builder';
+import { ProductStateAccumulator, ProductConfigurationState } from './product-state-accumulator';
+import { DynamicPatternMatcher, PatternMatchResult } from './dynamic-pattern-matcher';
+import { SequenceAwareTrainer } from './sequence-aware-trainer';
 import { 
   EnhancedInteractionData, 
   TrainingExample, 
@@ -28,11 +32,20 @@ export interface TrainingDataTransformerService {
 export class TrainingDataTransformerImpl implements TrainingDataTransformerService {
   private sessionData?: any; // Store session data for access in methods
   private journeyTracker: HybridJourneyTracker; // Real journey tracking
+  private productContextBuilder: ProductContextBuilder; // Product variant tracking
+  private productStateAccumulator: ProductStateAccumulator; // Sequential state tracking
+  private patternMatcher: DynamicPatternMatcher; // Dynamic pattern matching
+  private sequenceAwareTrainer: SequenceAwareTrainer; // Complete shopping flow training
+  private allInteractions?: any[]; // Store all interactions for product context analysis
 
   constructor(
     private selectorStrategy: SelectorStrategyService
   ) {
     this.journeyTracker = new HybridJourneyTracker();
+    this.productContextBuilder = new ProductContextBuilder();
+    this.productStateAccumulator = new ProductStateAccumulator();
+    this.patternMatcher = new DynamicPatternMatcher();
+    this.sequenceAwareTrainer = new SequenceAwareTrainer();
   }
 
   /**
@@ -43,11 +56,15 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     console.log(`\n🚀 [TRAINING DATA] Starting generation for session ${sessionId}`);
     console.log(`📊 [TRAINING DATA] Input: ${enhancedInteractions.length} enhanced interactions`);
     
-    // Store session data for use in user intent extraction
+    // Store session data and interactions for use in context extraction
     this.sessionData = sessionData;
+    this.allInteractions = enhancedInteractions;
     
     // 🎯 REAL JOURNEY TRACKING: Initialize hybrid tracker with actual session data
     this.journeyTracker.initializeForSession(sessionData, enhancedInteractions);
+    
+    // 🛒 PRODUCT STATE TRACKING: Initialize state accumulator for sequential context
+    this.productStateAccumulator.clearStates(); // Clear any previous session state
     
     const allExamples: TrainingExample[] = [];
     let selectorEnhancements = 0;
@@ -74,9 +91,11 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     }
     console.log(`✅ [OPENAI FORMAT] Generated ${allExamples.length} structured training examples`);
 
-    // 🎯 ENHANCED TRAINING: Using only DOM-grounded individual examples with journey context
-    // Legacy sequence examples disabled - our enhanced individual examples already include journey progression
-    console.log(`\n🛤️ [JOURNEY EXAMPLES] Skipping legacy sequence examples - using enhanced individual examples with journey context`);
+    // 🎯 NEW: SEQUENCE-AWARE TRAINING - Complete shopping flow examples
+    console.log(`\n🛤️ [SEQUENCE EXAMPLES] Creating sequence-aware training examples for complete shopping flows...`);
+    const sequenceExamples = this.sequenceAwareTrainer.generateSequenceTrainingExamples(enhancedInteractions);
+    console.log(`✅ [SEQUENCE EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
+    allExamples.push(...sequenceExamples);
     
     console.log(`🎯 [TASK EXAMPLES] Creating enhanced task-driven examples...`);
     const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
@@ -459,7 +478,19 @@ FORM STATE: ${stateContext.before || 'clean form'}`,
     const realHostname = realUrl ? (realUrl.includes('://') ? new URL(realUrl).hostname : realUrl) : hostname;
     const realPageTitle = pageContext.pageTitle || 'Unknown Page';
     
-    const businessContext = this.extractBusinessContext(interaction.business, realHostname);
+    // 🛒 PRODUCT STATE TRACKING: Process interaction through state accumulator
+    const productState = this.productStateAccumulator.processInteraction(
+      interaction, 
+      this.allInteractions!, 
+      interactionIndex
+    );
+    
+    // Generate product state context for training examples
+    const productStateContext = productState ? 
+      this.productStateAccumulator.generateStateContext(productState.productId, interactionIndex) : 
+      '';
+    
+    const businessContext = this.extractBusinessContext(interaction.business, realHostname, interaction, this.allInteractions, interactionIndex);
     const technicalContext = this.extractTechnicalContext(interaction);
     const nearbyElementsContext = this.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
     
@@ -494,7 +525,7 @@ Task Progress: ${realJourneyContext.taskProgress.currentTaskName} (${realJourney
 Current Focus: ${realJourneyContext.behavioralContext.userFocus}
 Navigation: ${realJourneyContext.navigationFlow.previousPages.join(' → ')} → [${realJourneyContext.navigationFlow.currentPage}]
 
-[PAGE CONTEXT]
+${productStateContext ? `[PRODUCT STATE HISTORY]\n${productStateContext}\n` : ''}${this.generateUserPathSequence(this.allInteractions!, interactionIndex) ? `[USER PATH SEQUENCE]\n${this.generateUserPathSequence(this.allInteractions!, interactionIndex)}\n` : ''}[PAGE CONTEXT]
 Site: ${realHostname}
 URL: ${realUrl}
 Page Title: ${realPageTitle}
@@ -507,16 +538,21 @@ Text Content: "${elementText}"
 Element Type: ${elementContext.elementType || 'Interactive Element'}
 Bounding Box: {x: ${boundingBox?.x || 0}, y: ${boundingBox?.y || 0}, width: ${boundingBox?.width || 0}, height: ${boundingBox?.height || 0}}
 Visibility: ${visualContext.visibility || 'Visible'}, ${elementContext.clickable ? 'Clickable' : 'Not Clickable'}
+${elementContext.formContext ? `Form Context: ${elementContext.formContext}` : ''}
+${elementContext.accessibilityContext ? `Accessibility: ${elementContext.accessibilityContext}` : ''}
 
 [SPATIAL CONTEXT]
 ${nearbyElementsContext.spatialSummary || 'No nearby elements detected'}
 Parent Container: ${elementContext.parentContainer || 'Unknown container'}
 
+[BUSINESS CONTEXT]
+${this.formatBusinessContextForTraining(businessContext)}
+
 [SELECTORS]
 ${[bestSelector, ...backupSelectors.slice(0, 2)].map((sel, i) => `${i + 1}. ${sel} ${i === 0 ? `(${reliability.toFixed(2)})` : ''}`).join('\n')}`,
 
       completion: `[ACTION]
-${this.mapActionType(actionType)}
+${this.generateShoppingSpecificAction(actionType, interaction, productState, elementText, businessContext)}
 
 [SELECTOR]
 ${bestSelector}
@@ -576,7 +612,281 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
   }
 
   /**
-   * Helper method to map action types to clear action names
+   * 🛒 SHOPPING-SPECIFIC: Generate contextual shopping actions instead of generic ones
+   * Transforms "Click" → "Select size M" or "Add configured product to cart"
+   */
+  private generateShoppingSpecificAction(
+    actionType: string,
+    interaction: any,
+    productState: any,
+    elementText: string,
+    businessContext: any
+  ): string {
+    // Enhanced shopping context analysis
+    const element = interaction.element || {};
+    const attributes = element.attributes || {};
+    const lowerElementText = elementText.toLowerCase();
+    const context = interaction.context || {};
+    const url = context.url || context.pageUrl || '';
+
+    // 🎯 CART INTERACTIONS: High-priority shopping actions
+    if (this.isCartButton(element, elementText)) {
+      if (productState && productState.readyForCart) {
+        // Complete configuration - specific product details with full name
+        const productName = productState.productName || 'product';
+        const size = productState.selectedSize ? `, Size: ${productState.selectedSize}` : '';
+        const color = productState.selectedColor ? `, Color: ${productState.selectedColor}` : '';
+        return `Add ${productName} to cart${size}${color}`;
+      } else if (productState) {
+        // Incomplete configuration - show what's missing
+        const productName = productState.productName || 'product';
+        const missing = productState.requiredSelections?.filter((req: string) => 
+          !productState.completedSelections?.includes(req)
+        ) || [];
+        if (missing.length > 0) {
+          return `Add ${productName} to cart (missing: ${missing.join(', ')})`;
+        }
+        return `Add ${productName} to cart`;
+      } else {
+        // No product state - generic cart action
+        return 'Add product to cart';
+      }
+    }
+
+    // 🎨 COLOR SELECTIONS: Detect color swatch interactions
+    if (this.isColorSelector(element, elementText, attributes)) {
+      const colorValue = this.extractColorValue(elementText, attributes);
+      return colorValue ? `Select color "${colorValue}"` : 'Select color option';
+    }
+
+    // 📏 SIZE SELECTIONS: Detect size selector interactions  
+    if (this.isSizeSelector(element, elementText, attributes)) {
+      const sizeValue = this.extractSizeValue(elementText, attributes);
+      return sizeValue ? `Select size "${sizeValue}"` : 'Select size option';
+    }
+
+    // 🛍️ PRODUCT NAVIGATION: Product page interactions
+    if (this.isProductInteraction(url, element, elementText)) {
+      if (lowerElementText.includes('product') || url.includes('/product')) {
+        return 'View product details';
+      }
+      if (lowerElementText.includes('quick') && lowerElementText.includes('shop')) {
+        return 'Quick shop product';
+      }
+      return 'Navigate to product';
+    }
+
+    // 🏪 CATEGORY NAVIGATION: Category browsing
+    if (this.isCategoryNavigation(url, elementText)) {
+      return `Browse ${elementText || 'category'}`;
+    }
+
+    // 🔍 SEARCH INTERACTIONS: Search and filtering
+    if (this.isSearchInteraction(element, elementText, attributes)) {
+      return elementText ? `Search for "${elementText}"` : 'Perform search';
+    }
+
+    // ⚙️ FALLBACK: Use generic action mapping for non-shopping interactions
+    return this.mapActionType(actionType);
+  }
+
+  /**
+   * 🛒 Detect cart button interactions
+   */
+  private isCartButton(element: any, elementText: string): boolean {
+    const lowerText = elementText.toLowerCase();
+    const attributes = element.attributes || {};
+    
+    // 🚨 EXCLUDE: Don't detect color/size selectors as cart buttons
+    if (attributes.name === 'color-radio' || 
+        attributes.name?.includes('Size') ||
+        attributes.type === 'radio' && (lowerText.length < 20 && !lowerText.includes('cart'))) {
+      return false;
+    }
+
+    // Text-based detection - more specific patterns
+    const cartTextPatterns = [
+      'add to cart', 'add to bag', 'add to basket',
+      'buy now', 'purchase now', 'add item'
+    ];
+    
+    if (cartTextPatterns.some(pattern => lowerText.includes(pattern))) {
+      return true;
+    }
+
+    // Attribute-based detection - more specific
+    const cartAttributes = ['addtocart', 'addtobag', 'buynow', 'purchase'];
+    const hasCartAttribute = cartAttributes.some(attr => 
+      Object.values(attributes).some(value => 
+        typeof value === 'string' && value.toLowerCase().includes(attr)
+      )
+    );
+
+    // ID/class based detection for cart buttons
+    const idClass = `${attributes.id || ''} ${attributes.class || ''}`.toLowerCase();
+    const hasCartIdClass = ['cart', 'bag', 'buy'].some(term => 
+      idClass.includes(`add-${term}`) || 
+      idClass.includes(`${term}-button`) ||
+      idClass.includes(`${term}btn`)
+    );
+
+    return hasCartAttribute || hasCartIdClass;
+  }
+
+  /**
+   * 🎨 Detect color selector interactions
+   */
+  /**
+   * 🔄 ENHANCED: Dynamic color selector detection
+   * Uses pattern matcher instead of hardcoded color list
+   */
+  private isColorSelector(element: any, elementText: string, attributes: any): boolean {
+    // Check attributes for color-related patterns (high confidence)
+    const colorKeywords = ['color', 'swatch', 'variant'];
+    const hasColorAttribute = colorKeywords.some(keyword => 
+      Object.keys(attributes).some(key => key.toLowerCase().includes(keyword)) ||
+      Object.values(attributes).some(value => 
+        typeof value === 'string' && value.toLowerCase().includes(keyword)
+      )
+    );
+
+    // Dynamic color detection using pattern matcher
+    const colorResult = this.patternMatcher.detectColor(elementText, { attributes });
+    const hasColorPattern = colorResult && colorResult.confidence >= 0.6;
+
+    return hasColorAttribute || !!hasColorPattern;
+  }
+
+  /**
+   * 📏 Detect size selector interactions
+   */
+  /**
+   * 🔄 ENHANCED: Dynamic size selector detection
+   * Uses pattern matcher instead of hardcoded size list
+   */
+  private isSizeSelector(element: any, elementText: string, attributes: any): boolean {
+    // Check attributes for size-related patterns (high confidence)
+    const sizeKeywords = ['size', 'dimension', 'fit'];
+    const hasSizeAttribute = sizeKeywords.some(keyword => 
+      Object.keys(attributes).some(key => key.toLowerCase().includes(keyword)) ||
+      Object.values(attributes).some(value => 
+        typeof value === 'string' && value.toLowerCase().includes(keyword)
+      )
+    );
+
+    // Dynamic size detection using pattern matcher
+    const sizeResult = this.patternMatcher.detectSize(elementText, { attributes });
+    const hasSizePattern = sizeResult && sizeResult.confidence >= 0.7;
+
+    return hasSizeAttribute || !!hasSizePattern;
+  }
+
+  /**
+   * Extract color value for action description
+   */
+  /**
+   * 🔄 ENHANCED: Smart color extraction with confidence scoring
+   * Uses dynamic pattern matching instead of simple length checks
+   */
+  private extractColorValue(elementText: string, attributes: any): string | null {
+    // Build context for better pattern matching
+    const context = { attributes };
+    
+    // Priority candidates: aria-label > text > value
+    const candidates = [
+      { text: attributes['aria-label'], priority: 3 },
+      { text: elementText, priority: 2 },
+      { text: attributes.value, priority: 1 }
+    ].filter(c => c.text);
+    
+    let bestResult: PatternMatchResult | null = null;
+    
+    for (const candidate of candidates) {
+      const result = this.patternMatcher.detectColor(candidate.text, context);
+      if (result) {
+        // Boost confidence based on semantic priority
+        const adjustedConfidence = result.confidence + (candidate.priority * 0.05);
+        
+        if (!bestResult || adjustedConfidence > bestResult.confidence) {
+          bestResult = result;
+          bestResult.confidence = Math.min(adjustedConfidence, 1.0);
+        }
+      }
+    }
+    
+    return bestResult && bestResult.confidence >= 0.6 ? bestResult.value : null;
+  }
+
+  /**
+   * Extract size value for action description
+   */
+  /**
+   * 🔄 ENHANCED: Smart size extraction with confidence scoring  
+   * Uses dynamic pattern matching instead of simple length checks
+   */
+  private extractSizeValue(elementText: string, attributes: any): string | null {
+    // Build context for better pattern matching
+    const context = { attributes };
+    
+    // Priority candidates: aria-label > text > value
+    const candidates = [
+      { text: attributes['aria-label'], priority: 3 },
+      { text: elementText, priority: 2 },
+      { text: attributes.value, priority: 1 }
+    ].filter(c => c.text);
+    
+    let bestResult: PatternMatchResult | null = null;
+    
+    for (const candidate of candidates) {
+      const result = this.patternMatcher.detectSize(candidate.text, context);
+      if (result) {
+        // Boost confidence based on semantic priority
+        const adjustedConfidence = result.confidence + (candidate.priority * 0.05);
+        
+        if (!bestResult || adjustedConfidence > bestResult.confidence) {
+          bestResult = result;
+          bestResult.confidence = Math.min(adjustedConfidence, 1.0);
+        }
+      }
+    }
+    
+    return bestResult && bestResult.confidence >= 0.7 ? bestResult.value : null;
+  }
+
+  /**
+   * Detect product-related interactions
+   */
+  private isProductInteraction(url: string, element: any, elementText: string): boolean {
+    return url.includes('/product') || 
+           url.includes('/p/') ||
+           elementText.toLowerCase().includes('product');
+  }
+
+  /**
+   * Detect category navigation
+   */
+  private isCategoryNavigation(url: string, elementText: string): boolean {
+    const categoryKeywords = ['men', 'women', 'kids', 'shirts', 'pants', 'shoes'];
+    return categoryKeywords.some(keyword => 
+      url.toLowerCase().includes(keyword) || 
+      elementText.toLowerCase().includes(keyword)
+    );
+  }
+
+  /**
+   * Detect search interactions
+   */
+  private isSearchInteraction(element: any, elementText: string, attributes: any): boolean {
+    const searchKeywords = ['search', 'find', 'query'];
+    return searchKeywords.some(keyword =>
+      Object.values(attributes).some(value => 
+        typeof value === 'string' && value.toLowerCase().includes(keyword)
+      ) || elementText.toLowerCase().includes(keyword)
+    );
+  }
+
+  /**
+   * Helper method to map action types to clear action names (LEGACY FALLBACK)
    */
   private mapActionType(actionType: string): string {
     const actionMap: { [key: string]: string } = {
@@ -621,84 +931,17 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
    * Creates training examples that teach the AI complete user flows from discovery to realistic conversion endpoints
    */
   createSequenceExamples(interactions: EnhancedInteractionData[]): TrainingExample[] {
-    const examples: TrainingExample[] = [];
-    
-    // Use enhanced journey detection to group interactions
-    const journeys = this.groupInteractionsBySequence(interactions);
-    
-    for (const journey of journeys) {
-      if (journey.length >= 2) {
-        // Extract journey metadata from enhanced interactions (might not exist yet)
-        const journeyMetadata = (journey[0] as any).journeyMetadata;
-        const journeyType = journeyMetadata?.journeyType || this.detectJourneyType(journey);
-        const journeyGoal = journeyMetadata?.journeyGoal || this.extractJourneyGoal(journey);
-        const userIntent = journeyMetadata?.userIntent || this.extractUserIntent(journey);
-        
-        // 🎯 CREATE JOURNEY-AWARE TRAINING EXAMPLES
-        
-        // 1. COMPLETE JOURNEY EXAMPLE: Full user flow from start to realistic endpoint
-        const journeyExample = this.createCompleteJourneyExample(journey, journeyType, journeyGoal, userIntent);
-        if (journeyExample) examples.push(journeyExample);
-        
-        // 2. JOURNEY STAGES EXAMPLE: Focus on funnel progression
-        const stagesExample = this.createJourneyStagesExample(journey, journeyType, userIntent);
-        if (stagesExample) examples.push(stagesExample);
-        
-        // 3. DECISION-MAKING EXAMPLE: Focus on user decision factors
-        const decisionExample = this.createDecisionMakingExample(journey, journeyGoal, userIntent);
-        if (decisionExample) examples.push(decisionExample);
-      }
-    }
-
-    return examples;
+    // Use the comprehensive SequenceAwareTrainer for complete shopping flow training
+    return this.sequenceAwareTrainer.generateSequenceTrainingExamples(interactions);
   }
 
-  /**
-   * 🎯 COMPLETE JOURNEY EXAMPLE: Full user flow with context and intent
-   */
-  private createCompleteJourneyExample(journey: EnhancedInteractionData[], journeyType: string, journeyGoal: string, userIntent: string): TrainingExample | null {
-    if (journey.length < 2) return null;
-    
-    // Build journey prompt with user context
-    const journeySteps = journey.map((interaction, i) => {
-      const stepType = this.getJourneyStepType(interaction, i, journey.length);
-      const element = interaction.element?.text || 'element';
-      const actionType = interaction.interaction?.type || 'interact';
-      const context = this.getStepContext(interaction);
-      
-      return `${stepType}: ${element} (${actionType}) ${context}`;
-    });
-    
-    // Build journey completion with reliable selectors
-    const journeyActions = journey.map((interaction, i) => {
-      const selectorResult = this.selectorStrategy.getBestSelectorWithScore(interaction.selectors || {});
-      const action = this.selectorStrategy.getPlaywrightAction(interaction.interaction?.type as any, selectorResult.bestSelector).action;
-      const comment = this.getJourneyStepComment(interaction, i, journey.length, userIntent);
-      
-      return `${action}; ${comment}`;
-    });
-    
-    return {
-      prompt: `JOURNEY (${journeyType}): User Intent: "${userIntent}" | Goal: ${journeyGoal} | Flow: ${journeySteps.join(' → ')}`,
-      completion: `// Complete ${journeyType} journey: ${userIntent}\n${journeyActions.join('\n')}`,
-      context: {
-        pageType: 'journey-sequence',
-        userJourney: journeyType,
-        journeyGoal,
-        userIntent,
-        journeyLength: journey.length,
-        businessContext: journey[journey.length - 1]?.business?.conversion?.funnelStage || 'unknown'
-      },
-      quality: this.calculateJourneyQuality(journey)
-    };
-  }
 
   /**
    * 🏗️ JOURNEY STAGES EXAMPLE: Focus on funnel progression
    */
   private createJourneyStagesExample(journey: EnhancedInteractionData[], journeyType: string, userIntent: string): TrainingExample | null {
     const stages = journey.map(i => i.business?.conversion?.funnelStage).filter(Boolean);
-    const uniqueStages = [...new Set(stages)];
+    const uniqueStages = Array.from(new Set(stages));
     
     if (uniqueStages.length < 2) return null;
     
@@ -814,7 +1057,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
       if (element.includes('feature')) factors.push('features');
     });
     
-    return [...new Set(factors)];
+    return Array.from(new Set(factors));
   }
 
   private getValidationReason(interaction: EnhancedInteractionData): string {
@@ -889,8 +1132,13 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
   private filterAndPrioritizeByJourneyQuality(allExamples: TrainingExample[]): TrainingExample[] {
     console.log(`\n🔍 [QUALITY FILTER] Starting quality filtering with ${allExamples.length} examples`);
     
-    // Separate journey examples from individual interaction examples
-    const journeyExamples = allExamples.filter(ex => 
+    // 🛒 PRIORITY: Separate cart interactions for special treatment
+    const cartExamples = allExamples.filter(ex => this.isCartTrainingExample(ex));
+    const nonCartExamples = allExamples.filter(ex => !cartExamples.includes(ex));
+    console.log(`🛒 [QUALITY FILTER] Found ${cartExamples.length} cart interaction examples`);
+    
+    // Separate journey examples from individual interaction examples (excluding cart)
+    const journeyExamples = nonCartExamples.filter(ex => 
       ex.context?.pageType === 'journey-sequence' ||
       ex.context?.pageType === 'funnel-progression' ||
       ex.context?.pageType === 'decision-validation' ||
@@ -898,8 +1146,12 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
       ex.quality?.factors?.funnelProgression
     );
     
-    const individualExamples = allExamples.filter(ex => !journeyExamples.includes(ex));
+    const individualExamples = nonCartExamples.filter(ex => !journeyExamples.includes(ex));
     console.log(`📊 [QUALITY FILTER] Found ${journeyExamples.length} journey examples, ${individualExamples.length} individual examples`);
+    
+    // 🛒 CART EXAMPLES: Lower quality threshold (0.2) - always include cart interactions
+    const qualityCartExamples = cartExamples.filter(ex => ex.quality.score >= 0.2);
+    console.log(`✅ [QUALITY FILTER] ${qualityCartExamples.length} cart examples pass quality threshold (0.2)`);
     
     // 🎯 JOURNEY EXAMPLES: Lower quality threshold (0.4) - prioritize complete flows
     const qualityJourneyExamples = journeyExamples.filter(ex => ex.quality.score >= 0.4);
@@ -909,14 +1161,18 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     const qualityIndividualExamples = individualExamples.filter(ex => ex.quality.score >= 0.3);
     console.log(`✅ [QUALITY FILTER] ${qualityIndividualExamples.length} individual examples pass quality threshold (0.3)`);
     
-    // 📊 PRIORITIZATION STRATEGY:
-    // 1. Include ALL high-quality journey examples first
-    // 2. Add individual examples only if we have space and they're high quality
-    const prioritizedExamples = [...qualityJourneyExamples];
-    console.log(`🎯 [QUALITY FILTER] Starting with ${prioritizedExamples.length} high-quality journey examples`);
+    // 📊 ENHANCED PRIORITIZATION STRATEGY:
+    // 1. Include ALL cart interactions first (highest priority)
+    // 2. Include ALL high-quality journey examples second
+    // 3. Add individual examples only if we have space and they're high quality
+    const prioritizedExamples = [...qualityCartExamples];
+    console.log(`🛒 [QUALITY FILTER] Starting with ${prioritizedExamples.length} cart interaction examples`);
+    
+    prioritizedExamples.push(...qualityJourneyExamples);
+    console.log(`🎯 [QUALITY FILTER] Added ${qualityJourneyExamples.length} journey examples`);
     
     // Add individual examples up to a reasonable limit (don't overwhelm with individual actions)
-    const maxIndividualExamples = Math.max(qualityJourneyExamples.length, 5);
+    const maxIndividualExamples = Math.max(qualityJourneyExamples.length + qualityCartExamples.length, 5);
     const topIndividualExamples = qualityIndividualExamples
       .sort((a, b) => b.quality.score - a.quality.score)
       .slice(0, maxIndividualExamples);
@@ -950,6 +1206,45 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
   }
 
   /**
+   * 🛒 Detect if a training example involves cart interactions
+   * Used for prioritizing cart button training examples with lower quality threshold
+   */
+  private isCartTrainingExample(example: TrainingExample): boolean {
+    const prompt = example.prompt.toLowerCase();
+    const completion = example.completion.toLowerCase();
+    
+    // Pattern 1: Direct cart text detection
+    const cartTextPatterns = [
+      'add to cart', 'add to bag', 'add to basket',
+      'add product', 'add item', 'buy now', 
+      'purchase', 'checkout', 'shopping cart'
+    ];
+    const hasCartText = cartTextPatterns.some(pattern => 
+      prompt.includes(pattern) || completion.includes(pattern)
+    );
+    
+    // Pattern 2: Cart-specific business context
+    const hasCartBusinessContext = 
+      prompt.includes('[BUSINESS CONTEXT]') && 
+      (prompt.includes('Product:') || prompt.includes('Size:') || prompt.includes('Color:'));
+    
+    // Pattern 3: E-commerce interaction with product context
+    const hasEcommerceWithProduct = 
+      prompt.includes('hostname: gap.com') && 
+      (prompt.includes('product') || prompt.includes('size') || prompt.includes('color'));
+    
+    // Pattern 4: Completion indicates cart action
+    const completionIndicatesCart = 
+      completion.includes('cart') || 
+      completion.includes('bag') || 
+      completion.includes('add') ||
+      completion.includes('purchase');
+    
+    // Return true if any pattern matches
+    return hasCartText || hasCartBusinessContext || hasEcommerceWithProduct || completionIndicatesCart;
+  }
+
+  /**
    * Create task-driven examples (copied from openai-integration-clean.ts)
    */
   createTaskDrivenExamples(interactions: EnhancedInteractionData[], taskContext?: any): TrainingExample[] {
@@ -967,11 +1262,44 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
           userJourney: 'task-completion',
           businessContext: pattern.task
         },
-        quality: this.calculateComprehensiveQuality(interactions[0] || {})
+        quality: interactions[0] ? this.calculateComprehensiveQuality(interactions[0]) : this.getDefaultQuality()
       });
     }
 
     return examples;
+  }
+
+  /**
+   * Default quality for cases where no interaction data is available
+   */
+  private getDefaultQuality(): any {
+    return {
+      score: 0.3,
+      factors: {
+        hasReliableSelector: false,
+        hasSpatialContext: false,
+        hasBusinessContext: false,
+        hasVisualContext: false,
+        hasAccessibilityContext: false,
+        hasPerformanceContext: false,
+        hasStateContext: false,
+        hasFormContext: false,
+        hasSEOContext: false,
+        hasAnalyticsContext: false,
+        hasTimingContext: false,
+        hasNetworkContext: false,
+        hasErrorContext: false,
+        hasUserContext: false,
+        hasCompleteNearbyElements: false,
+        hasDesignSystemContext: false,
+        hasBehaviorPatternsContext: false,
+        multiStepJourney: false,
+        funnelProgression: false,
+        conversionComplete: false,
+        clearUserIntent: false,
+        journeyPrioritized: false
+      }
+    };
   }
 
   // 🔧 HELPER METHODS (per FOCUSED_TASKS.md - keep embedded)
@@ -1083,15 +1411,22 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
       context.computedStyles = keyStyles;
     }
     
-    if (element?.ariaAttributes) {
-      const ariaData = Object.entries(element.ariaAttributes)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(' ');
-      context.ariaContext = ariaData;
+    // 🆕 ENHANCED ACCESSIBILITY CONTEXT: Comprehensive ARIA and focus information
+    const accessibilityInfo = this.extractAccessibilityContext(element, element.attributes || {});
+    if (accessibilityInfo) {
+      context.accessibilityContext = accessibilityInfo;
     }
     
+    // 🆕 ENHANCED FORM CONTEXT: Extract comprehensive form information
     if (element?.formContext) {
       context.formContext = `${element.formContext.formName || 'form'}.${element.formContext.fieldName || 'field'} (${element.formContext.fieldType || 'text'})${element.formContext.required ? ' *required' : ''}`;
+    } else if (element?.tag === 'input' || element?.tag === 'textarea' || element?.tag === 'select') {
+      // Auto-detect form context for form elements
+      const attributes = element.attributes || {};
+      const formInfo = this.extractFormContext(element, attributes);
+      if (formInfo) {
+        context.formContext = formInfo;
+      }
     }
     
     // Build DOM hierarchy from ancestors (legacy)
@@ -1234,14 +1569,95 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     return context;
   }
 
-  private extractBusinessContext(business: any, hostname: string): any {
+  private extractBusinessContext(business: any, hostname: string, interaction?: any, allInteractions?: any[], interactionIndex?: number): any {
     const context: any = {};
     
-    if (business?.ecommerce) {
+    // 🛒 ENHANCED: Use ProductContextBuilder for rich e-commerce context
+    if (interaction && allInteractions && interactionIndex !== undefined) {
+      const cartInteractions = this.productContextBuilder.analyzeCartInteractions(allInteractions);
+      
+      // Find if this interaction or recent interactions have product context
+      const currentCartInteraction = cartInteractions.find(ci => ci.interaction.timestamp === interaction.timestamp);
+      const recentCartInteraction = cartInteractions
+        .filter(ci => Math.abs(ci.interaction.timestamp - interaction.timestamp) < 10000) // Within 10 seconds
+        .sort((a, b) => Math.abs(b.interaction.timestamp - interaction.timestamp))[0];
+      
+      const productContext = currentCartInteraction || recentCartInteraction;
+      
+      // 🛒 NEW: Get accumulated state from state accumulator
+      const productId = this.extractProductIdFromInteraction(interaction);
+      const accumulatedState = productId ? this.productStateAccumulator.getAllStates().get(productId) : null;
+      
+      if (productContext || accumulatedState) {
+        // Prefer accumulated state data over product context builder (more comprehensive)
+        if (accumulatedState) {
+          // Use accumulated state for comprehensive product configuration
+          context.ecommerce = {
+            productId: accumulatedState.productId,
+            productName: accumulatedState.productName,
+            productCategory: accumulatedState.category,
+            productPrice: accumulatedState.basePrice || 'Unknown',
+            
+            // Show accumulated selections with completion status
+            selectedSize: accumulatedState.selectedSize,
+            selectedColor: accumulatedState.selectedColor,
+            selectedStyle: accumulatedState.selectedStyle,
+            
+            // State validation info
+            cartReady: accumulatedState.readyForCart,
+            selectionProgress: `${accumulatedState.completedSelections.length}/${accumulatedState.requiredSelections.length}`,
+            missingSelections: accumulatedState.requiredSelections.filter(req => 
+              !accumulatedState.completedSelections.includes(req)
+            ),
+            
+            // Enhanced confidence with state history
+            confidence: accumulatedState.confidence,
+            stage: accumulatedState.readyForCart ? 'ready-for-cart' : 'product-selection',
+            
+            // Selection history for training context
+            selectionHistory: accumulatedState.selectionHistory.map(step => 
+              `Step ${step.stepNumber}: ${step.actionDescription}`
+            ).join(', ')
+          };
+        } else if (productContext) {
+          // Fallback to product context builder data
+          const { productInfo, confidence } = productContext;
+          const variant = productInfo.selectedVariant;
+        
+          // Rich e-commerce context with actual product details
+          context.ecommerce = {
+          productName: productInfo.name,
+          productId: productInfo.id,
+          productCategory: productInfo.category,
+          productPrice: productInfo.basePrice || 'Unknown',
+          selectedVariant: {
+            size: variant.size || null,
+            color: variant.color || null,
+            style: variant.style || null
+          },
+          confidence: confidence,
+          url: productInfo.url
+        };
+        
+        // Enhanced conversion context for cart interactions
+        if (currentCartInteraction) {
+          context.conversion = {
+            funnelStage: 'product-selection',
+            action: 'add-to-cart',
+            productResolved: true,
+            variantTracking: Boolean(variant.size || variant.color)
+          };
+        }
+        }
+      }
+    }
+    
+    // Legacy business context (fallback)
+    if (business?.ecommerce && !context.ecommerce) {
       context.ecommerce = `${business.ecommerce.productName || 'product'} $${business.ecommerce.productPrice || 0} ${business.ecommerce.productCategory || 'category'}`;
     }
     
-    if (business?.conversion) {
+    if (business?.conversion && !context.conversion) {
       context.conversion = `${business.conversion.funnelStage || 'unknown'} step-${business.conversion.funnelPosition || 0} ${business.conversion.abTestVariant || 'control'}`;
     }
     
@@ -1250,14 +1666,70 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     }
     
     // Fallback business context detection from hostname
-    if (!business && hostname) {
-      if (hostname.includes('nordstrom') || hostname.includes('shop')) {
+    if (!context.ecommerce && !business && hostname) {
+      if (hostname.includes('nordstrom') || hostname.includes('shop') || hostname.includes('gap')) {
         context.ecommerce = 'e-commerce site';
         context.conversion = 'retail funnel';
       }
     }
     
     return context;
+  }
+
+  /**
+   * Format business context for training examples - Enhanced with product details
+   */
+  private formatBusinessContextForTraining(businessContext: any): string {
+    const contextParts: string[] = [];
+    
+    // Enhanced e-commerce context with product details
+    if (businessContext.ecommerce && typeof businessContext.ecommerce === 'object') {
+      const product = businessContext.ecommerce;
+      contextParts.push(`Product: ${product.productName} (ID: ${product.productId})`);
+      contextParts.push(`Category: ${product.productCategory}`);
+      if (product.productPrice) {
+        contextParts.push(`Price: ${product.productPrice}`);
+      }
+      
+      // Selected variants
+      const variant = product.selectedVariant;
+      if (variant) {
+        const variantParts = [];
+        if (variant.size) variantParts.push(`Size: ${variant.size}`);
+        if (variant.color) variantParts.push(`Color: ${variant.color}`);
+        if (variant.style) variantParts.push(`Style: ${variant.style}`);
+        
+        if (variantParts.length > 0) {
+          contextParts.push(`Selected: ${variantParts.join(', ')}`);
+        }
+      }
+      
+      if (product.confidence) {
+        contextParts.push(`Confidence: ${(product.confidence * 100).toFixed(1)}%`);
+      }
+    } else if (businessContext.ecommerce && typeof businessContext.ecommerce === 'string') {
+      // Legacy format
+      contextParts.push(`E-commerce: ${businessContext.ecommerce}`);
+    }
+    
+    // Conversion context
+    if (businessContext.conversion) {
+      if (typeof businessContext.conversion === 'object') {
+        contextParts.push(`Stage: ${businessContext.conversion.funnelStage || 'unknown'}`);
+        if (businessContext.conversion.action) {
+          contextParts.push(`Action: ${businessContext.conversion.action}`);
+        }
+      } else {
+        contextParts.push(`Conversion: ${businessContext.conversion}`);
+      }
+    }
+    
+    // User context
+    if (businessContext.user) {
+      contextParts.push(`User: ${businessContext.user}`);
+    }
+    
+    return contextParts.length > 0 ? contextParts.join('\n') : 'General browsing context';
   }
 
   private extractTechnicalContext(interaction: any): any {
@@ -3272,6 +3744,329 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
       return 'subscription-intent';
     }
     return 'general-navigation';
+  }
+
+  /**
+   * ♿ Extract comprehensive accessibility context
+   */
+  private extractAccessibilityContext(element: any, attributes: any): string | null {
+    const a11yParts: string[] = [];
+    
+    // Extract ARIA role and semantic meaning
+    const role = attributes.role || this.inferAriaRole(element.tag, attributes);
+    if (role) {
+      a11yParts.push(`role: ${role}`);
+    }
+    
+    // Extract ARIA labels and descriptions
+    const ariaLabel = attributes['aria-label'];
+    const ariaLabelledBy = attributes['aria-labelledby'];
+    const ariaDescribedBy = attributes['aria-describedby'];
+    
+    if (ariaLabel) {
+      a11yParts.push(`label: "${ariaLabel}"`);
+    } else if (ariaLabelledBy) {
+      a11yParts.push(`labelledby: ${ariaLabelledBy}`);
+    }
+    
+    if (ariaDescribedBy) {
+      a11yParts.push(`describedby: ${ariaDescribedBy}`);
+    }
+    
+    // Extract ARIA states
+    const ariaStates: string[] = [];
+    const ariaStateProps = [
+      'aria-expanded', 'aria-checked', 'aria-selected', 'aria-pressed',
+      'aria-disabled', 'aria-hidden', 'aria-current', 'aria-invalid'
+    ];
+    
+    ariaStateProps.forEach(prop => {
+      if (attributes[prop] !== undefined) {
+        ariaStates.push(`${prop.replace('aria-', '')}: ${attributes[prop]}`);
+      }
+    });
+    
+    if (ariaStates.length > 0) {
+      a11yParts.push(`states: ${ariaStates.join(', ')}`);
+    }
+    
+    // Extract focus management
+    const focusInfo: string[] = [];
+    if (attributes.tabindex !== undefined) {
+      focusInfo.push(`tabindex: ${attributes.tabindex}`);
+    }
+    if (attributes.autofocus) {
+      focusInfo.push('autofocus');
+    }
+    
+    if (focusInfo.length > 0) {
+      a11yParts.push(`focus: ${focusInfo.join(', ')}`);
+    }
+    
+    // Extract accessibility relationships
+    const relationships: string[] = [];
+    if (attributes['aria-owns']) {
+      relationships.push(`owns: ${attributes['aria-owns']}`);
+    }
+    if (attributes['aria-controls']) {
+      relationships.push(`controls: ${attributes['aria-controls']}`);
+    }
+    if (attributes['aria-flowto']) {
+      relationships.push(`flowto: ${attributes['aria-flowto']}`);
+    }
+    
+    if (relationships.length > 0) {
+      a11yParts.push(`relationships: ${relationships.join(', ')}`);
+    }
+    
+    return a11yParts.length > 0 ? a11yParts.join(', ') : null;
+  }
+
+  /**
+   * Infer ARIA role from HTML element and attributes
+   */
+  private inferAriaRole(tag: string, attributes: any): string | null {
+    // Explicit roles take precedence
+    if (attributes.role) return attributes.role;
+    
+    // Implicit roles based on HTML semantics
+    const roleMap: { [key: string]: string | null } = {
+      'button': 'button',
+      'a': attributes.href ? 'link' : null,
+      'input': this.getInputRole(attributes.type),
+      'select': 'combobox',
+      'textarea': 'textbox',
+      'h1': 'heading',
+      'h2': 'heading',
+      'h3': 'heading',
+      'h4': 'heading',
+      'h5': 'heading',
+      'h6': 'heading',
+      'nav': 'navigation',
+      'main': 'main',
+      'header': 'banner',
+      'footer': 'contentinfo',
+      'aside': 'complementary',
+      'section': 'region',
+      'article': 'article',
+      'form': 'form',
+      'table': 'table',
+      'img': 'img',
+      'ul': 'list',
+      'ol': 'list',
+      'li': 'listitem'
+    };
+    
+    return roleMap[tag] || null;
+  }
+
+  /**
+   * Get appropriate role for input elements based on type
+   */
+  private getInputRole(inputType: string): string | null {
+    const inputRoles: { [key: string]: string } = {
+      'button': 'button',
+      'submit': 'button',
+      'reset': 'button',
+      'checkbox': 'checkbox',
+      'radio': 'radio',
+      'text': 'textbox',
+      'email': 'textbox',
+      'password': 'textbox',
+      'search': 'searchbox',
+      'tel': 'textbox',
+      'url': 'textbox',
+      'number': 'spinbutton',
+      'range': 'slider'
+    };
+    
+    return inputRoles[inputType] || 'textbox';
+  }
+
+  /**
+   * 📝 Extract comprehensive form context for input elements
+   */
+  private extractFormContext(element: any, attributes: any): string | null {
+    const formParts: string[] = [];
+    
+    // Extract form field type
+    const inputType = attributes.type || element.tag || 'text';
+    formParts.push(`type: ${inputType}`);
+    
+    // Extract field name/purpose from various sources
+    const fieldName = attributes.name || 
+                     attributes.id || 
+                     attributes['aria-label'] || 
+                     attributes.placeholder ||
+                     'field';
+    formParts.push(`field: ${fieldName}`);
+    
+    // Extract validation requirements
+    const validationInfo: string[] = [];
+    if (attributes.required || attributes['aria-required'] === 'true') {
+      validationInfo.push('required');
+    }
+    if (attributes.pattern) {
+      validationInfo.push(`pattern: ${attributes.pattern.slice(0, 20)}`);
+    }
+    if (attributes.minlength || attributes.maxlength) {
+      validationInfo.push(`length: ${attributes.minlength || 0}-${attributes.maxlength || '∞'}`);
+    }
+    if (attributes.min || attributes.max) {
+      validationInfo.push(`range: ${attributes.min || '0'}-${attributes.max || '∞'}`);
+    }
+    
+    if (validationInfo.length > 0) {
+      formParts.push(`validation: ${validationInfo.join(', ')}`);
+    }
+    
+    // Extract current state
+    const currentValue = attributes.value || '';
+    if (currentValue) {
+      formParts.push(`value: "${currentValue.slice(0, 20)}${currentValue.length > 20 ? '...' : ''}"`);
+    }
+    
+    // Extract form relationship context
+    if (attributes.form) {
+      formParts.push(`form: ${attributes.form}`);
+    }
+    
+    // Extract autocomplete hints
+    if (attributes.autocomplete) {
+      formParts.push(`autocomplete: ${attributes.autocomplete}`);
+    }
+    
+    return formParts.length > 1 ? formParts.join(', ') : null;
+  }
+
+  /**
+   * 🔄 Generate user path sequence showing how user arrived at current element
+   */
+  private generateUserPathSequence(allInteractions: any[], currentIndex: number): string | null {
+    if (currentIndex < 1) return null; // Need previous interactions
+    
+    // Look back up to 5 interactions to show user path
+    const lookbackCount = Math.min(5, currentIndex);
+    const pathInteractions = allInteractions.slice(currentIndex - lookbackCount, currentIndex + 1);
+    
+    const pathSteps: string[] = [];
+    
+    pathInteractions.forEach((interaction, index) => {
+      const isCurrentInteraction = index === pathInteractions.length - 1;
+      const stepNumber = currentIndex - lookbackCount + index + 1;
+      
+      // Extract key information for path step
+      const context = interaction.context || {};
+      const element = interaction.element || {};
+      const url = context.url || context.pageUrl || '';
+      const pageTitle = context.pageTitle || '';
+      const elementText = (element.text || '').slice(0, 30);
+      const elementTag = element.tag || 'element';
+      
+      // Determine page type from URL
+      const pageType = this.inferPageTypeFromUrl(url);
+      
+      // Create meaningful step description
+      let stepDescription = '';
+      if (pageType === 'homepage') {
+        stepDescription = 'Started on homepage';
+      } else if (pageType === 'category') {
+        stepDescription = `Browsed ${this.extractCategoryFromUrl(url)} category`;
+      } else if (pageType === 'product') {
+        const productName = pageTitle.split('|')[0]?.trim() || 'product';
+        stepDescription = `Viewed ${productName.slice(0, 25)}${productName.length > 25 ? '...' : ''}`;
+      } else if (pageType === 'search') {
+        stepDescription = 'Performed search';
+      } else {
+        stepDescription = `Navigated to ${pageType}`;
+      }
+      
+      // Add element interaction detail if not a navigation
+      if (elementText && elementTag !== 'body' && elementTag !== 'html') {
+        if (elementText.toLowerCase().includes('add to')) {
+          stepDescription += ` → Clicked "${elementText}"`;
+        } else if (elementTag === 'input' && element.attributes?.type === 'radio') {
+          stepDescription += ` → Selected "${elementText}"`;
+        } else if (elementText.length > 0) {
+          stepDescription += ` → Clicked "${elementText.slice(0, 20)}${elementText.length > 20 ? '...' : ''}"`;
+        }
+      }
+      
+      // Format the step
+      const stepMarker = isCurrentInteraction ? '→ [CURRENT]' : `→ Step ${stepNumber}`;
+      pathSteps.push(`${stepMarker} ${stepDescription}`);
+    });
+    
+    return pathSteps.length > 1 ? pathSteps.join('\n') : null;
+  }
+
+  /**
+   * Infer page type from URL for path sequence
+   */
+  private inferPageTypeFromUrl(url: string): string {
+    if (!url) return 'unknown';
+    
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl === '/' || lowerUrl.includes('/home') || lowerUrl.endsWith('.com') || lowerUrl.endsWith('.com/')) {
+      return 'homepage';
+    }
+    if (lowerUrl.includes('/product') || lowerUrl.includes('/p/')) {
+      return 'product';
+    }
+    if (lowerUrl.includes('/category') || lowerUrl.includes('/browse') || lowerUrl.includes('/men') || lowerUrl.includes('/women')) {
+      return 'category';
+    }
+    if (lowerUrl.includes('/search') || lowerUrl.includes('?q=')) {
+      return 'search';
+    }
+    if (lowerUrl.includes('/cart') || lowerUrl.includes('/bag')) {
+      return 'cart';
+    }
+    if (lowerUrl.includes('/checkout')) {
+      return 'checkout';
+    }
+    
+    return 'page';
+  }
+
+  /**
+   * Extract category name from URL for path descriptions
+   */
+  private extractCategoryFromUrl(url: string): string {
+    const categories = ['men', 'women', 'kids', 'shirts', 'pants', 'shoes', 'hoodies'];
+    const lowerUrl = url.toLowerCase();
+    
+    for (const category of categories) {
+      if (lowerUrl.includes(category)) {
+        return category.charAt(0).toUpperCase() + category.slice(1);
+      }
+    }
+    
+    return 'items';
+  }
+
+  /**
+   * Extract product ID from interaction context for state accumulator
+   */
+  private extractProductIdFromInteraction(interaction: any): string | null {
+    const context = interaction.context || {};
+    const url = context.url || context.pageUrl || '';
+    
+    // Use same patterns as ProductStateAccumulator
+    const patterns = [
+      /pid=([^&]+)/i,
+      /\/product\/([^/?]+)/i,
+      /\/p\/([^/?]+)/i,
+      /product_id=([^&]+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    
+    return null;
   }
 }
 
