@@ -89,7 +89,7 @@ export class SequenceAwareTrainer {
     
     for (let i = 0; i < interactions.length; i++) {
       const interaction = interactions[i];
-      const url = interaction.context?.pageUrl || '';
+      const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
       const elementText = interaction.element?.text || '';
       
       // Detect sequence start (homepage, search, category page)
@@ -131,8 +131,8 @@ export class SequenceAwareTrainer {
   private buildShoppingSequence(interactions: EnhancedInteractionData[], startIndex: number): ShoppingSequence | null {
     if (interactions.length < 2) return null;
     
-    const startUrl = interactions[0].context?.pageUrl || '';
-    const endUrl = interactions[interactions.length - 1].context?.pageUrl || '';
+    const startUrl = interactions[0].context?.pageUrl || (interactions[0].context as any)?.url || '';
+    const endUrl = interactions[interactions.length - 1].context?.pageUrl || (interactions[interactions.length - 1].context as any)?.url || '';
     
     // Determine sequence type
     const sequenceType = this.determineSequenceType(interactions);
@@ -311,12 +311,25 @@ export class SequenceAwareTrainer {
   private isSequenceContinuation(interaction: EnhancedInteractionData, currentSequence: EnhancedInteractionData[]): boolean {
     if (currentSequence.length === 0) return false;
     
-    const url = interaction.context?.pageUrl || '';
-    const lastUrl = currentSequence[currentSequence.length - 1].context?.pageUrl || '';
+    // Handle both pageUrl and url field formats
+    const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
+    const lastUrl = currentSequence[currentSequence.length - 1].context?.pageUrl || 
+                    (currentSequence[currentSequence.length - 1].context as any)?.url || '';
     
-    // Same domain and related pages
-    return url.includes(new URL(lastUrl).hostname) &&
-           (url.includes('/product') || url.includes('/category') || url.includes('/search'));
+    // Skip if either URL is empty or invalid
+    if (!url || !lastUrl) return false;
+    
+    try {
+      // Same domain and related pages
+      const currentHostname = new URL(url).hostname;
+      const lastHostname = new URL(lastUrl).hostname;
+      
+      return currentHostname === lastHostname &&
+             (url.includes('/product') || url.includes('/category') || url.includes('/search'));
+    } catch (error) {
+      // Invalid URLs - skip this comparison
+      return false;
+    }
   }
 
   private isSequenceEnd(interaction: EnhancedInteractionData): boolean {
