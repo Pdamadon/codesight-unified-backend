@@ -104,18 +104,19 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     }
     console.log(`✅ [OPENAI FORMAT] Generated ${allExamples.length} structured training examples`);
 
+    // 🎯 COMMENTED OUT: Legacy training formats to ensure consistent OpenAI structured format only
     // 🎯 NEW: SEQUENCE-AWARE TRAINING - Complete shopping flow examples
-    console.log(`\n🛤️ [SEQUENCE EXAMPLES] Creating sequence-aware training examples for complete shopping flows...`);
-    const sequenceExamples = this.sequenceAwareTrainer.generateSequenceTrainingExamples(enhancedInteractions);
-    console.log(`✅ [SEQUENCE EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
-    allExamples.push(...sequenceExamples);
+    // console.log(`\n🛤️ [SEQUENCE EXAMPLES] Creating sequence-aware training examples for complete shopping flows...`);
+    // const sequenceExamples = this.sequenceAwareTrainer.generateSequenceTrainingExamples(enhancedInteractions);
+    // console.log(`✅ [SEQUENCE EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
+    // allExamples.push(...sequenceExamples);
     
-    console.log(`🎯 [TASK EXAMPLES] Creating enhanced task-driven examples...`);
-    const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
-    console.log(`✅ [TASK EXAMPLES] Generated ${taskExamples.length} task examples`);
+    // console.log(`🎯 [TASK EXAMPLES] Creating enhanced task-driven examples...`);
+    // const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
+    // console.log(`✅ [TASK EXAMPLES] Generated ${taskExamples.length} task examples`);
     
-    allExamples.push(...taskExamples);
-    console.log(`📈 [TOTAL EXAMPLES] Combined total: ${allExamples.length} training examples`);
+    // allExamples.push(...taskExamples);
+    console.log(`📈 [TOTAL EXAMPLES] OpenAI structured examples only: ${allExamples.length} training examples`);
 
     // 🎯 JOURNEY-PRIORITIZED QUALITY FILTERING
     console.log(`🔍 [QUALITY FILTER] Applying journey-prioritized quality filtering...`);
@@ -447,28 +448,27 @@ wait(200)
       });
     }
 
+    // 🎯 COMMENTED OUT: ENHANCED-COMPLETE format to ensure consistent OpenAI structured format only
     // 🎯 EXAMPLE 8: NEW ENHANCED DATA - Complete Nearby Elements + Design System + Behavior Patterns
-    if (nearbyElementsContext.interactionTargets && designSystemContext.componentLibrary && behaviorPatternsContext.patterns) {
-      examples.push({
-        prompt: `ENHANCED-COMPLETE: "${elementText}" ${actionType} | Design: ${designSystemContext.componentLibrary} ${designSystemContext.brandColors} | Nearby: ${nearbyElementsContext.spatialSummary} (${nearbyElementsContext.interactionTargets}) | User: ${behaviorPatternsContext.preferredCategories} ${behaviorPatternsContext.purchasePattern} | on ${hostname}${hoverContext.wasRevealedByHover ? ` | Hover-revealed element` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal enhanced element
-wait(200)
-` : ''}${playwrightAction.action} // UI: ${designSystemContext.componentLibrary} ${designSystemContext.designPatterns} | Spatial: ${nearbyElementsContext.relationships} | PersonalizedFor: ${behaviorPatternsContext.personalization} | PurchaseContext: ${behaviorPatternsContext.purchaseHistory}${hoverContext.wasRevealedByHover ? ' | Dropdown interaction' : ''}`,
-        context: {
-          visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
-          element: { 
-            ...elementContext, 
-            nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
-            spatialRelationships: nearbyElementsContext.relationships, 
-            interactionContext: nearbyElementsContext.interactionTargets,
-            allNearbySelectors: nearbyElementsContext.allElementSelectors,
-            completeElementMap: nearbyElementsContext.completeElementMap
-          },
-          business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns, purchaseHistory: behaviorPatternsContext.purchaseHistory, userPreferences: behaviorPatternsContext.preferences, personalizedContext: behaviorPatternsContext.personalization }
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
+    // if (nearbyElementsContext.interactionTargets && designSystemContext.componentLibrary && behaviorPatternsContext.patterns) {
+    //   examples.push({
+    //     prompt: `ENHANCED-COMPLETE: "${elementText}" ${actionType} | Design: ${designSystemContext.componentLibrary} ${designSystemContext.brandColors} | Nearby: ${nearbyElementsContext.spatialSummary} (${nearbyElementsContext.interactionTargets}) | User: ${behaviorPatternsContext.preferredCategories} ${behaviorPatternsContext.purchasePattern} | on ${hostname}${hoverContext.wasRevealedByHover ? ` | Hover-revealed element` : ''}`,
+    //     completion: `[COMMENTED OUT - template literal]`,
+    //     context: {
+    //       visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
+    //       element: { 
+    //         ...elementContext, 
+    //         nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
+    //         spatialRelationships: nearbyElementsContext.relationships, 
+    //         interactionContext: nearbyElementsContext.interactionTargets,
+    //         allNearbySelectors: nearbyElementsContext.allElementSelectors,
+    //         completeElementMap: nearbyElementsContext.completeElementMap
+    //       },
+    //       business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns, purchaseHistory: behaviorPatternsContext.purchaseHistory, userPreferences: behaviorPatternsContext.preferences, personalizedContext: behaviorPatternsContext.personalization }
+    //     },
+    //     quality: this.calculateComprehensiveQuality(interaction)
+    //   });
+    // }
 
     return examples;
   }
@@ -626,7 +626,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
         originalInteraction: interaction,
         processingTime: Date.now() - startTime,
         dataCompletion: this.calculateDataCompletion(interaction),
-        enhancementFlags: ['openai-structured', 'section-based', 'enhanced-context']
+        enhancementFlags: ['openai-structured', 'section-based', 'enhanced-context', 'format-consistent']
       },
       journeyMetadata: {
         journeyType: 'real-user-session',

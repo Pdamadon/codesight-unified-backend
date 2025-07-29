@@ -7,7 +7,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { NavigationStrategyService } from './services/navigation-strategy';
-import { OpenAIIntegrationService } from './services/openai-integration';
+import { OpenAIIntegrationService } from './services/openai-integration-clean';
 
 async function testNavigationStrategy() {
   const prisma = new PrismaClient();
