@@ -13,6 +13,10 @@ import { ProductContextBuilder, CartInteraction } from './product-context-builde
 import { ProductStateAccumulator, ProductConfigurationState } from './product-state-accumulator';
 import { DynamicPatternMatcher, PatternMatchResult } from './dynamic-pattern-matcher';
 import { SequenceAwareTrainer } from './sequence-aware-trainer';
+import { DomContextService, DomContextServiceImpl } from './dom-context-service';
+import { VisualContextService, VisualContextServiceImpl } from './visual-context-service';
+import { BusinessContextService, BusinessContextServiceImpl } from './business-context-service';
+import { JourneyContextService, JourneyContextServiceImpl } from './journey-context-service';
 import { 
   EnhancedInteractionData, 
   TrainingExample, 
@@ -24,7 +28,6 @@ import {
 
 export interface TrainingDataTransformerService {
   generateTrainingData(sessionId: string, enhancedInteractions: any[], sessionData?: any): Promise<TrainingDataResult>;
-  createFineTuningExamples(interaction: EnhancedInteractionData): TrainingExample[];
   createSequenceExamples(interactions: EnhancedInteractionData[]): TrainingExample[];
   createTaskDrivenExamples(interactions: EnhancedInteractionData[], taskContext?: any): TrainingExample[];
 }
@@ -37,6 +40,12 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   private patternMatcher: DynamicPatternMatcher; // Dynamic pattern matching
   private sequenceAwareTrainer: SequenceAwareTrainer; // Complete shopping flow training
   private allInteractions?: any[]; // Store all interactions for product context analysis
+  
+  // New context services for focused functionality
+  private domContextService: DomContextService;
+  private visualContextService: VisualContextService;
+  private businessContextService: BusinessContextService;
+  private journeyContextService: JourneyContextService;
 
   constructor(
     private selectorStrategy: SelectorStrategyService
@@ -48,6 +57,12 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     this.journeyTracker = new HybridJourneyTracker();
     this.productContextBuilder = new ProductContextBuilder();
     this.productStateAccumulator = new ProductStateAccumulator();
+    
+    // Initialize new context services
+    this.domContextService = new DomContextServiceImpl();
+    this.visualContextService = new VisualContextServiceImpl();
+    this.businessContextService = new BusinessContextServiceImpl(this.productContextBuilder, this.productStateAccumulator);
+    this.journeyContextService = new JourneyContextServiceImpl();
     this.patternMatcher = new DynamicPatternMatcher();
     this.sequenceAwareTrainer = new SequenceAwareTrainer();
     
@@ -72,6 +87,9 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     // Store session data and interactions for use in context extraction
     this.sessionData = sessionData;
     this.allInteractions = enhancedInteractions;
+    
+    // Update journey context service with session data
+    this.journeyContextService = new JourneyContextServiceImpl(sessionData);
     
     // 🎯 REAL JOURNEY TRACKING: Initialize hybrid tracker with actual session data
     this.journeyTracker.initializeForSession(sessionData, enhancedInteractions);
@@ -106,16 +124,16 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
 
     // 🎯 COMMENTED OUT: Legacy training formats to ensure consistent OpenAI structured format only
     // 🎯 NEW: SEQUENCE-AWARE TRAINING - Complete shopping flow examples
-    // console.log(`\n🛤️ [SEQUENCE EXAMPLES] Creating sequence-aware training examples for complete shopping flows...`);
-    // const sequenceExamples = this.sequenceAwareTrainer.generateSequenceTrainingExamples(enhancedInteractions);
-    // console.log(`✅ [SEQUENCE EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
-    // allExamples.push(...sequenceExamples);
+    console.log(`\n🛤️ [SEQUENCE EXAMPLES] Creating sequence-aware training examples for complete shopping flows...`);
+    const sequenceExamples = this.sequenceAwareTrainer.generateSequenceTrainingExamples(enhancedInteractions);
+    console.log(`✅ [SEQUENCE EXAMPLES] Generated ${sequenceExamples.length} sequence examples`);
+    allExamples.push(...sequenceExamples);
     
-    // console.log(`🎯 [TASK EXAMPLES] Creating enhanced task-driven examples...`);
-    // const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
-    // console.log(`✅ [TASK EXAMPLES] Generated ${taskExamples.length} task examples`);
+    console.log(`🎯 [TASK EXAMPLES] Creating enhanced task-driven examples...`);
+    const taskExamples = this.createTaskDrivenExamples(enhancedInteractions);
+    console.log(`✅ [TASK EXAMPLES] Generated ${taskExamples.length} task examples`);
     
-    // allExamples.push(...taskExamples);
+    allExamples.push(...taskExamples);
     console.log(`📈 [TOTAL EXAMPLES] OpenAI structured examples only: ${allExamples.length} training examples`);
 
     // 🎯 JOURNEY-PRIORITIZED QUALITY FILTERING
@@ -145,335 +163,6 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   }
 
   /**
-   * 🛤️ JOURNEY-AWARE TRAINING EXAMPLES: Generate both micro-actions and journey progression
-   * 
-   * Creates training examples that maintain:
-   * 1. Detailed DOM-grounded micro interactions (ChatGPT's approach)
-   * 2. Sequential journey progression toward conversion goals
-   * 3. Step-by-step navigation context and goal advancement
-   */
-  createFineTuningExamples(interaction: EnhancedInteractionData): TrainingExample[] {
-    const examples: TrainingExample[] = [];
-    const startTime = Date.now();
-    
-    // 🚨 CRITICAL FIX: Use reliability-based selector selection
-    const selectorResult = this.selectorStrategy.getBestSelectorWithScore(interaction.selectors || {});
-    const bestSelector = selectorResult.bestSelector;
-    const backupSelectors = selectorResult.backupSelectors;
-    const reliability = selectorResult.reliability;
-
-    // 🆕 COMPREHENSIVE DATA EXTRACTION - Use EVERYTHING
-    const url = interaction.context?.pageUrl || '';
-    const hostname = url ? new URL(url).hostname : 'unknown-site';
-    const elementText = interaction.element?.text || '';
-    const actionType = interaction.interaction?.type?.toLowerCase() || 'interact';
-    
-    // Extract ALL available context including NEW ENHANCED DATA
-    const visualContext = this.extractVisualContext(interaction.visual);
-    const elementContext = this.extractElementContext(interaction.element);
-    const pageContext = this.extractPageContext(interaction.context);
-    const stateContext = this.extractStateContext(interaction.state);
-    const businessContext = this.extractBusinessContext(interaction.business, hostname);
-    const technicalContext = this.extractTechnicalContext(interaction);
-    
-    // 🆕 NEW ENHANCED DATA EXTRACTION
-    const nearbyElementsContext = this.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
-    const designSystemContext = this.extractDesignSystemContext(interaction.visual?.designSystem);
-    const behaviorPatternsContext = this.extractBehaviorPatternsContext(interaction.business?.user);
-    
-    // 🎯 HOVER-SPECIFIC CONTEXT EXTRACTION
-    const hoverContext = this.extractHoverContext(interaction, undefined, undefined);
-    
-    // 🛤️ JOURNEY CONTEXT EXTRACTION
-    const journeyContext = this.extractJourneyContext(interaction);
-    
-    // Generate Playwright action with reliable selector
-    const playwrightAction = this.selectorStrategy.getPlaywrightAction(
-      actionType as any, 
-      bestSelector !== 'element' ? bestSelector : (interaction.interaction?.selector || 'element')
-    );
-
-    // 🛤️ EXAMPLE 1: JOURNEY-AWARE MICRO ACTION (maintains journey progression + DOM details)
-    if (bestSelector !== 'element') {
-      const boundingBox = interaction.visual?.boundingBox;
-      const nearbyElements = interaction.element?.nearbyElements?.slice(0, 5) || [];
-      const domAncestors = interaction.context?.ancestors?.slice(0, 3) || [];
-      
-      examples.push({
-        prompt: `JOURNEY STEP ${journeyContext.currentStep}/${journeyContext.totalSteps}: ${journeyContext.stepDescription}
-
-GOAL: ${journeyContext.overallGoal}
-PROGRESS: ${journeyContext.previousSteps.join(' → ')} → [${journeyContext.currentStepName}] → ${journeyContext.nextSteps.join(' → ')}
-CURRENT TASK: On ${url}, ${journeyContext.actionDescription}
-
-DOM CONTEXT:
-- Element: <${interaction.element?.tag || 'button'} ${Object.entries(interaction.element?.attributes || {}).map(([k, v]) => `${k}="${v}"`).join(' ')}>${elementText}</${interaction.element?.tag || 'button'}>
-- Bounding Box: {x: ${boundingBox?.x || 0}, y: ${boundingBox?.y || 0}, width: ${boundingBox?.width || 0}, height: ${boundingBox?.height || 0}}
-- Page Type: ${interaction.context?.pageType || 'unknown'}
-
-SPATIAL CONTEXT:
-${nearbyElements.map((el: any) => `- ${el.direction || 'near'}: "${el.text}" (${el.distance || 0}px) [${el.elementType || 'element'}]`).join('\n')}
-
-SELECTORS (reliability):
-1. ${bestSelector} (${reliability.toFixed(2)})
-${backupSelectors.slice(0, 2).map((sel: string, i: number) => `${i + 2}. ${sel} (estimated)`).join('\n')}
-
-JOURNEY CONTEXT: ${journeyContext.funnelStage} | ${businessContext.ecommerce} | Step ${journeyContext.currentStep} of ${journeyContext.totalSteps}${hoverContext.wasRevealedByHover ? `
-HOVER CONTEXT: Element revealed by hover on "${hoverContext.dropdownContext}" - requires dropdown navigation` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `// Hover sequence required for dropdown navigation
-hover('${hoverContext.dropdownContext}') // Reveal dropdown content
-wait(200) // Allow dropdown animation
-` : ''}{
-  "action": "${actionType}",
-  "selector": "${bestSelector}",
-  "reasoning": "${this.getSelectorReasoningText(bestSelector, reliability)} - ${journeyContext.actionReasoning}${hoverContext.wasRevealedByHover ? ' | Element revealed by hover' : ''}",
-  "confidence": ${reliability.toFixed(2)},
-  "journey_impact": {
-    "current_step": "${journeyContext.currentStepName}",
-    "next_step": "${journeyContext.nextStepName}",
-    "goal_progress": "${journeyContext.progressPercent}%",
-    "expected_outcome": "${journeyContext.expectedOutcome}"
-  },
-  "fallbacks": [${backupSelectors.slice(0, 2).map(s => `"${s}"`).join(', ')}],
-  "coordinates": {"x": ${boundingBox?.x || 0}, "y": ${boundingBox?.y || 0}}
-}`,
-        context: {
-          pageType: interaction.context?.pageType,
-          userJourney: interaction.context?.userJourney,
-          reliability,
-          journeyContext,
-          businessContext: businessContext.conversion,
-          visual: { ...visualContext, designSystem: designSystemContext.summary },
-          element: { 
-            ...elementContext, 
-            nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
-            spatialRelationships: nearbyElementsContext.relationships
-          },
-          page: pageContext,
-          state: stateContext,
-          business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns },
-          technical: technicalContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction),
-        rawData: {
-          originalInteraction: interaction,
-          processingTime: Date.now() - startTime,
-          dataCompletion: this.calculateDataCompletion(interaction),
-          enhancementFlags: this.getEnhancementFlags(interaction)
-        },
-        journeyMetadata: {
-          journeyType: journeyContext.journeyType,
-          journeyGoal: journeyContext.overallGoal,
-          userIntent: journeyContext.userIntent,
-          stepNumber: journeyContext.currentStep,
-          totalSteps: journeyContext.totalSteps,
-          isJourneyStart: journeyContext.currentStep === 1,
-          isJourneyEnd: journeyContext.currentStep === journeyContext.totalSteps,
-          journeyProgress: journeyContext.progressPercent + '%'
-        }
-      });
-    }
-
-    // 🎯 EXAMPLE 2: ULTRA-COMPREHENSIVE site-specific pattern with ALL DATA
-    if (bestSelector !== 'element') {
-      examples.push({
-        prompt: `${hostname.toUpperCase()}: "${elementText}" ${actionType} | ${visualContext.layout} ${designSystemContext.componentLibrary} | ${elementContext.formContext} | ${nearbyElementsContext.spatialSummary} | ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} user | ${pageContext.performance} performance${hoverContext.isHoverInteraction ? ` | Hover Context: ${hoverContext.hoverSequence}` : ''}${hoverContext.wasRevealedByHover ? ` | Element revealed by hover on "${hoverContext.dropdownContext}"` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `// Element revealed by hover - need complete sequence\nhover('${hoverContext.dropdownContext}') // Reveal dropdown navigation\nwait(200) // Allow dropdown to appear\n${playwrightAction.action} // Click revealed element` : playwrightAction.action} // ${businessContext.ecommerce} | Design: ${designSystemContext.brandColors} ${designSystemContext.designPatterns} | Behavior: ${behaviorPatternsContext.devicePreference} ${behaviorPatternsContext.interactionPatterns} | Nearby: ${nearbyElementsContext.interactionTargets} | Rel: ${reliability.toFixed(2)} | ${technicalContext.timing} | Backups: ${backupSelectors.length} | NearbyOptions: ${nearbyElementsContext.allElementSelectors.slice(0, 5).map((el: any) => `${el.text}[${el.selector.slice(0, 15)}]`).join(',')}`,
-        context: {
-          pageType: interaction.context?.pageType,
-          userJourney: interaction.context?.userJourney,
-          reliability,
-          businessContext: businessContext.conversion,
-          visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
-          element: { 
-            ...elementContext, 
-            nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
-            spatialRelationships: nearbyElementsContext.relationships, 
-            interactionContext: nearbyElementsContext.interactionTargets,
-            allNearbySelectors: nearbyElementsContext.allElementSelectors,
-            completeElementMap: nearbyElementsContext.completeElementMap
-          },
-          page: pageContext,
-          state: stateContext,
-          business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns },
-          technical: technicalContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction),
-        rawData: {
-          originalInteraction: interaction,
-          processingTime: Date.now() - startTime,
-          dataCompletion: this.calculateDataCompletion(interaction),
-          enhancementFlags: this.getEnhancementFlags(interaction)
-        }
-      });
-    }
-
-    // 🎯 EXAMPLE 3: INPUT INTERACTION with FORM CONTEXT (ChatGPT micro-level approach for forms)
-    if (actionType === 'input' || actionType === 'type' || elementContext.formContext) {
-      const formElement = interaction.element;
-      const formAttributes = formElement?.attributes || {};
-      const formBoundingBox = interaction.visual?.boundingBox;
-      const formNearbyElements = interaction.element?.nearbyElements || [];
-      
-      examples.push({
-        prompt: `FORM INPUT: Enter text in "${elementText}" field on ${url}
-
-FORM CONTEXT:
-- Field: <${formElement?.tag || 'input'} type="${formAttributes.type || 'text'}" name="${formAttributes.name || ''}" placeholder="${formAttributes.placeholder || ''}" ${formAttributes.required ? 'required' : ''}>
-- Form: ${elementContext.formContext || 'unknown form'}
-- Validation: ${formAttributes.pattern ? 'has pattern validation' : 'basic validation'}
-- Bounding Box: {x: ${formBoundingBox?.x || 0}, y: ${formBoundingBox?.y || 0}, width: ${formBoundingBox?.width || 0}, height: ${formBoundingBox?.height || 0}}
-
-NEARBY FIELDS:
-${formNearbyElements.filter((el: any) => el.elementType === 'input' || el.text?.includes('field')).map((el: any) => `- ${el.text} (${el.direction} ${el.distance}px)`).join('\n') || '- No nearby form fields'}
-
-SELECTOR OPTIONS:
-1. ${bestSelector} (reliability: ${reliability.toFixed(2)})
-${backupSelectors.slice(0, 2).map((sel: string, i: number) => `${i + 2}. ${sel}`).join('\n')}
-
-FORM STATE: ${stateContext.before || 'clean form'}`,
-        completion: `{
-  "action": "fill",
-  "selector": "${bestSelector}",
-  "reasoning": "Using ${this.getSelectorReasoningText(bestSelector, reliability)} for form field interaction",
-  "confidence": ${reliability.toFixed(2)},
-  "validation": "Expect ${elementContext.formContext || 'form validation'} and field state update",
-  "inputContext": {
-    "fieldType": "${formAttributes.type || 'text'}",
-    "required": ${formAttributes.required || false},
-    "hasValidation": ${!!formAttributes.pattern}
-  }
-}`,
-        context: {
-          pageType: interaction.context?.pageType,
-          userJourney: interaction.context?.userJourney,
-          reliability,
-          element: elementContext,
-          state: stateContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 EXAMPLE 4: VISUAL + SPATIAL + ACCESSIBILITY context
-    if (visualContext.positioning && elementContext.ariaContext) {
-      examples.push({
-        prompt: `VISUAL-A11Y: "${elementText}" ${visualContext.positioning} | ${visualContext.colors} | ARIA: ${elementContext.ariaContext} | ${pageContext.accessibility} on ${hostname}${hoverContext.wasRevealedByHover ? ` | Hover revealed` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal dropdown for accessibility
-wait(200)
-` : ''}${playwrightAction.action} // Visual: ${visualContext.deviceType} | A11y: WCAG-${pageContext.accessibility} | Colors: ${visualContext.colors}${hoverContext.wasRevealedByHover ? ' | Dropdown element' : ''}`,
-        context: {
-          spatialContext: `${visualContext.positioning} with ${elementContext.ariaContext}`,
-          visual: visualContext,
-          element: elementContext,
-          page: pageContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 EXAMPLE 3: BUSINESS + E-COMMERCE + CONVERSION context  
-    if (businessContext.ecommerce && businessContext.conversion) {
-      examples.push({
-        prompt: `E-COMMERCE: ${businessContext.ecommerce} | Funnel: ${businessContext.conversion} | User: ${businessContext.user} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Revealed by hover on "${hoverContext.dropdownContext}"` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}')\nwait(200)\n${playwrightAction.action} // Click revealed dropdown element` : playwrightAction.action} // Product: ${businessContext.ecommerce} | Stage: ${businessContext.conversion} | Timing: ${technicalContext.timing}`,
-        context: {
-          businessContext: `${businessContext.ecommerce} at ${businessContext.conversion}`,
-          business: businessContext,
-          technical: technicalContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 EXAMPLE 4: PERFORMANCE + NETWORK + SEO context
-    if (pageContext.performance && technicalContext.network) {
-      examples.push({
-        prompt: `PERFORMANCE: ${pageContext.performance} | Network: ${technicalContext.network} | SEO: ${pageContext.seo} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Hover dropdown` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal for interaction
-wait(200)
-` : ''}${playwrightAction.action} // Load: ${pageContext.performance} | Requests: ${technicalContext.network} | ${pageContext.seo}${hoverContext.wasRevealedByHover ? ' | Hover-revealed element' : ''}`,
-        context: {
-          page: pageContext,
-          technical: technicalContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 EXAMPLE 5: STATE + FORM + INTERACTION context
-    if (stateContext.before && elementContext.formContext) {
-      examples.push({
-        prompt: `FORM-STATE: ${elementContext.formContext} | Before: ${stateContext.before} | Changes: ${stateContext.changes} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Hover revealed` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal form options
-wait(200)
-` : ''}${playwrightAction.action} // Form: ${elementContext.formContext} | State: ${stateContext.before} → ${stateContext.after}${hoverContext.wasRevealedByHover ? ' | Dropdown option' : ''}`,
-        context: {
-          element: elementContext,
-          state: stateContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 EXAMPLE 6: COMPLETE DOM + HIERARCHY + SIBLINGS context
-    if (elementContext.domHierarchy && interaction.element?.siblingElements?.length) {
-      const siblings = interaction.element.siblingElements.slice(0, 3).map(s => s.text).join(', ');
-      examples.push({
-        prompt: `DOM-COMPLETE: ${elementContext.domHierarchy} | Siblings: ${siblings} | Attrs: ${elementContext.attributes} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Dropdown element` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Reveal DOM element
-wait(200)
-` : ''}${playwrightAction.action} // Path: ${elementContext.domHierarchy} | Near: ${siblings} | Computed: ${elementContext.computedStyles}${hoverContext.wasRevealedByHover ? ' | Revealed by hover' : ''}`,
-        context: {
-          element: elementContext,
-          spatialContext: `in ${elementContext.domHierarchy} with siblings: ${siblings}`
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 EXAMPLE 7: ANALYTICS + TRACKING + USER context
-    if (pageContext.analytics && businessContext.user) {
-      examples.push({
-        prompt: `ANALYTICS: ${pageContext.analytics} | User: ${businessContext.user} | Session: ${technicalContext.timing} | "${elementText}" ${actionType}${hoverContext.wasRevealedByHover ? ` | Hover interaction` : ''}`,
-        completion: `${hoverContext.wasRevealedByHover ? `hover('${hoverContext.dropdownContext}') // Track hover interaction
-wait(200)
-` : ''}${playwrightAction.action} // Track: ${pageContext.analytics} | User: ${businessContext.user} | Time: ${technicalContext.timing}${hoverContext.wasRevealedByHover ? ' | Dropdown analytics' : ''}`,
-        context: {
-          page: pageContext,
-          business: businessContext,
-          technical: technicalContext
-        },
-        quality: this.calculateComprehensiveQuality(interaction)
-      });
-    }
-
-    // 🎯 COMMENTED OUT: ENHANCED-COMPLETE format to ensure consistent OpenAI structured format only
-    // 🎯 EXAMPLE 8: NEW ENHANCED DATA - Complete Nearby Elements + Design System + Behavior Patterns
-    // if (nearbyElementsContext.interactionTargets && designSystemContext.componentLibrary && behaviorPatternsContext.patterns) {
-    //   examples.push({
-    //     prompt: `ENHANCED-COMPLETE: "${elementText}" ${actionType} | Design: ${designSystemContext.componentLibrary} ${designSystemContext.brandColors} | Nearby: ${nearbyElementsContext.spatialSummary} (${nearbyElementsContext.interactionTargets}) | User: ${behaviorPatternsContext.preferredCategories} ${behaviorPatternsContext.purchasePattern} | on ${hostname}${hoverContext.wasRevealedByHover ? ` | Hover-revealed element` : ''}`,
-    //     completion: `[COMMENTED OUT - template literal]`,
-    //     context: {
-    //       visual: { ...visualContext, designSystem: designSystemContext.summary, componentLibrary: designSystemContext.componentLibrary, brandColors: designSystemContext.brandColors, designPatterns: designSystemContext.designPatterns },
-    //       element: { 
-    //         ...elementContext, 
-    //         nearbyElementsComplete: nearbyElementsContext.spatialSummary, 
-    //         spatialRelationships: nearbyElementsContext.relationships, 
-    //         interactionContext: nearbyElementsContext.interactionTargets,
-    //         allNearbySelectors: nearbyElementsContext.allElementSelectors,
-    //         completeElementMap: nearbyElementsContext.completeElementMap
-    //       },
-    //       business: { ...businessContext, behaviorPatterns: behaviorPatternsContext.patterns, purchaseHistory: behaviorPatternsContext.purchaseHistory, userPreferences: behaviorPatternsContext.preferences, personalizedContext: behaviorPatternsContext.personalization }
-    //     },
-    //     quality: this.calculateComprehensiveQuality(interaction)
-    //   });
-    // }
-
-    return examples;
-  }
-
-  /**
    * 🧠 OPENAI RECOMMENDED: Create structured training examples using OpenAI's recommended format
    * This format uses clear section labels for better AI comprehension and learning efficiency
    * 🎯 NEW: Uses REAL journey tracking instead of fake step templates
@@ -499,9 +188,9 @@ wait(200)
     const elementText = interaction.element?.text || '';
     const actionType = interaction.interaction?.type?.toLowerCase() || 'interact';
     
-    // Extract comprehensive context
-    const visualContext = this.extractVisualContext(interaction.visual);
-    const elementContext = this.extractElementContext(interaction.element);
+    // Extract comprehensive context using new services
+    const visualContext = this.visualContextService.extractVisualContext(interaction.visual);
+    const elementContext = this.domContextService.extractElementContext(interaction.element);
     const pageContext = this.extractPageContext(interaction.context);
     const stateContext = this.extractStateContext(interaction.state);
     
@@ -522,9 +211,9 @@ wait(200)
       this.productStateAccumulator.generateStateContext(productState.productId, interactionIndex) : 
       '';
     
-    const businessContext = this.extractBusinessContext(interaction.business, realHostname, interaction, this.allInteractions, interactionIndex);
+    const businessContext = this.businessContextService.extractBusinessContext(interaction.business, realHostname, interaction, this.allInteractions, interactionIndex);
     const technicalContext = this.extractTechnicalContext(interaction);
-    const nearbyElementsContext = this.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
+    const nearbyElementsContext = this.visualContextService.extractCompleteNearbyElements(interaction.element?.nearbyElements || []);
     
     // 🎯 REAL JOURNEY TRACKING: Get actual journey context instead of fake templates
     const realJourneyContext = this.journeyTracker.getJourneyContextForInteraction(interaction, interactionIndex);
@@ -547,17 +236,38 @@ wait(200)
       });
     }
     
+    // 🎯 SEMANTIC ENHANCEMENT: Get semantic journey context from SequenceAwareTrainer
+    const stageName = (this.sequenceAwareTrainer as any).getStageNameForInteraction ? 
+      (this.sequenceAwareTrainer as any).getStageNameForInteraction(interaction) : 'Navigation';
+    const pageClassification = (this.sequenceAwareTrainer as any).classifyPageSemantically ? 
+      (this.sequenceAwareTrainer as any).classifyPageSemantically(interaction) : { pageType: 'unknown', confidence: 0.5 };
+    const behaviorDescription = (this.sequenceAwareTrainer as any).getSemanticBehaviorDescription ? 
+      (this.sequenceAwareTrainer as any).getSemanticBehaviorDescription(pageClassification.pageType, interaction) : 
+      'User progressing through shopping interface';
+    
+    // Build journey progression context (simplified for now)
+    const journeyProgression = `${pageClassification.pageType} → ${stageName}`;
+    const semanticContext = behaviorDescription;
+    const sequenceType = 'navigation_flow'; // Will be enhanced with full sequence analysis later
+    const sequenceQuality = pageClassification.confidence || 0.5;
+    
     examples.push({
       prompt: `[USER GOAL]
 ${userGoal}
+Task Progress: ${realJourneyContext.taskProgress.currentTaskName} (${realJourneyContext.taskProgress.currentTaskIndex + 1}/${realJourneyContext.taskProgress.totalTasks} - ${realJourneyContext.taskProgress.progressPercent}% complete)
+${realJourneyContext.taskProgress.completedTasks.length > 0 ? `Completed: [${realJourneyContext.taskProgress.completedTasks.map(t => `"${t}" ✅`).join(', ')}]` : ''}
+${realJourneyContext.taskProgress.remainingTasks.length > 0 ? `Remaining: [${realJourneyContext.taskProgress.remainingTasks.map(t => `"${t}"`).join(', ')}]` : ''}
 
 [JOURNEY]
-Step: ${realJourneyContext.sessionStep}/${realJourneyContext.totalSteps}
-Task Progress: ${realJourneyContext.taskProgress.currentTaskName} (${realJourneyContext.taskProgress.currentTaskIndex + 1}/${realJourneyContext.taskProgress.totalTasks})
-Current Focus: ${realJourneyContext.behavioralContext.userFocus}
-Navigation: ${realJourneyContext.navigationFlow.previousPages.join(' → ')} → [${realJourneyContext.navigationFlow.currentPage}]
+Step: ${realJourneyContext.sessionStep}/${realJourneyContext.totalSteps} - ${realJourneyContext.taskProgress.currentTaskName}
+Current Intent: ${realJourneyContext.currentIntent.action}${realJourneyContext.currentIntent.product ? ` (${realJourneyContext.currentIntent.product})` : ''} (confidence: ${realJourneyContext.currentIntent.confidence.toFixed(2)})
+Evidence: ${realJourneyContext.currentIntent.reasoning}
+Navigation Flow: ${realJourneyContext.navigationFlow.previousPages.slice(-2).join(' → ')} → ${realJourneyContext.navigationFlow.currentPage}
+Flow Reason: ${realJourneyContext.navigationFlow.flowReason}
+User Focus: ${realJourneyContext.behavioralContext.userFocus}
+Decision Factors: [${realJourneyContext.behavioralContext.decisionFactors.slice(0, 3).join(', ')}]
 
-${productStateContext ? `[PRODUCT STATE HISTORY]\n${productStateContext}\n` : ''}${this.generateUserPathSequence(this.allInteractions!, interactionIndex) ? `[USER PATH SEQUENCE]\n${this.generateUserPathSequence(this.allInteractions!, interactionIndex)}\n` : ''}[PAGE CONTEXT]
+${productStateContext ? `[SHOPPING SEQUENCE CONTEXT]\n${productStateContext}\n` : ''}${this.generateUserPathSequence(this.allInteractions!, interactionIndex) ? `[USER PATH SEQUENCE]\n${this.generateUserPathSequence(this.allInteractions!, interactionIndex)}\n` : ''}[PAGE CONTEXT]
 Site: ${realHostname}
 URL: ${realUrl}
 Page Title: ${realPageTitle}
@@ -565,20 +275,32 @@ Page Type: ${pageContext.pageType || 'unknown'}
 Loading State: ${stateContext.loadingComplete ? 'Complete' : 'Loading'}
 
 [DOM CONTEXT]
-Element: <${element?.tag || 'button'} ${Object.entries(attributes).map(([k, v]) => `${k}="${v}"`).join(' ')}>${elementText}</${element?.tag || 'button'}>
+Target Element: <${element?.tag || 'button'} ${Object.entries(attributes).map(([k, v]) => `${k}="${v}"`).join(' ')}>${elementText}</${element?.tag || 'button'}>
 Text Content: "${elementText}"
 Element Type: ${elementContext.elementType || 'Interactive Element'}
 Bounding Box: {x: ${boundingBox?.x || 0}, y: ${boundingBox?.y || 0}, width: ${boundingBox?.width || 0}, height: ${boundingBox?.height || 0}}
 Visibility: ${visualContext.visibility || 'Visible'}, ${elementContext.clickable ? 'Clickable' : 'Not Clickable'}
-${elementContext.formContext ? `Form Context: ${elementContext.formContext}` : ''}
+State: ${this.domContextService.extractElementState(element, attributes)}
 ${elementContext.accessibilityContext ? `Accessibility: ${elementContext.accessibilityContext}` : ''}
+
+[DOM HIERARCHY]
+${this.domContextService.buildDomHierarchy(element, interaction)}
+
+[SIBLINGS CONTEXT]
+${this.domContextService.buildSiblingsContext(element, interaction)}
+
+[FORM CONTEXT]
+${this.domContextService.buildFormContext(element, interaction, elementContext)}
 
 [SPATIAL CONTEXT]
 ${nearbyElementsContext.spatialSummary || 'No nearby elements detected'}
 Parent Container: ${elementContext.parentContainer || 'Unknown container'}
 
+[SELECTOR STRATEGIES]
+${this.domContextService.buildPlaywrightSelectorStrategies(element, attributes, elementText, elementContext)}
+
 [BUSINESS CONTEXT]
-${this.formatBusinessContextForTraining(businessContext)}
+${this.businessContextService.formatBusinessContextForTraining(businessContext)}
 
 [SELECTORS]
 ${[bestSelector, ...backupSelectors.slice(0, 2)].map((sel, i) => `${i + 1}. ${sel} ${i === 0 ? `(${reliability.toFixed(2)})` : ''}`).join('\n')}`,
@@ -590,15 +312,15 @@ ${this.generateShoppingSpecificAction(actionType, interaction, productState, ele
 ${bestSelector}
 
 [REASONING]
-${realJourneyContext.currentIntent.reasoning} - ${realJourneyContext.behavioralContext.userFocus}
+${realJourneyContext.currentIntent.reasoning} | User Focus: ${realJourneyContext.behavioralContext.userFocus} | Task Impact: This action progresses "${realJourneyContext.taskProgress.currentTaskName}" toward completion
 
 [CONFIDENCE]
-${reliability.toFixed(2)}
+${reliability.toFixed(2)} (selector) | ${realJourneyContext.currentIntent.confidence.toFixed(2)} (intent) | ${realJourneyContext.behavioralContext.conversionLikelihood.toFixed(2)} (conversion)
 
-[JOURNEY IMPACT]
-Current Task: ${realJourneyContext.taskProgress.currentTaskName}
-Next Actions: ${realJourneyContext.behavioralContext.nextPredictedActions.slice(0, 2).join(', ')}
-Task Progress: ${realJourneyContext.taskProgress.progressPercent}% (${realJourneyContext.taskProgress.currentTaskIndex + 1}/${realJourneyContext.taskProgress.totalTasks})
+[TASK CONTEXT]
+Current Task: ${realJourneyContext.taskProgress.currentTaskName} (${realJourneyContext.taskProgress.progressPercent}% complete)
+Task ${realJourneyContext.taskProgress.currentTaskIndex + 1} of ${realJourneyContext.taskProgress.totalTasks}: ${realJourneyContext.taskProgress.completedTasks.length} completed, ${realJourneyContext.taskProgress.remainingTasks.length} remaining
+Next Predicted: ${realJourneyContext.behavioralContext.nextPredictedActions.slice(0, 3).join(' → ')}
 Decision Factors: ${realJourneyContext.behavioralContext.decisionFactors.slice(0, 2).join(', ')}
 
 [FALLBACKS]
@@ -1336,21 +1058,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
 
   // 🔧 HELPER METHODS (per FOCUSED_TASKS.md - keep embedded)
 
-  private buildSpatialContext(nearbyElements: any[], boundingBox?: any): string {
-    if (nearbyElements.length === 0) return '';
-    
-    return nearbyElements.slice(0, 3).map(el => 
-      `${el.relationship || 'near'} "${el.text}" (${el.distance || 'close'})`
-    ).join(', ');
-  }
 
-  private buildDOMHierarchy(ancestors: any[]): string {
-    if (ancestors.length === 0) return '';
-    
-    return ancestors.slice(-3).map(a => 
-      `${a.tag}${a.classes?.length ? `.${a.classes[0]}` : ''}`
-    ).join(' > ');
-  }
 
   private buildStateContext(stateBefore: any): string {
     const parts = [];
@@ -1393,140 +1101,9 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
 
   // 🔧 COMPREHENSIVE CONTEXT EXTRACTION METHODS
 
-  private extractVisualContext(visual: any): any {
-    const context: any = {};
-    
-    if (visual?.boundingBox) {
-      context.positioning = `(${visual.boundingBox.x},${visual.boundingBox.y}) ${visual.boundingBox.width}×${visual.boundingBox.height}`;
-    }
-    
-    if (visual?.colors) {
-      context.colors = `bg:${visual.colors.background || 'auto'} txt:${visual.colors.text || 'auto'} border:${visual.colors.border || 'auto'}`;
-    }
-    
-    if (visual?.typography) {
-      context.typography = `${visual.typography.fontSize || '16px'} ${visual.typography.fontFamily || 'default'} ${visual.typography.fontWeight || 'normal'}`;
-    }
-    
-    if (visual?.layout) {
-      context.layout = `${visual.layout.display || 'block'} ${visual.layout.position || 'static'}`;
-    }
-    
-    if (visual?.animations) {
-      context.animations = visual.animations.hasAnimations ? 
-        `${visual.animations.animationType} ${visual.animations.duration}ms` : 'static';
-    }
-    
-    context.deviceType = visual?.deviceType || 'desktop';
-    
-    return context;
-  }
 
-  private extractElementContext(element: any): any {
-    const context: any = {};
-    
-    context.tag = element?.tag || 'unknown';
-    
-    if (element?.attributes) {
-      const keyAttrs = Object.entries(element.attributes)
-        .slice(0, 3)
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(' ');
-      context.attributes = keyAttrs;
-    }
-    
-    if (element?.computedStyles) {
-      const keyStyles = Object.entries(element.computedStyles)
-        .slice(0, 3)
-        .map(([k, v]) => `${k}:${v}`)
-        .join('; ');
-      context.computedStyles = keyStyles;
-    }
-    
-    // 🆕 ENHANCED ACCESSIBILITY CONTEXT: Comprehensive ARIA and focus information
-    const accessibilityInfo = this.extractAccessibilityContext(element, element.attributes || {});
-    if (accessibilityInfo) {
-      context.accessibilityContext = accessibilityInfo;
-    }
-    
-    // 🆕 ENHANCED FORM CONTEXT: Extract comprehensive form information
-    if (element?.formContext) {
-      context.formContext = `${element.formContext.formName || 'form'}.${element.formContext.fieldName || 'field'} (${element.formContext.fieldType || 'text'})${element.formContext.required ? ' *required' : ''}`;
-    } else if (element?.tag === 'input' || element?.tag === 'textarea' || element?.tag === 'select') {
-      // Auto-detect form context for form elements
-      const attributes = element.attributes || {};
-      const formInfo = this.extractFormContext(element, attributes);
-      if (formInfo) {
-        context.formContext = formInfo;
-      }
-    }
-    
-    // Build DOM hierarchy from ancestors (legacy)
-    if (element?.ancestors) {
-      context.domHierarchy = element.ancestors.slice(-3).map((a: any) => 
-        `${a.tag}${a.classes?.length ? `.${a.classes[0]}` : ''}`
-      ).join(' > ');
-    }
-    
-    // 🔧 FIX: Extract parent container from parentElements (rich interaction data)
-    if (element?.parentElements && element.parentElements.length > 0) {
-      const immediateParent = element.parentElements[0];
-      context.parentContainer = immediateParent.id ? 
-        `#${immediateParent.id}` : 
-        `.${immediateParent.className || immediateParent.tagName}`;
-        
-      // Build full DOM hierarchy from parentElements
-      context.domHierarchy = element.parentElements
-        .slice(0, 3)
-        .map((p: any) => p.id ? `#${p.id}` : `${p.tagName}${p.className ? `.${p.className}` : ''}`)
-        .reverse()
-        .join(' > ');
-    }
-    
-    // Set element type based on tag and attributes
-    context.elementType = this.determineElementType(element);
-    context.clickable = this.isElementClickable(element);
-    
-    return context;
-  }
 
-  private determineElementType(element: any): string {
-    if (!element?.tag) return 'Interactive Element';
-    
-    const tag = element.tag.toLowerCase();
-    const attributes = element.attributes || {};
-    
-    if (tag === 'button') return 'Button';
-    if (tag === 'a') return 'Link';
-    if (tag === 'input') {
-      const type = attributes.type || 'text';
-      return `Input (${type})`;
-    }
-    if (tag === 'select') return 'Dropdown';
-    if (tag === 'textarea') return 'Text Area';
-    if (tag === 'form') return 'Form';
-    if (['div', 'span'].includes(tag) && attributes.onclick) return 'Clickable Container';
-    
-    return `${tag.charAt(0).toUpperCase() + tag.slice(1)} Element`;
-  }
 
-  private isElementClickable(element: any): boolean {
-    if (!element?.tag) return false;
-    
-    const tag = element.tag.toLowerCase();
-    const attributes = element.attributes || {};
-    
-    // Inherently clickable elements
-    if (['button', 'a', 'input', 'select', 'textarea'].includes(tag)) return true;
-    
-    // Elements with click handlers
-    if (attributes.onclick || attributes['data-testid']) return true;
-    
-    // Elements with specific roles
-    if (attributes.role && ['button', 'link', 'tab', 'menuitem'].includes(attributes.role)) return true;
-    
-    return false;
-  }
 
   private extractPageContext(contextData: any): any {
     const context: any = {};
@@ -1601,178 +1178,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     return context;
   }
 
-  private extractBusinessContext(business: any, hostname: string, interaction?: any, allInteractions?: any[], interactionIndex?: number): any {
-    const context: any = {};
-    
-    // 🛒 ENHANCED: Use ProductContextBuilder for rich e-commerce context
-    if (interaction && allInteractions && interactionIndex !== undefined) {
-      console.log('🛒 [TRAINING DATA TRANSFORMER] Calling ProductContextBuilder for business context', {
-        totalInteractions: allInteractions.length,
-        currentInteractionIndex: interactionIndex
-      });
-      
-      const cartInteractions = this.productContextBuilder.analyzeCartInteractions(allInteractions);
-      
-      console.log('🛒 [TRAINING DATA TRANSFORMER] ProductContextBuilder analysis complete', {
-        cartInteractionsFound: cartInteractions.length,
-        productContextBuilderActive: true
-      });
-      
-      // Find if this interaction or recent interactions have product context
-      const currentCartInteraction = cartInteractions.find(ci => ci.interaction.timestamp === interaction.timestamp);
-      const recentCartInteraction = cartInteractions
-        .filter(ci => Math.abs(ci.interaction.timestamp - interaction.timestamp) < 10000) // Within 10 seconds
-        .sort((a, b) => Math.abs(b.interaction.timestamp - interaction.timestamp))[0];
-      
-      const productContext = currentCartInteraction || recentCartInteraction;
-      
-      // 🛒 NEW: Get accumulated state from state accumulator
-      const productId = this.extractProductIdFromInteraction(interaction);
-      const accumulatedState = productId ? this.productStateAccumulator.getAllStates().get(productId) : null;
-      
-      if (productContext || accumulatedState) {
-        // Prefer accumulated state data over product context builder (more comprehensive)
-        if (accumulatedState) {
-          // Use accumulated state for comprehensive product configuration
-          context.ecommerce = {
-            productId: accumulatedState.productId,
-            productName: accumulatedState.productName,
-            productCategory: accumulatedState.category,
-            productPrice: accumulatedState.basePrice || 'Unknown',
-            
-            // Show accumulated selections with completion status
-            selectedSize: accumulatedState.selectedSize,
-            selectedColor: accumulatedState.selectedColor,
-            selectedStyle: accumulatedState.selectedStyle,
-            
-            // State validation info
-            cartReady: accumulatedState.readyForCart,
-            selectionProgress: `${accumulatedState.completedSelections.length}/${accumulatedState.requiredSelections.length}`,
-            missingSelections: accumulatedState.requiredSelections.filter(req => 
-              !accumulatedState.completedSelections.includes(req)
-            ),
-            
-            // Enhanced confidence with state history
-            confidence: accumulatedState.confidence,
-            stage: accumulatedState.readyForCart ? 'ready-for-cart' : 'product-selection',
-            
-            // Selection history for training context
-            selectionHistory: accumulatedState.selectionHistory.map(step => 
-              `Step ${step.stepNumber}: ${step.actionDescription}`
-            ).join(', ')
-          };
-        } else if (productContext) {
-          // Fallback to product context builder data
-          const { productInfo, confidence } = productContext;
-          const variant = productInfo.selectedVariant;
-        
-          // Rich e-commerce context with actual product details
-          context.ecommerce = {
-          productName: productInfo.name,
-          productId: productInfo.id,
-          productCategory: productInfo.category,
-          productPrice: productInfo.basePrice || 'Unknown',
-          selectedVariant: {
-            size: variant.size || null,
-            color: variant.color || null,
-            style: variant.style || null
-          },
-          confidence: confidence,
-          url: productInfo.url
-        };
-        
-        // Enhanced conversion context for cart interactions
-        if (currentCartInteraction) {
-          context.conversion = {
-            funnelStage: 'product-selection',
-            action: 'add-to-cart',
-            productResolved: true,
-            variantTracking: Boolean(variant.size || variant.color)
-          };
-        }
-        }
-      }
-    }
-    
-    // Legacy business context (fallback)
-    if (business?.ecommerce && !context.ecommerce) {
-      context.ecommerce = `${business.ecommerce.productName || 'product'} $${business.ecommerce.productPrice || 0} ${business.ecommerce.productCategory || 'category'}`;
-    }
-    
-    if (business?.conversion && !context.conversion) {
-      context.conversion = `${business.conversion.funnelStage || 'unknown'} step-${business.conversion.funnelPosition || 0} ${business.conversion.abTestVariant || 'control'}`;
-    }
-    
-    if (business?.user) {
-      context.user = `segment:${business.user.customerSegment || 'unknown'} session:${business.user.timeOnSite || 0}s interactions:${business.user.previousInteractions || 0}`;
-    }
-    
-    // Fallback business context detection from hostname
-    if (!context.ecommerce && !business && hostname) {
-      if (hostname.includes('nordstrom') || hostname.includes('shop') || hostname.includes('gap')) {
-        context.ecommerce = 'e-commerce site';
-        context.conversion = 'retail funnel';
-      }
-    }
-    
-    return context;
-  }
 
-  /**
-   * Format business context for training examples - Enhanced with product details
-   */
-  private formatBusinessContextForTraining(businessContext: any): string {
-    const contextParts: string[] = [];
-    
-    // Enhanced e-commerce context with product details
-    if (businessContext.ecommerce && typeof businessContext.ecommerce === 'object') {
-      const product = businessContext.ecommerce;
-      contextParts.push(`Product: ${product.productName} (ID: ${product.productId})`);
-      contextParts.push(`Category: ${product.productCategory}`);
-      if (product.productPrice) {
-        contextParts.push(`Price: ${product.productPrice}`);
-      }
-      
-      // Selected variants
-      const variant = product.selectedVariant;
-      if (variant) {
-        const variantParts = [];
-        if (variant.size) variantParts.push(`Size: ${variant.size}`);
-        if (variant.color) variantParts.push(`Color: ${variant.color}`);
-        if (variant.style) variantParts.push(`Style: ${variant.style}`);
-        
-        if (variantParts.length > 0) {
-          contextParts.push(`Selected: ${variantParts.join(', ')}`);
-        }
-      }
-      
-      if (product.confidence) {
-        contextParts.push(`Confidence: ${(product.confidence * 100).toFixed(1)}%`);
-      }
-    } else if (businessContext.ecommerce && typeof businessContext.ecommerce === 'string') {
-      // Legacy format
-      contextParts.push(`E-commerce: ${businessContext.ecommerce}`);
-    }
-    
-    // Conversion context
-    if (businessContext.conversion) {
-      if (typeof businessContext.conversion === 'object') {
-        contextParts.push(`Stage: ${businessContext.conversion.funnelStage || 'unknown'}`);
-        if (businessContext.conversion.action) {
-          contextParts.push(`Action: ${businessContext.conversion.action}`);
-        }
-      } else {
-        contextParts.push(`Conversion: ${businessContext.conversion}`);
-      }
-    }
-    
-    // User context
-    if (businessContext.user) {
-      contextParts.push(`User: ${businessContext.user}`);
-    }
-    
-    return contextParts.length > 0 ? contextParts.join('\n') : 'General browsing context';
-  }
 
   private extractTechnicalContext(interaction: any): any {
     const context: any = {};
@@ -1951,146 +1357,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
 
   // 🆕 NEW ENHANCED DATA EXTRACTION METHODS
 
-  private extractCompleteNearbyElements(nearbyElements: any[]): any {
-    const context: any = {
-      spatialSummary: '',
-      relationships: '',
-      interactionTargets: '',
-      elementTypes: '',
-      accessibility: '',
-      allElementSelectors: [],
-      completeElementMap: {}
-    };
 
-    if (!nearbyElements || nearbyElements.length === 0) {
-      return { spatialSummary: 'no-nearby', relationships: 'isolated', interactionTargets: 'none', allElementSelectors: [] };
-    }
-
-    // 🎯 ENHANCED: Use ALL nearby elements (up to 15) with complete selector info
-    const allElements = nearbyElements.slice(0, 15); // Increased for richer context
-    
-    // 🚀 NEW: Extract complete element information including selectors
-    const completeElementInfo = allElements.map(el => {
-      return {
-        text: el.text || el.tagName || 'element',
-        tagName: el.tagName || 'unknown',
-        selector: el.selector || `${el.tagName || 'element'}`,
-        distance: el.distance || 0,
-        direction: el.direction || el.relationship || 'unknown',
-        isInteractive: el.isInteractive !== false, // Default to true if not specified
-        isVisible: el.isVisible !== false, // Default to true if not specified
-        boundingBox: el.boundingBox || null,
-        attributes: el.attributes || {},
-        elementType: el.elementType || el.tagName || 'element'
-      };
-    });
-    
-    // Store complete element map for rich context
-    context.completeElementMap = completeElementInfo.reduce((map: Record<string, any>, el, index) => {
-      map[`element_${index}`] = el;
-      return map;
-    }, {} as Record<string, any>);
-    
-    // Extract all selectors for training data (THIS IS THE KEY ENHANCEMENT!)
-    context.allElementSelectors = completeElementInfo.map(el => ({
-      text: el.text,
-      selector: el.selector,
-      tagName: el.tagName,
-      distance: el.distance,
-      direction: el.direction,
-      interactive: el.isInteractive
-    }));
-
-    // Enhanced spatial summary with selectors and interaction capability
-    const spatialItems = completeElementInfo.map(el => {
-      const interactivity = el.isInteractive ? '✓' : '✗';
-      const visibility = el.isVisible ? '👁' : '🚫';
-      return `${el.tagName}:${el.text.slice(0, 12)} ${interactivity}${visibility} (${el.direction}, ${el.distance}px) [${el.selector.slice(0, 20)}]`;
-    });
-    context.spatialSummary = spatialItems.join(', ');
-
-    // Relationship mapping using enhanced element info
-    const relationships: Record<string, number> = {};
-    completeElementInfo.forEach(el => {
-      relationships[el.direction] = (relationships[el.direction] || 0) + 1;
-    });
-    context.relationships = Object.entries(relationships)
-      .map(([rel, count]) => `${rel}:${count}`)
-      .join(' ');
-
-    // Enhanced interaction targets with selectors (KEY ENHANCEMENT!)
-    const interactionTargets = completeElementInfo
-      .filter(el => el.isInteractive || el.elementType === 'button' || el.elementType === 'link' || el.elementType === 'input')
-      .map(el => `${el.elementType}:"${el.text?.slice(0, 10) || 'btn'}"[${el.selector.slice(0, 15)}]`)
-      .slice(0, 8); // Increased to show more options
-    context.interactionTargets = interactionTargets.join(' ');
-
-    // Element types distribution using enhanced info
-    const elementTypes: Record<string, number> = {};
-    completeElementInfo.forEach(el => {
-      const type = el.elementType || 'unknown';
-      elementTypes[type] = (elementTypes[type] || 0) + 1;
-    });
-    context.elementTypes = Object.entries(elementTypes)
-      .map(([type, count]) => `${type}:${count}`)
-      .join(' ');
-
-    // Accessibility context
-    const accessibleElements = allElements.filter(el => el.ariaRole || el.attributes?.['aria-label']);
-    context.accessibility = accessibleElements.length > 0 ? 
-      `${accessibleElements.length}accessible roles:${accessibleElements.map(el => el.ariaRole).filter(Boolean).join(',')}` : 
-      'no-aria';
-
-    return context;
-  }
-
-  private extractDesignSystemContext(designSystem: any): any {
-    const context: any = {
-      summary: '',
-      componentLibrary: '',
-      brandColors: '',
-      designPatterns: '',
-      framework: ''
-    };
-
-    if (!designSystem) {
-      return { 
-        summary: 'no-design-system', 
-        componentLibrary: 'unknown', 
-        brandColors: 'default', 
-        designPatterns: 'basic' 
-      };
-    }
-
-    // Component library detection
-    context.componentLibrary = designSystem.componentLibrary || 
-      designSystem.uiFramework || 'custom';
-
-    // Brand colors summary
-    if (designSystem.brandColors) {
-      const colors = [];
-      if (designSystem.brandColors.primary) colors.push(`primary:${designSystem.brandColors.primary}`);
-      if (designSystem.brandColors.secondary) colors.push(`secondary:${designSystem.brandColors.secondary}`);
-      if (designSystem.brandColors.accent) colors.push(`accent:${designSystem.brandColors.accent}`);
-      context.brandColors = colors.length > 0 ? colors.join(' ') : 'default-colors';
-    } else {
-      context.brandColors = 'default-colors';
-    }
-
-    // Design patterns
-    context.designPatterns = designSystem.designPatterns?.slice(0, 3).join(' ') || 'basic-patterns';
-
-    // Framework summary
-    const frameworks = [];
-    if (designSystem.uiFramework) frameworks.push(designSystem.uiFramework);
-    if (designSystem.cssFramework) frameworks.push(designSystem.cssFramework);
-    context.framework = frameworks.join('+') || 'vanilla';
-
-    // Overall summary
-    context.summary = `${context.componentLibrary} ${context.framework} ${context.designPatterns}`;
-
-    return context;
-  }
 
   private extractBehaviorPatternsContext(user: any): any {
     const context: any = {
@@ -2493,7 +1760,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
         // Save completed journey if it has meaningful content
         if (this.isValidJourney(currentJourney)) {
           journeys.push([...currentJourney]);
-          console.log(`🎯 [JOURNEY GROUPING] Journey ${journeys.length}: ${currentJourney.length} interactions (${this.detectJourneyType(currentJourney)})`);
+          console.log(`🎯 [JOURNEY GROUPING] Journey ${journeys.length}: ${currentJourney.length} interactions (${this.journeyContextService.detectJourneyType(currentJourney)})`);
         } else {
           console.log(`⚠️ [JOURNEY GROUPING] Skipped invalid journey with ${currentJourney.length} interactions`);
         }
@@ -2512,7 +1779,7 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     // Add final journey if valid
     if (currentJourney.length > 0 && this.isValidJourney(currentJourney)) {
       journeys.push(currentJourney);
-      console.log(`🎯 [JOURNEY GROUPING] Final journey ${journeys.length}: ${currentJourney.length} interactions (${this.detectJourneyType(currentJourney)})`);
+      console.log(`🎯 [JOURNEY GROUPING] Final journey ${journeys.length}: ${currentJourney.length} interactions (${this.journeyContextService.detectJourneyType(currentJourney)})`);
     }
     
     console.log(`📊 [JOURNEY GROUPING] Detected ${journeys.length} valid journeys with ${journeyBreaks} breaks`);
@@ -2622,12 +1889,12 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
    * 🎯 ENHANCED JOURNEY METADATA: Add comprehensive journey-specific metadata for training optimization
    */
   private enhanceJourneyWithMetadata(journey: EnhancedInteractionData[]): EnhancedInteractionData[] {
-    const journeyType = this.detectJourneyType(journey);
-    const journeyGoal = this.extractJourneyGoal(journey);
-    const userIntent = this.extractUserIntent(journey);
+    const journeyType = this.journeyContextService.detectJourneyType(journey);
+    const journeyGoal = this.journeyContextService.extractJourneyGoal(journey);
+    const userIntent = this.journeyContextService.extractUserIntent(journey);
     
     // Extract comprehensive journey analytics
-    const journeyAnalytics = this.analyzeJourneyPattern(journey);
+    const journeyAnalytics = this.journeyContextService.analyzeJourneyPattern(journey);
     const decisionPoints = this.identifyDecisionPoints(journey);
     const funnelProgression = this.analyzeFunnelProgression(journey);
     const conversionSignals = this.extractConversionSignals(journey);
@@ -2679,436 +1946,15 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     }));
   }
 
-  /**
-   * 🏷️ EXPANDED JOURNEY TYPE DETECTION: Identify comprehensive journey patterns with granular templates
-   */
-  private detectJourneyType(journey: EnhancedInteractionData[]): string {
-    const pages: string[] = journey.map(i => i.context?.pageType).filter((p): p is string => Boolean(p));
-    const goals: string[] = journey.map(i => i.business?.conversion?.conversionGoal).filter((g): g is string => Boolean(g));
-    const products: string[] = journey.map(i => i.business?.ecommerce?.productCategory).filter((p): p is string => Boolean(p));
-    const urls: string[] = journey.map(i => i.context?.pageUrl?.toLowerCase()).filter((u): u is string => Boolean(u));
-    const elements: string[] = journey.map(i => i.element?.text?.toLowerCase()).filter((e): e is string => Boolean(e));
-    const stages: string[] = journey.map(i => i.business?.conversion?.funnelStage).filter((s): s is string => Boolean(s));
-    
-    // 🛒 E-COMMERCE JOURNEY TEMPLATES (Enhanced with more granular patterns)
-    if (this.matchesEcommercePattern(pages, goals, products, elements, urls)) {
-      // High-intent purchase patterns
-      if (elements.some(el => el.includes('buy now') || el.includes('purchase'))) {
-        return 'ecommerce-high-intent-purchase';
-      }
-      // Research-heavy patterns
-      if (stages.includes('validation') && elements.some(el => el.includes('review') || el.includes('compare'))) {
-        return 'ecommerce-research-validation-purchase';
-      }
-      // Price comparison patterns
-      if (elements.some(el => el.includes('price') && el.includes('compare'))) {
-        return 'ecommerce-price-comparison-purchase';
-      }
-      // Cart abandonment and recovery patterns
-      if (goals.includes('add-to-cart') && !goals.includes('reach-checkout')) {
-        return 'ecommerce-add-to-cart-journey';
-      }
-      // Multi-product comparison patterns
-      if (products.length > 1 || elements.some(el => el.includes('compare'))) {
-        return 'ecommerce-multi-product-comparison';
-      }
-      // Quick checkout patterns
-      if (goals.some(g => ['add-to-cart', 'reach-checkout'].includes(g)) && journey.length <= 4) {
-        return 'ecommerce-quick-checkout';
-      }
-      // Browse and discovery patterns  
-      if (pages.includes('search-results') && pages.includes('category')) {
-        return 'ecommerce-browse-discovery-purchase';
-      }
-      return 'ecommerce-purchase';
-    }
-    
-    // 💼 SAAS/SOFTWARE JOURNEY TEMPLATES (Enhanced with conversion paths)
-    if (this.matchesSaaSPattern(pages, goals, elements, urls)) {
-      // Free trial conversion patterns
-      if (pages.includes('pricing') && elements.some(el => el.includes('trial') || el.includes('free'))) {
-        return 'saas-freemium-trial-signup';
-      }
-      // Enterprise sales patterns
-      if (elements.some(el => el.includes('enterprise') || el.includes('sales'))) {
-        return 'saas-enterprise-sales-inquiry';
-      }
-      // Demo and consultation patterns
-      if (elements.some(el => el.includes('demo') || el.includes('schedule'))) {
-        return 'saas-demo-consultation-request';
-      }
-      // Feature evaluation patterns
-      if (pages.includes('features') && stages.includes('evaluation')) {
-        return 'saas-feature-evaluation';
-      }
-      // Pricing research patterns
-      if (pages.includes('pricing') && stages.includes('consideration')) {
-        return 'saas-pricing-research';
-      }
-      // Direct paid signup patterns
-      if (goals.some(g => ['subscription', 'subscription-selected'].includes(g))) {
-        return 'saas-direct-paid-signup';
-      }
-      return 'saas-signup';
-    }
-    
-    // 📅 BOOKING/RESERVATION JOURNEY TEMPLATES (Enhanced with booking types)
-    if (this.matchesBookingPattern(pages, goals, elements, urls)) {
-      // Restaurant reservation patterns
-      if (elements.some(el => el.includes('table') || el.includes('restaurant'))) {
-        return 'booking-restaurant-reservation';
-      }
-      // Hotel/accommodation patterns
-      if (elements.some(el => el.includes('room') || el.includes('hotel') || el.includes('stay'))) {
-        return 'booking-accommodation-reservation';
-      }
-      // Event/ticket booking patterns
-      if (elements.some(el => el.includes('ticket') || el.includes('event'))) {
-        return 'booking-event-ticket-purchase';
-      }
-      // Service appointment patterns
-      if (elements.some(el => el.includes('appointment') || el.includes('consultation'))) {
-        return 'booking-service-appointment';
-      }
-      // Date/time selection patterns
-      if (elements.some(el => el.includes('date') || el.includes('time') || el.includes('calendar'))) {
-        return 'booking-datetime-selection';
-      }
-      return 'booking-flow';
-    }
-    
-    // 🎓 LEAD GENERATION JOURNEY TEMPLATES (Enhanced with content types)
-    if (this.matchesLeadGenPattern(pages, goals, elements, urls)) {
-      // Content marketing patterns
-      if (elements.some(el => el.includes('download') || el.includes('whitepaper') || el.includes('ebook'))) {
-        return 'leadgen-content-marketing-download';
-      }
-      // Newsletter and email patterns
-      if (elements.some(el => el.includes('newsletter') || el.includes('subscribe') || el.includes('updates'))) {
-        return 'leadgen-email-subscription';
-      }
-      // Quote and estimate patterns
-      if (elements.some(el => el.includes('quote') || el.includes('estimate') || el.includes('pricing'))) {
-        return 'leadgen-quote-estimate-request';
-      }
-      // Webinar and event patterns
-      if (elements.some(el => el.includes('webinar') || el.includes('register'))) {
-        return 'leadgen-webinar-registration';
-      }
-      // Contact and inquiry patterns
-      if (pages.includes('contact') || elements.some(el => el.includes('contact') || el.includes('inquiry'))) {
-        return 'leadgen-contact-inquiry';
-      }
-      return 'leadgen-contact';
-    }
-    
-    // 🔍 RESEARCH/COMPARISON JOURNEY TEMPLATES (Enhanced with research types)
-    if (this.matchesResearchPattern(pages, goals, elements, stages)) {
-      // Product comparison patterns
-      if (stages.includes('validation') && elements.some(el => el.includes('compare') || el.includes('vs'))) {
-        return 'research-product-comparison-analysis';
-      }
-      // Technical specification patterns
-      if (elements.some(el => el.includes('spec') || el.includes('technical') || el.includes('feature'))) {
-        return 'research-technical-specification';
-      }
-      // Review and rating patterns
-      if (elements.some(el => el.includes('review') || el.includes('rating') || el.includes('feedback'))) {
-        return 'research-review-validation';
-      }
-      // Market research patterns
-      if (pages.includes('search-results') && stages.includes('discovery')) {
-        return 'research-market-discovery';
-      }
-      return 'research-evaluation';
-    }
-    
-    // 🏪 LOCAL BUSINESS JOURNEY TEMPLATES (Enhanced with business types)
-    if (this.matchesLocalBusinessPattern(elements, urls)) {
-      // Location and hours patterns
-      if (elements.some(el => el.includes('location') || el.includes('hours') || el.includes('address'))) {
-        return 'local-business-location-hours-lookup';
-      }
-      // Menu and services patterns
-      if (elements.some(el => el.includes('menu') || el.includes('service') || el.includes('offerings'))) {
-        return 'local-business-menu-services-research';
-      }
-      // Contact and directions patterns
-      if (elements.some(el => el.includes('phone') || el.includes('directions') || el.includes('map'))) {
-        return 'local-business-contact-directions';
-      }
-      return 'local-business-research';
-    }
-    
-    // 🆕 NEW JOURNEY TEMPLATES (Additional common patterns)
-    
-    // 🏦 FINANCIAL SERVICES JOURNEY TEMPLATES
-    if (this.matchesFinancialPattern(pages, elements, urls)) {
-      if (elements.some(el => el.includes('loan') || el.includes('mortgage'))) {
-        return 'financial-loan-application';
-      }
-      if (elements.some(el => el.includes('insurance') || el.includes('coverage'))) {
-        return 'financial-insurance-quote';
-      }
-      if (elements.some(el => el.includes('account') || el.includes('open'))) {
-        return 'financial-account-opening';
-      }
-      return 'financial-services-inquiry';
-    }
-    
-    // 🎓 EDUCATION JOURNEY TEMPLATES
-    if (this.matchesEducationPattern(pages, elements, urls)) {
-      if (elements.some(el => el.includes('course') || el.includes('program'))) {
-        return 'education-course-enrollment';
-      }
-      if (elements.some(el => el.includes('application') || el.includes('apply'))) {
-        return 'education-program-application';
-      }
-      return 'education-research';
-    }
-    
-    // 🏥 HEALTHCARE JOURNEY TEMPLATES
-    if (this.matchesHealthcarePattern(pages, elements, urls)) {
-      if (elements.some(el => el.includes('appointment') || el.includes('schedule'))) {
-        return 'healthcare-appointment-booking';
-      }
-      if (elements.some(el => el.includes('provider') || el.includes('doctor'))) {
-        return 'healthcare-provider-search';
-      }
-      return 'healthcare-information-lookup';
-    }
-    
-    // 🏠 REAL ESTATE JOURNEY TEMPLATES
-    if (this.matchesRealEstatePattern(pages, elements, urls)) {
-      if (elements.some(el => el.includes('buy') || el.includes('purchase'))) {
-        return 'realestate-home-buying-search';
-      }
-      if (elements.some(el => el.includes('rent') || el.includes('rental'))) {
-        return 'realestate-rental-search';
-      }
-      return 'realestate-property-research';
-    }
-    
-    // 🎮 ENTERTAINMENT/MEDIA JOURNEY TEMPLATES
-    if (this.matchesEntertainmentPattern(pages, elements, urls)) {
-      if (elements.some(el => el.includes('stream') || el.includes('watch'))) {
-        return 'entertainment-content-streaming';
-      }
-      if (elements.some(el => el.includes('subscribe') || el.includes('membership'))) {
-        return 'entertainment-subscription-signup';
-      }
-      return 'entertainment-content-discovery';
-    }
-    
-    return 'general-task';
-  }
-
-  // 🛒 E-commerce Pattern Matching
-  private matchesEcommercePattern(pages: string[], goals: string[], products: string[], elements: string[], urls: string[]): boolean {
-    return goals.some(g => ['add-to-cart', 'purchase', 'reach-checkout'].includes(g)) ||
-           products.length > 0 ||
-           pages.some(p => ['product', 'cart', 'checkout'].includes(p)) ||
-           urls.some(url => url.includes('shop') || url.includes('product') || url.includes('cart')) ||
-           elements.some(el => el.includes('add to cart') || el.includes('buy') || el.includes('price'));
-  }
-
-  // 💼 SaaS Pattern Matching
-  private matchesSaaSPattern(pages: string[], goals: string[], elements: string[], urls: string[]): boolean {
-    return goals.some(g => ['signup', 'subscription', 'subscription-selected'].includes(g)) ||
-           pages.some(p => ['pricing', 'signup', 'trial'].includes(p)) ||
-           urls.some(url => url.includes('pricing') || url.includes('signup') || url.includes('trial')) ||
-           elements.some(el => el.includes('sign up') || el.includes('subscribe') || el.includes('plan') || el.includes('trial'));
-  }
-
-  // 📅 Booking Pattern Matching
-  private matchesBookingPattern(pages: string[], goals: string[], elements: string[], urls: string[]): boolean {
-    return goals.some(g => ['booking', 'booking-form-complete'].includes(g)) ||
-           pages.some(p => ['booking', 'reservation'].includes(p)) ||
-           urls.some(url => url.includes('book') || url.includes('reserve') || url.includes('appointment')) ||
-           elements.some(el => el.includes('book') || el.includes('reserve') || el.includes('schedule') || el.includes('appointment'));
-  }
-
-  // 🎓 Lead Generation Pattern Matching
-  private matchesLeadGenPattern(pages: string[], goals: string[], elements: string[], urls: string[]): boolean {
-    return goals.some(g => ['contact', 'lead-generation'].includes(g)) ||
-           pages.some(p => ['contact', 'download'].includes(p)) ||
-           urls.some(url => url.includes('contact') || url.includes('download') || url.includes('newsletter')) ||
-           elements.some(el => el.includes('contact') || el.includes('download') || el.includes('newsletter') || el.includes('quote'));
-  }
-
-  // 🔍 Research Pattern Matching
-  private matchesResearchPattern(pages: string[], goals: string[], elements: string[], stages: string[]): boolean {
-    return stages.some(s => ['evaluation', 'validation'].includes(s)) ||
-           pages.some(p => ['search-results', 'comparison', 'reviews'].includes(p)) ||
-           elements.some(el => el.includes('compare') || el.includes('review') || el.includes('spec') || el.includes('feature'));
-  }
-
-  // 🏪 Local Business Pattern Matching
-  private matchesLocalBusinessPattern(elements: string[], urls: string[]): boolean {
-    return elements.some(el => el.includes('location') || el.includes('hours') || el.includes('address') || el.includes('phone')) ||
-           urls.some(url => url.includes('location') || url.includes('contact') || url.includes('hours'));
-  }
-
-  // 🆕 NEW PATTERN MATCHING METHODS
-
-  // 🏦 Financial Services Pattern Matching
-  private matchesFinancialPattern(pages: string[], elements: string[], urls: string[]): boolean {
-    return elements.some(el => 
-      el.includes('loan') || el.includes('mortgage') || el.includes('insurance') || 
-      el.includes('bank') || el.includes('account') || el.includes('credit') ||
-      el.includes('investment') || el.includes('finance')
-    ) || urls.some(url => 
-      url.includes('bank') || url.includes('finance') || url.includes('loan') || 
-      url.includes('insurance') || url.includes('invest')
-    ) || pages.some(p => p === 'financial' || p === 'banking');
-  }
-
-  // 🎓 Education Pattern Matching
-  private matchesEducationPattern(pages: string[], elements: string[], urls: string[]): boolean {
-    return elements.some(el => 
-      el.includes('course') || el.includes('program') || el.includes('degree') ||
-      el.includes('university') || el.includes('college') || el.includes('school') ||
-      el.includes('learn') || el.includes('education') || el.includes('study')
-    ) || urls.some(url => 
-      url.includes('edu') || url.includes('university') || url.includes('college') ||
-      url.includes('course') || url.includes('learn')
-    ) || pages.some(p => p === 'education' || p === 'course' || p === 'program');
-  }
-
-  // 🏥 Healthcare Pattern Matching
-  private matchesHealthcarePattern(pages: string[], elements: string[], urls: string[]): boolean {
-    return elements.some(el => 
-      el.includes('doctor') || el.includes('appointment') || el.includes('hospital') ||
-      el.includes('clinic') || el.includes('health') || el.includes('medical') ||
-      el.includes('provider') || el.includes('patient')
-    ) || urls.some(url => 
-      url.includes('health') || url.includes('medical') || url.includes('doctor') ||
-      url.includes('clinic') || url.includes('hospital')
-    ) || pages.some(p => p === 'healthcare' || p === 'medical' || p === 'appointment');
-  }
-
-  // 🏠 Real Estate Pattern Matching
-  private matchesRealEstatePattern(pages: string[], elements: string[], urls: string[]): boolean {
-    return elements.some(el => 
-      el.includes('home') || el.includes('house') || el.includes('property') ||
-      el.includes('real estate') || el.includes('rent') || el.includes('buy') ||
-      el.includes('mortgage') || el.includes('listing')
-    ) || urls.some(url => 
-      url.includes('realestate') || url.includes('zillow') || url.includes('realtor') ||
-      url.includes('homes') || url.includes('property')
-    ) || pages.some(p => p === 'realestate' || p === 'property' || p === 'listing');
-  }
-
-  // 🎮 Entertainment/Media Pattern Matching
-  private matchesEntertainmentPattern(pages: string[], elements: string[], urls: string[]): boolean {
-    return elements.some(el => 
-      el.includes('watch') || el.includes('stream') || el.includes('movie') ||
-      el.includes('show') || el.includes('video') || el.includes('music') ||
-      el.includes('play') || el.includes('entertainment')
-    ) || urls.some(url => 
-      url.includes('netflix') || url.includes('youtube') || url.includes('spotify') ||
-      url.includes('stream') || url.includes('media') || url.includes('entertainment')
-    ) || pages.some(p => p === 'entertainment' || p === 'media' || p === 'streaming');
-  }
 
   /**
    * 🎯 JOURNEY GOAL EXTRACTION: Identify what user is trying to accomplish (realistic endpoints)
    */
-  private extractJourneyGoal(journey: EnhancedInteractionData[]): string {
-    const goals: string[] = journey.map(i => i.business?.conversion?.conversionGoal).filter((g): g is string => Boolean(g));
-    const lastGoal = goals[goals.length - 1];
-    
-    // Use explicit conversion goal if available
-    if (lastGoal) return lastGoal;
-    
-    // 🎯 REALISTIC GOAL INFERENCE based on journey patterns:
-    
-    const pages: string[] = journey.map(i => i.context?.pageType).filter((p): p is string => Boolean(p));
-    const urls: string[] = journey.map(i => i.context?.pageUrl?.toLowerCase()).filter((u): u is string => Boolean(u));
-    const elements: string[] = journey.map(i => i.element?.text?.toLowerCase()).filter((e): e is string => Boolean(e));
-    
-    // E-commerce goals (stop at cart/checkout, not payment)
-    if (pages.some(p => ['product', 'search-results'].includes(p))) {
-      if (urls.some(url => url.includes('cart') || url.includes('checkout'))) return 'reach-checkout';
-      if (elements.some(el => el.includes('add to cart'))) return 'add-to-cart';
-      return 'product-research-to-cart';
-    }
-    
-    // Booking goals (stop at booking form, not payment)
-    if (pages.includes('booking') || urls.some(url => url.includes('book'))) {
-      return 'complete-booking-form';
-    }
-    
-    // Signup goals (stop at registration, not subscription payment)
-    if (pages.includes('signup') || urls.some(url => url.includes('signup') || url.includes('register'))) {
-      return 'complete-registration';
-    }
-    
-    // SaaS goals (stop at plan selection/checkout, not payment)
-    if (pages.includes('pricing') || elements.some(el => el.includes('subscribe') || el.includes('plan'))) {
-      return 'select-subscription-plan';
-    }
-    
-    // General research to action intent
-    if (pages.includes('search-results')) return 'research-to-action';
-    
-    return 'complete-user-intent';
-  }
 
   /**
    * 🧠 USER INTENT EXTRACTION: Understand why user is taking this journey
    * Priority: 1) Generated task 2) Inferred intent 3) Generic fallback
    */
-  private extractUserIntent(journey: EnhancedInteractionData[]): string {
-    // PRIORITY 1: Check for AI-generated task from session data
-    console.log('🔍 [DEBUG] Checking for generated task in sessionData:', {
-      hasSessionData: !!this.sessionData,
-      hasConfig: !!this.sessionData?.config,
-      hasGeneratedTask: !!this.sessionData?.config?.generatedTask,
-      sessionDataKeys: this.sessionData ? Object.keys(this.sessionData) : 'none',
-      configKeys: this.sessionData?.config ? Object.keys(this.sessionData.config) : 'none'
-    });
-    
-    if (this.sessionData?.config?.generatedTask) {
-      const generatedTask = this.sessionData.config.generatedTask;
-      console.log('🎯 [TRAINING DATA] Found generated task:', generatedTask);
-      
-      // Use task description as user intent
-      if (generatedTask.description) {
-        console.log('🎯 [TRAINING DATA] Using generated task as user intent:', generatedTask.description);
-        return generatedTask.description;
-      }
-      // Fallback to task title if no description
-      if (generatedTask.title) {
-        console.log('🎯 [TRAINING DATA] Using generated task title as user intent:', generatedTask.title);
-        return generatedTask.title;
-      }
-    }
-    
-    // PRIORITY 2: Look for search queries, product categories, or explicit intent data
-    for (const interaction of journey) {
-      if (interaction.state?.before?.formData) {
-        const searchQuery = interaction.state.before.formData['search'] || 
-                           interaction.state.before.formData['query'] ||
-                           interaction.state.before.formData['q'];
-        if (searchQuery) return `searching for: ${searchQuery}`;
-      }
-      
-      if (interaction.business?.ecommerce?.productName) {
-        return `interested in: ${interaction.business.ecommerce.productName}`;
-      }
-    }
-    
-    // PRIORITY 3: Fallback to journey type
-    const journeyType = this.detectJourneyType(journey);
-    switch (journeyType) {
-      case 'ecommerce-purchase': return 'looking to buy product';
-      case 'saas-signup': return 'evaluating software solution';
-      case 'booking-flow': return 'making reservation/booking';
-      case 'product-research': return 'researching products/options';
-      default: return 'completing task';
-    }
-  }
 
   private analyzeTaskPatterns(interactions: EnhancedInteractionData[], taskContext?: any): any[] {
     // Analyze patterns in task completion
@@ -3449,19 +2295,6 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
   /**
    * 📊 ANALYZE JOURNEY PATTERN: Extract comprehensive journey analytics
    */
-  private analyzeJourneyPattern(journey: EnhancedInteractionData[]): any {
-    const funnelStages = journey.map(i => i.business?.conversion?.funnelStage).filter(Boolean);
-    const uniqueStages = new Set(funnelStages);
-    const pageTypes = journey.map(i => i.context?.pageType).filter(Boolean);
-    const uniquePages = new Set(pageTypes);
-    
-    return {
-      quality: this.calculateJourneyQuality(journey).score,
-      completeness: uniqueStages.size / 6, // Based on 6 funnel stages
-      complexity: Math.min(uniquePages.size / 5, 1), // Normalized complexity score
-      conversionProbability: this.estimateConversionProbability(journey)
-    };
-  }
 
   /**
    * 🎯 IDENTIFY DECISION POINTS: Find key decision moments in the journey
@@ -3920,283 +2753,16 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     return 'page state change, UI update';
   }
 
-  /**
-   * 🛤️ JOURNEY CONTEXT EXTRACTION: Understand where user is in conversion journey
-   */
-  private extractJourneyContext(interaction: EnhancedInteractionData): any {
-    const url = interaction.context?.pageUrl || '';
-    const pageType = interaction.context?.pageType || 'unknown';
-    const elementText = interaction.element?.text || '';
-    const funnelStage = interaction.business?.conversion?.funnelStage || 'unknown';
-    const funnelPosition = interaction.business?.conversion?.funnelPosition || 0;
-    const productName = interaction.business?.ecommerce?.productName || '';
-    const userJourney = interaction.context?.userJourney || '';
 
-    // Determine journey type and goal based on context
-    const journeyType = this.determineJourneyType(url, pageType, elementText, funnelStage);
-    const overallGoal = this.determineOverallGoal(journeyType, productName, funnelStage);
-    
-    // Extract journey progression
-    const journeySteps = this.extractJourneySteps(url, pageType, funnelStage, journeyType);
-    const currentStep = Math.max(1, funnelPosition || this.inferCurrentStep(pageType, url));
-    const totalSteps = journeySteps.length;
-    
-    // Determine step context
-    const currentStepName = journeySteps[currentStep - 1] || pageType;
-    const nextStepName = journeySteps[currentStep] || 'completion';
-    const previousSteps = journeySteps.slice(0, currentStep - 1);
-    const nextSteps = journeySteps.slice(currentStep);
-    
-    // Calculate progress
-    const progressPercent = Math.round((currentStep / totalSteps) * 100);
-    
-    // Action descriptions
-    const actionDescription = this.generateActionDescription(elementText, currentStepName, nextStepName);
-    const actionReasoning = this.generateActionReasoning(elementText, currentStepName, overallGoal);
-    const stepDescription = this.generateStepDescription(currentStepName, overallGoal);
-    const expectedOutcome = this.generateJourneyExpectedOutcome(elementText, currentStepName, nextStepName);
-    
-    return {
-      journeyType,
-      overallGoal,
-      userIntent: userJourney || this.inferUserIntent(journeyType, elementText),
-      currentStep,
-      totalSteps,
-      currentStepName,
-      nextStepName,
-      previousSteps,
-      nextSteps,
-      progressPercent,
-      funnelStage,
-      stepDescription,
-      actionDescription,
-      actionReasoning,
-      expectedOutcome
-    };
-  }
 
-  private determineJourneyType(url: string, pageType: string, elementText: string, funnelStage: string): string {
-    const lowerUrl = url.toLowerCase();
-    const lowerElement = elementText.toLowerCase();
-    
-    // E-commerce journeys
-    if (lowerUrl.includes('shop') || lowerUrl.includes('product') || lowerElement.includes('cart') || lowerElement.includes('buy')) {
-      return 'ecommerce-purchase';
-    }
-    
-    // SaaS/subscription journeys
-    if (lowerUrl.includes('pricing') || lowerElement.includes('sign up') || lowerElement.includes('subscribe')) {
-      return 'saas-subscription';
-    }
-    
-    // Booking/reservation journeys
-    if (lowerUrl.includes('book') || lowerUrl.includes('reserve') || lowerElement.includes('appointment')) {
-      return 'booking-reservation';
-    }
-    
-    // Content/research journeys
-    if (pageType === 'article' || pageType === 'blog' || lowerElement.includes('read more')) {
-      return 'content-engagement';
-    }
-    
-    return 'general-navigation';
-  }
 
-  private determineOverallGoal(journeyType: string, productName: string, funnelStage: string): string {
-    switch (journeyType) {
-      case 'ecommerce-purchase':
-        return productName ? `Purchase ${productName}` : 'Complete product purchase';
-      case 'saas-subscription':
-        return 'Sign up for service subscription';
-      case 'booking-reservation':
-        return 'Complete booking/reservation';
-      case 'content-engagement':
-        return 'Read and engage with content';
-      default:
-        return 'Navigate and complete user goal';
-    }
-  }
 
-  private extractJourneySteps(url: string, pageType: string, funnelStage: string, journeyType: string): string[] {
-    switch (journeyType) {
-      case 'ecommerce-purchase':
-        return ['homepage', 'category-browse', 'product-detail', 'add-to-cart', 'cart-review', 'checkout', 'payment', 'confirmation'];
-      case 'saas-subscription':
-        return ['homepage', 'pricing', 'plan-selection', 'signup', 'payment', 'onboarding'];
-      case 'booking-reservation':
-        return ['homepage', 'service-browse', 'date-selection', 'details-entry', 'confirmation', 'payment'];
-      case 'content-engagement':
-        return ['homepage', 'content-discovery', 'article-reading', 'engagement'];
-      default:
-        return ['homepage', 'navigation', 'interaction', 'completion'];
-    }
-  }
 
-  private inferCurrentStep(pageType: string, url: string): number {
-    const lowerUrl = url.toLowerCase();
-    
-    if (lowerUrl.includes('checkout') || lowerUrl.includes('payment')) return 6;
-    if (lowerUrl.includes('cart')) return 5;
-    if (pageType === 'product' || lowerUrl.includes('product')) return 3;
-    if (pageType === 'category' || lowerUrl.includes('category')) return 2;
-    if (pageType === 'homepage' || lowerUrl === '/' || lowerUrl.endsWith('.com') || lowerUrl.endsWith('.com/')) return 1;
-    
-    return 3; // Default to middle step
-  }
 
-  private generateActionDescription(elementText: string, currentStep: string, nextStep: string): string {
-    const lowerElement = elementText.toLowerCase();
-    
-    if (lowerElement.includes('add to cart') || lowerElement.includes('add to bag')) {
-      return `click "${elementText}" to add product to cart`;
-    }
-    if (lowerElement.includes('checkout') || lowerElement.includes('proceed')) {
-      return `click "${elementText}" to proceed to checkout`;
-    }
-    if (lowerElement.includes('search')) {
-      return `use search to find desired products`;
-    }
-    if (lowerElement.includes('sign up') || lowerElement.includes('register')) {
-      return `click "${elementText}" to begin registration`;
-    }
-    
-    return `interact with "${elementText}" to progress from ${currentStep} to ${nextStep}`;
-  }
 
-  private generateActionReasoning(elementText: string, currentStep: string, overallGoal: string): string {
-    const lowerElement = elementText.toLowerCase();
-    
-    if (lowerElement.includes('add to cart')) {
-      return `Adding product to cart advances toward purchase completion`;
-    }
-    if (lowerElement.includes('checkout')) {
-      return `Proceeding to checkout moves closer to transaction completion`;
-    }
-    if (lowerElement.includes('search')) {
-      return `Search helps locate specific products needed for purchase goal`;
-    }
-    
-    return `This action progresses the user journey toward: ${overallGoal}`;
-  }
 
-  private generateStepDescription(currentStep: string, overallGoal: string): string {
-    switch (currentStep) {
-      case 'product-detail':
-        return 'Evaluate product details and specifications';
-      case 'add-to-cart':
-        return 'Add selected product to shopping cart';
-      case 'cart-review':
-        return 'Review cart contents and quantities';
-      case 'checkout':
-        return 'Proceed through checkout process';
-      case 'category-browse':
-        return 'Browse product categories and options';
-      default:
-        return `${currentStep.replace('-', ' ')} stage of ${overallGoal}`;
-    }
-  }
 
-  private generateJourneyExpectedOutcome(elementText: string, currentStep: string, nextStep: string): string {
-    const lowerElement = elementText.toLowerCase();
-    
-    if (lowerElement.includes('add to cart')) {
-      return 'Product added to cart, advance to cart review';
-    }
-    if (lowerElement.includes('checkout')) {
-      return 'Navigate to checkout page, begin payment process';
-    }
-    if (lowerElement.includes('search')) {
-      return 'Display search results, enable product discovery';
-    }
-    
-    return `Complete ${currentStep} and advance to ${nextStep}`;
-  }
 
-  private inferUserIntent(journeyType: string, elementText: string): string {
-    if (journeyType === 'ecommerce-purchase') {
-      return elementText.toLowerCase().includes('add to cart') ? 'purchase-intent' : 'browse-intent';
-    }
-    if (journeyType === 'saas-subscription') {
-      return 'subscription-intent';
-    }
-    return 'general-navigation';
-  }
-
-  /**
-   * ♿ Extract comprehensive accessibility context
-   */
-  private extractAccessibilityContext(element: any, attributes: any): string | null {
-    const a11yParts: string[] = [];
-    
-    // Extract ARIA role and semantic meaning
-    const role = attributes.role || this.inferAriaRole(element.tag, attributes);
-    if (role) {
-      a11yParts.push(`role: ${role}`);
-    }
-    
-    // Extract ARIA labels and descriptions
-    const ariaLabel = attributes['aria-label'];
-    const ariaLabelledBy = attributes['aria-labelledby'];
-    const ariaDescribedBy = attributes['aria-describedby'];
-    
-    if (ariaLabel) {
-      a11yParts.push(`label: "${ariaLabel}"`);
-    } else if (ariaLabelledBy) {
-      a11yParts.push(`labelledby: ${ariaLabelledBy}`);
-    }
-    
-    if (ariaDescribedBy) {
-      a11yParts.push(`describedby: ${ariaDescribedBy}`);
-    }
-    
-    // Extract ARIA states
-    const ariaStates: string[] = [];
-    const ariaStateProps = [
-      'aria-expanded', 'aria-checked', 'aria-selected', 'aria-pressed',
-      'aria-disabled', 'aria-hidden', 'aria-current', 'aria-invalid'
-    ];
-    
-    ariaStateProps.forEach(prop => {
-      if (attributes[prop] !== undefined) {
-        ariaStates.push(`${prop.replace('aria-', '')}: ${attributes[prop]}`);
-      }
-    });
-    
-    if (ariaStates.length > 0) {
-      a11yParts.push(`states: ${ariaStates.join(', ')}`);
-    }
-    
-    // Extract focus management
-    const focusInfo: string[] = [];
-    if (attributes.tabindex !== undefined) {
-      focusInfo.push(`tabindex: ${attributes.tabindex}`);
-    }
-    if (attributes.autofocus) {
-      focusInfo.push('autofocus');
-    }
-    
-    if (focusInfo.length > 0) {
-      a11yParts.push(`focus: ${focusInfo.join(', ')}`);
-    }
-    
-    // Extract accessibility relationships
-    const relationships: string[] = [];
-    if (attributes['aria-owns']) {
-      relationships.push(`owns: ${attributes['aria-owns']}`);
-    }
-    if (attributes['aria-controls']) {
-      relationships.push(`controls: ${attributes['aria-controls']}`);
-    }
-    if (attributes['aria-flowto']) {
-      relationships.push(`flowto: ${attributes['aria-flowto']}`);
-    }
-    
-    if (relationships.length > 0) {
-      a11yParts.push(`relationships: ${relationships.join(', ')}`);
-    }
-    
-    return a11yParts.length > 0 ? a11yParts.join(', ') : null;
-  }
 
   /**
    * Infer ARIA role from HTML element and attributes
@@ -4259,61 +2825,6 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     return inputRoles[inputType] || 'textbox';
   }
 
-  /**
-   * 📝 Extract comprehensive form context for input elements
-   */
-  private extractFormContext(element: any, attributes: any): string | null {
-    const formParts: string[] = [];
-    
-    // Extract form field type
-    const inputType = attributes.type || element.tag || 'text';
-    formParts.push(`type: ${inputType}`);
-    
-    // Extract field name/purpose from various sources
-    const fieldName = attributes.name || 
-                     attributes.id || 
-                     attributes['aria-label'] || 
-                     attributes.placeholder ||
-                     'field';
-    formParts.push(`field: ${fieldName}`);
-    
-    // Extract validation requirements
-    const validationInfo: string[] = [];
-    if (attributes.required || attributes['aria-required'] === 'true') {
-      validationInfo.push('required');
-    }
-    if (attributes.pattern) {
-      validationInfo.push(`pattern: ${attributes.pattern.slice(0, 20)}`);
-    }
-    if (attributes.minlength || attributes.maxlength) {
-      validationInfo.push(`length: ${attributes.minlength || 0}-${attributes.maxlength || '∞'}`);
-    }
-    if (attributes.min || attributes.max) {
-      validationInfo.push(`range: ${attributes.min || '0'}-${attributes.max || '∞'}`);
-    }
-    
-    if (validationInfo.length > 0) {
-      formParts.push(`validation: ${validationInfo.join(', ')}`);
-    }
-    
-    // Extract current state
-    const currentValue = attributes.value || '';
-    if (currentValue) {
-      formParts.push(`value: "${currentValue.slice(0, 20)}${currentValue.length > 20 ? '...' : ''}"`);
-    }
-    
-    // Extract form relationship context
-    if (attributes.form) {
-      formParts.push(`form: ${attributes.form}`);
-    }
-    
-    // Extract autocomplete hints
-    if (attributes.autocomplete) {
-      formParts.push(`autocomplete: ${attributes.autocomplete}`);
-    }
-    
-    return formParts.length > 1 ? formParts.join(', ') : null;
-  }
 
   /**
    * 🔄 Generate user path sequence showing how user arrived at current element
@@ -4425,25 +2936,6 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
   /**
    * Extract product ID from interaction context for state accumulator
    */
-  private extractProductIdFromInteraction(interaction: any): string | null {
-    const context = interaction.context || {};
-    const url = context.url || context.pageUrl || '';
-    
-    // Use same patterns as ProductStateAccumulator
-    const patterns = [
-      /pid=([^&]+)/i,
-      /\/product\/([^/?]+)/i,
-      /\/p\/([^/?]+)/i,
-      /product_id=([^&]+)/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
-    }
-    
-    return null;
-  }
 }
 
 // Export singleton for dependency injection
