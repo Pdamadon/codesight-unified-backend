@@ -94,10 +94,11 @@ export class SequenceAwareTrainer {
       sequencesProcessed: shoppingSequences.length,
       totalExamplesGenerated: examples.length,
       examplesByType: {
-        completeFlow: examples.filter(e => e.metadata?.exampleType === 'complete_flow').length,
-        stageProgression: examples.filter(e => e.metadata?.exampleType === 'stage_progression').length,
-        decisionPoint: examples.filter(e => e.metadata?.exampleType === 'decision_point').length,
-        productConfiguration: examples.filter(e => e.metadata?.exampleType === 'product_configuration').length
+        // Note: Counting by context.pageType since metadata property doesn't exist on TrainingExample
+        completeFlow: examples.filter(e => e.context?.pageType === 'complete_flow').length,
+        stageProgression: examples.filter(e => e.context?.pageType === 'stage_progression').length,
+        decisionPoint: examples.filter(e => e.context?.pageType === 'decision_point').length,
+        productConfiguration: examples.filter(e => e.context?.pageType === 'product_configuration').length
       },
       hoverSequencesDetected: shoppingSequences.filter(s => s.hasHoverSequences).length
     });
