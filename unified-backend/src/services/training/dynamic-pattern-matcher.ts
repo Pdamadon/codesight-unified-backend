@@ -108,6 +108,11 @@ export class DynamicPatternMatcher {
     const cleanText = text.trim();
     const upperText = cleanText.toUpperCase();
     
+    console.log('🔍 [DYNAMIC PATTERN MATCHER] Size detection called', {
+      input: cleanText,
+      componentActive: true
+    });
+    
     // 1. Alpha pattern matching (highest confidence)
     if (this.sizeConfig.alphaPattern.test(upperText)) {
       return {
@@ -223,6 +228,12 @@ export class DynamicPatternMatcher {
     const cleanText = text.trim();
     const lowerText = cleanText.toLowerCase();
     const domain = context.domain || 'generic';
+    
+    console.log('🎨 [DYNAMIC PATTERN MATCHER] Color detection called', {
+      input: cleanText,
+      domain: domain,
+      componentActive: true
+    });
     
     // 1. Basic color matching (high confidence)
     const basicResult = this.detectBasicColor(lowerText);

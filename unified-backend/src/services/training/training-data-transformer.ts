@@ -41,11 +41,24 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
   constructor(
     private selectorStrategy: SelectorStrategyService
   ) {
+    console.log('🏗️ [TRAINING DATA TRANSFORMER] Initializing enhanced components', {
+      componentActive: true
+    });
+    
     this.journeyTracker = new HybridJourneyTracker();
     this.productContextBuilder = new ProductContextBuilder();
     this.productStateAccumulator = new ProductStateAccumulator();
     this.patternMatcher = new DynamicPatternMatcher();
     this.sequenceAwareTrainer = new SequenceAwareTrainer();
+    
+    console.log('🏗️ [TRAINING DATA TRANSFORMER] All enhanced components loaded', {
+      journeyTracker: !!this.journeyTracker,
+      productContextBuilder: !!this.productContextBuilder,
+      productStateAccumulator: !!this.productStateAccumulator,
+      patternMatcher: !!this.patternMatcher,
+      sequenceAwareTrainer: !!this.sequenceAwareTrainer,
+      selectorStrategy: !!this.selectorStrategy
+    });
   }
 
   /**
@@ -1593,7 +1606,17 @@ ${backupSelectors.slice(0, 2).map((sel, i) => `${i + 1}. ${sel}`).join('\n')}
     
     // 🛒 ENHANCED: Use ProductContextBuilder for rich e-commerce context
     if (interaction && allInteractions && interactionIndex !== undefined) {
+      console.log('🛒 [TRAINING DATA TRANSFORMER] Calling ProductContextBuilder for business context', {
+        totalInteractions: allInteractions.length,
+        currentInteractionIndex: interactionIndex
+      });
+      
       const cartInteractions = this.productContextBuilder.analyzeCartInteractions(allInteractions);
+      
+      console.log('🛒 [TRAINING DATA TRANSFORMER] ProductContextBuilder analysis complete', {
+        cartInteractionsFound: cartInteractions.length,
+        productContextBuilderActive: true
+      });
       
       // Find if this interaction or recent interactions have product context
       const currentCartInteraction = cartInteractions.find(ci => ci.interaction.timestamp === interaction.timestamp);

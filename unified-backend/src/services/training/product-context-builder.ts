@@ -52,16 +52,32 @@ export class ProductContextBuilder {
    * Analyze a sequence of interactions to identify cart actions with product context
    */
   public analyzeCartInteractions(interactions: any[]): CartInteraction[] {
+    console.log('🛒 [PRODUCT CONTEXT BUILDER] Starting cart interaction analysis', {
+      totalInteractions: interactions.length,
+      componentActive: true,
+      dynamicPatternMatcherLoaded: !!this.patternMatcher
+    });
+    
     const cartInteractions: CartInteraction[] = [];
+    let productStateUpdates = 0;
+    let cartActionsFound = 0;
     
     for (let i = 0; i < interactions.length; i++) {
       const interaction = interactions[i];
       
       // Update product state tracking
       this.updateProductState(interaction, interactions, i);
+      productStateUpdates++;
       
       // Check if this is a cart interaction
       if (this.isCartInteraction(interaction)) {
+        cartActionsFound++;
+        console.log('🛒 [PRODUCT CONTEXT BUILDER] Cart interaction detected', {
+          interactionIndex: i,
+          elementText: interaction.element?.text,
+          elementTag: interaction.element?.tag
+        });
+        
         const productInfo = this.resolveProductForCartAction(interaction, interactions, i);
         
         if (productInfo) {
@@ -71,9 +87,23 @@ export class ProductContextBuilder {
             confidence: this.calculateConfidence(productInfo, interaction),
             resolutionMethod: this.getResolutionMethod(productInfo)
           });
+          
+          console.log('🛒 [PRODUCT CONTEXT BUILDER] Product context resolved', {
+            productId: productInfo.id,
+            productName: productInfo.name,
+            selectedVariant: productInfo.selectedVariant,
+            confidence: this.calculateConfidence(productInfo, interaction)
+          });
         }
       }
     }
+    
+    console.log('🛒 [PRODUCT CONTEXT BUILDER] Analysis completed', {
+      productStateUpdates,
+      cartActionsFound,
+      resolvedCartInteractions: cartInteractions.length,
+      dynamicPatternsUsed: this.patternMatcher ? true : false
+    });
     
     return cartInteractions;
   }

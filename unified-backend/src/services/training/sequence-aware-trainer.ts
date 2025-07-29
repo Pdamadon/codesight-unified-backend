@@ -52,10 +52,22 @@ export class SequenceAwareTrainer {
    * Generate sequence-aware training examples from session interactions
    */
   generateSequenceTrainingExamples(interactions: EnhancedInteractionData[]): TrainingExample[] {
+    console.log('🔗 [SEQUENCE AWARE TRAINER] Starting sequence training generation', {
+      totalInteractions: interactions.length,
+      componentActive: true,
+      journeyTrackerLoaded: !!this.journeyTracker,
+      productStateAccumulatorLoaded: !!this.productStateAccumulator,
+      dynamicPatternMatcherLoaded: !!this.patternMatcher
+    });
+    
     const examples: TrainingExample[] = [];
     
     // 1. Identify shopping sequences in the interactions
     const shoppingSequences = this.identifyShoppingSequences(interactions);
+    console.log('🔗 [SEQUENCE AWARE TRAINER] Shopping sequences identified', {
+      sequenceCount: shoppingSequences.length,
+      sequenceTypes: shoppingSequences.map(s => s.sequenceType)
+    });
     
     // 2. Generate different types of sequence examples
     for (const sequence of shoppingSequences) {
@@ -77,6 +89,18 @@ export class SequenceAwareTrainer {
         examples.push(...configExamples);
       }
     }
+    
+    console.log('🔗 [SEQUENCE AWARE TRAINER] Training generation completed', {
+      sequencesProcessed: shoppingSequences.length,
+      totalExamplesGenerated: examples.length,
+      examplesByType: {
+        completeFlow: examples.filter(e => e.metadata?.exampleType === 'complete_flow').length,
+        stageProgression: examples.filter(e => e.metadata?.exampleType === 'stage_progression').length,
+        decisionPoint: examples.filter(e => e.metadata?.exampleType === 'decision_point').length,
+        productConfiguration: examples.filter(e => e.metadata?.exampleType === 'product_configuration').length
+      },
+      hoverSequencesDetected: shoppingSequences.filter(s => s.hasHoverSequences).length
+    });
     
     return examples;
   }
