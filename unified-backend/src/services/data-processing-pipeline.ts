@@ -808,7 +808,7 @@ export class DataProcessingPipeline extends EventEmitter {
     
     this.processingInterval = setInterval(() => {
       this.processJobs();
-    }, 1000); // Check every second
+    }, 60000); // Check every minute
 
     this.logger.info('Processing pipeline started');
   }
@@ -825,21 +825,26 @@ export class DataProcessingPipeline extends EventEmitter {
   }
 
   private async processJobs(): Promise<void> {
-    console.log('🔄 PIPELINE DEBUG: processJobs() called, checking queue...');
-    console.log('📊 Queue length:', this.jobQueue.length);
-    console.log('📊 Active jobs:', this.activeJobs.size);
-    console.log('📊 Max concurrent:', this.maxConcurrentJobs);
-    
-    // Enhanced logging for queue contents
-    if (this.jobQueue.length > 0) {
-      console.log('📋 PIPELINE DEBUG: Jobs in queue:');
-      this.jobQueue.forEach((job, index) => {
-        console.log(`   ${index + 1}. Job ${job.id} - Type: ${job.type}, SessionID: ${job.sessionId}, Priority: ${job.priority}, Status: ${job.status}`);
-      });
+    // Only log if there are jobs to process or active jobs
+    if (this.jobQueue.length > 0 || this.activeJobs.size > 0) {
+      console.log('🔄 PIPELINE DEBUG: processJobs() called, checking queue...');
+      console.log('📊 Queue length:', this.jobQueue.length);
+      console.log('📊 Active jobs:', this.activeJobs.size);
+      console.log('📊 Max concurrent:', this.maxConcurrentJobs);
+      
+      // Enhanced logging for queue contents
+      if (this.jobQueue.length > 0) {
+        console.log('📋 PIPELINE DEBUG: Jobs in queue:');
+        this.jobQueue.forEach((job, index) => {
+          console.log(`   ${index + 1}. Job ${job.id} - Type: ${job.type}, SessionID: ${job.sessionId}, Priority: ${job.priority}, Status: ${job.status}`);
+        });
+      }
     }
     
     if (this.activeJobs.size >= this.maxConcurrentJobs) {
-      console.log('⏸️  PIPELINE DEBUG: Max concurrent jobs reached, skipping processing');
+      if (this.jobQueue.length > 0) {
+        console.log('⏸️  PIPELINE DEBUG: Max concurrent jobs reached, skipping processing');
+      }
       return;
     }
     
