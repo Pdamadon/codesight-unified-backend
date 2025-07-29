@@ -378,6 +378,11 @@
       // Key press tracking (for shortcuts and navigation)
       this.boundKeyHandler = this.handleKeyPress.bind(this);
       document.addEventListener('keydown', this.boundKeyHandler, true);
+      
+      // Hover tracking for dropdown navigation (debounced)
+      this.boundHoverHandler = this.createDebouncedHover(this.handleHover.bind(this), 300);
+      document.addEventListener('mouseenter', this.boundHoverHandler, true);
+      document.addEventListener('mouseleave', this.boundHoverHandler, true);
     }
 
     unbindEventListeners() {
@@ -398,6 +403,10 @@
       }
       if (this.boundKeyHandler) {
         document.removeEventListener('keydown', this.boundKeyHandler, true);
+      }
+      if (this.boundHoverHandler) {
+        document.removeEventListener('mouseenter', this.boundHoverHandler, true);
+        document.removeEventListener('mouseleave', this.boundHoverHandler, true);
       }
     }
 
@@ -819,6 +828,290 @@
       };
 
       this.captureEvent(interactionData);
+    }
+
+    // Hover event handling for dropdown navigation
+    createDebouncedHover(fn, delay) {
+      let timeoutId = null;
+      return (event) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(event), delay);
+      };
+    }
+
+    isDropdownTrigger(element) {
+      if (!element) return false;
+      
+      // 1. Semantic indicators - ARIA and data attributes
+      const hasDropdownAttributes = element.hasAttribute('aria-haspopup') ||
+                                    element.hasAttribute('data-toggle') ||
+                                    element.classList.contains('dropdown') ||
+                                    element.classList.contains('dropdown-toggle') ||
+                                    element.role === 'button';
+      
+      // 2. Navigation context - must be inside navigation structure
+      const isNavigation = element.closest('nav, .nav, .navigation, .menu, header, .navbar, .nav-menu');
+      
+      // 3. E-commerce specific text patterns
+      const elementText = element.textContent?.trim() || '';
+      const ecommercePattern = /^(Men|Women|Sale|Shop|Category|Browse|Kids|Home|New|Clothing|Shoes|Accessories|Collections)$/i;
+      const hasEcommerceText = ecommercePattern.test(elementText);
+      
+      // 4. Structural hints - has child menu elements
+      const hasChildMenu = element.querySelector('ul, .dropdown-menu, .submenu, .mega-menu') ||
+                          element.parentElement?.querySelector('.dropdown-menu, .submenu');
+      
+      // 5. CSS classes that indicate dropdown functionality
+      const hasDropdownClasses = element.classList.contains('has-dropdown') ||
+                                 element.classList.contains('dropdown-trigger') ||
+                                 element.classList.contains('menu-item-has-children');
+      
+      // Must be in navigation AND have either semantic indicators, e-commerce text, child menus, or dropdown classes
+      return isNavigation && (hasDropdownAttributes || hasEcommerceText || hasChildMenu || hasDropdownClasses);
+    }
+
+    async handleHover(event) {
+      if (!this.isTracking) return;
+      
+      const element = event.target;
+      const timestamp = Date.now();
+      
+      // Only process dropdown triggers
+      if (!this.isDropdownTrigger(element)) return;
+      
+      // Skip if element is too small (likely tracking pixel)
+      const rect = element.getBoundingClientRect();
+      if (rect.width < 10 && rect.height < 10) return;
+      
+      try {
+        // Capture DOM state before hover effect
+        const preHoverState = this.captureDropdownContext(element);
+        
+        // Wait for CSS transitions and dynamic content to load
+        await this.waitForDOMChanges(150);
+        
+        // Capture DOM state after hover effect
+        const postHoverState = this.captureDropdownContext(element);
+        
+        // Only send interaction if DOM actually changed (meaningful hover)
+        if (!this.hasSignificantDOMChange(preHoverState, postHoverState)) {
+          return;
+        }
+        
+        // Capture screenshot after hover effect reveals content
+        const screenshotPromise = this.captureScreenshot('hover', timestamp);
+        
+        // Generate selectors and element analysis (same as click handler)
+        const selectors = this.generateEnhancedSelectors(element);
+        const domContext = this.captureEnhancedDOMContext(element);
+        const elementAnalysis = this.analyzeElementEnhanced(element);
+        
+        const interactionData = {
+          type: 'HOVER',
+          timestamp,
+          sessionTime: timestamp - this.startTime,
+          sequence: ++this.interactionSequence,
+
+          // Enhanced selectors (same structure as click events)
+          selectors: {
+            primary: selectors.primary,
+            alternatives: selectors.alternatives,
+            xpath: selectors.xpath,
+            cssPath: selectors.cssPath,
+            selectorReliability: selectors.selectorReliability
+          },
+
+          // Backward compatibility
+          primarySelector: selectors.primary,
+          selectorAlternatives: selectors.alternatives,
+          xpath: selectors.xpath,
+          cssPath: selectors.cssPath,
+          selectorReliability: selectors.selectorReliability,
+
+          // Visual context
+          visual: {
+            boundingBox: elementAnalysis.boundingBox,
+            viewport: this.getViewportInfo(),
+            isInViewport: elementAnalysis.isInViewport,
+            percentVisible: elementAnalysis.percentVisible,
+            screenshot: null // Will be set after screenshot capture
+          },
+
+          // Element analysis
+          element: elementAnalysis,
+
+          // Backward compatibility
+          elementTag: elementAnalysis.tagName,
+          elementText: elementAnalysis.text,
+          elementValue: elementAnalysis.value,
+          elementAttributes: elementAnalysis.attributes,
+          boundingBox: elementAnalysis.boundingBox,
+          isInViewport: elementAnalysis.isInViewport,
+          percentVisible: elementAnalysis.percentVisible,
+
+          // DOM context
+          context: {
+            parentElements: domContext.parentElements,
+            siblings: domContext.siblings,
+            nearbyElements: domContext.nearbyElements,
+            pageStructure: domContext.pageStructure
+          },
+
+          // Backward compatibility
+          parentElements: domContext.parentElements,
+          siblingElements: domContext.siblings,
+          nearbyElements: domContext.nearbyElements,
+
+          // Hover-specific context
+          hoverContext: {
+            preHoverDOM: preHoverState,
+            postHoverDOM: postHoverState,
+            revealedElements: this.getRevealedElements(preHoverState, postHoverState),
+            dropdownTarget: elementAnalysis.text,
+            hoverType: event.type, // 'mouseenter' or 'mouseleave'
+            isDropdownTrigger: true
+          },
+
+          // Interaction metadata
+          interaction: {
+            coordinates: {
+              clientX: event.clientX,
+              clientY: event.clientY,
+              pageX: event.pageX,
+              pageY: event.pageY
+            },
+            timestamp: timestamp,
+            sessionTime: timestamp - this.startTime,
+            sequence: this.interactionSequence
+          },
+
+          // Legacy fields for compatibility
+          metadata: {
+            sessionId: this.sessionId,
+            userId: 'anon-user',
+            timestamp: new Date(timestamp).toISOString(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            viewport: this.getViewportInfo()
+          },
+          pageContext: {
+            domSnapshot: this.getPrunedDOMSnapshot(element),
+            htmlHash: this.generatePageHash(),
+            networkRequests: this.getRecentNetworkRequests()
+          }
+        };
+
+        // Wait for screenshot to complete
+        const screenshot = await screenshotPromise;
+        if (screenshot) {
+          interactionData.screenshot = screenshot;
+          interactionData.visual.screenshot = screenshot;
+        }
+
+        // Send the interaction data
+        this.captureEvent(interactionData);
+        
+        console.log('Unified: Captured hover interaction on dropdown trigger:', elementAnalysis.text);
+        
+      } catch (error) {
+        console.error('Unified: Error handling hover event:', error);
+      }
+    }
+
+    captureDropdownContext(element) {
+      try {
+        const visibleElements = Array.from(element.querySelectorAll('*'))
+          .filter(el => this.isElementVisible(el))
+          .map(el => ({
+            tag: el.tagName.toLowerCase(),
+            text: el.textContent?.trim() || '',
+            classes: el.className,
+            id: el.id,
+            visible: this.isElementVisible(el)
+          }));
+
+        return {
+          elementText: element.textContent?.trim() || '',
+          visibleChildren: visibleElements,
+          boundingRect: element.getBoundingClientRect(),
+          computedStyle: {
+            display: getComputedStyle(element).display,
+            visibility: getComputedStyle(element).visibility,
+            opacity: getComputedStyle(element).opacity
+          },
+          childElementCount: element.children.length,
+          timestamp: Date.now()
+        };
+      } catch (error) {
+        console.error('Unified: Error capturing dropdown context:', error);
+        return { error: error.message, timestamp: Date.now() };
+      }
+    }
+
+    hasSignificantDOMChange(before, after) {
+      if (!before || !after || before.error || after.error) return false;
+      
+      try {
+        // Check if new elements became visible (dropdown menu appeared)
+        const beforeVisible = before.visibleChildren ? before.visibleChildren.length : 0;
+        const afterVisible = after.visibleChildren ? after.visibleChildren.length : 0;
+        
+        // Significant if 2+ new elements appeared (indicating dropdown menu items)
+        const hasNewElements = afterVisible > beforeVisible + 1;
+        
+        // Also check if child element count changed significantly
+        const beforeChildren = before.childElementCount || 0;
+        const afterChildren = after.childElementCount || 0;
+        const hasNewChildren = afterChildren > beforeChildren;
+        
+        return hasNewElements || hasNewChildren;
+      } catch (error) {
+        console.error('Unified: Error comparing DOM states:', error);
+        return false;
+      }
+    }
+
+    getRevealedElements(before, after) {
+      if (!before?.visibleChildren || !after?.visibleChildren) return [];
+      
+      try {
+        const beforeTexts = new Set(before.visibleChildren.map(el => el.text));
+        const revealedElements = after.visibleChildren
+          .filter(el => !beforeTexts.has(el.text) && el.text.trim())
+          .map(el => ({
+            text: el.text,
+            tag: el.tag,
+            classes: el.classes
+          }));
+        
+        return revealedElements;
+      } catch (error) {
+        console.error('Unified: Error getting revealed elements:', error);
+        return [];
+      }
+    }
+
+    waitForDOMChanges(milliseconds) {
+      return new Promise(resolve => {
+        setTimeout(resolve, milliseconds);
+      });
+    }
+
+    isElementVisible(element) {
+      if (!element) return false;
+      
+      try {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        
+        return style.display !== 'none' &&
+               style.visibility !== 'hidden' &&
+               style.opacity !== '0' &&
+               rect.width > 0 &&
+               rect.height > 0;
+      } catch (error) {
+        return false;
+      }
     }
 
     // Enhanced selector generation

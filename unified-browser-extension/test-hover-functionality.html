@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hover Functionality Test - CodeSight Extension</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .navbar {
+            background: #333;
+            padding: 10px 0;
+            margin-bottom: 30px;
+        }
+        
+        .nav-menu {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .nav-item {
+            position: relative;
+            margin: 0 20px;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            display: block;
+            transition: background-color 0.3s;
+        }
+        
+        .nav-link:hover {
+            background-color: #555;
+        }
+        
+        /* Dropdown functionality */
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .nav-item:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .dropdown-item {
+            display: block;
+            padding: 10px 15px;
+            color: #333;
+            text-decoration: none;
+            border-bottom: 1px solid #eee;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+        
+        .test-info {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .log-area {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .status.ready {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.waiting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .mega-menu {
+            width: 400px;
+            padding: 20px;
+        }
+        
+        .mega-menu-section {
+            margin-bottom: 15px;
+        }
+        
+        .mega-menu-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-info">
+        <h1>🎯 CodeSight Hover Functionality Test</h1>
+        <p><strong>Purpose:</strong> Test the enhanced hover event capturing for dropdown navigation</p>
+        <p><strong>Instructions:</strong></p>
+        <ol>
+            <li>Load the CodeSight extension</li>
+            <li>Start tracking on this page</li>
+            <li>Hover over the navigation items below</li>
+            <li>Check the console logs to see hover events being captured</li>
+        </ol>
+    </div>
+
+    <div id="extension-status" class="status waiting">
+        Extension Status: Checking...
+    </div>
+
+    <nav class="navbar">
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a href="#" class="nav-link">Men</a>
+                <div class="dropdown-menu">
+                    <a href="#" class="dropdown-item">T-Shirts</a>
+                    <a href="#" class="dropdown-item">Jeans</a>
+                    <a href="#" class="dropdown-item">Shoes</a>
+                    <a href="#" class="dropdown-item">Accessories</a>
+                    <a href="#" class="dropdown-item">Sale</a>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">Women</a>
+                <div class="dropdown-menu">
+                    <a href="#" class="dropdown-item">Dresses</a>
+                    <a href="#" class="dropdown-item">Tops</a>
+                    <a href="#" class="dropdown-item">Pants</a>
+                    <a href="#" class="dropdown-item">Shoes</a>
+                    <a href="#" class="dropdown-item">Sale</a>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">Sale</a>
+                <div class="dropdown-menu mega-menu">
+                    <div class="mega-menu-section">
+                        <div class="mega-menu-title">Men's Sale</div>
+                        <a href="#" class="dropdown-item">T-Shirts 50% Off</a>
+                        <a href="#" class="dropdown-item">Jeans 30% Off</a>
+                    </div>
+                    <div class="mega-menu-section">
+                        <div class="mega-menu-title">Women's Sale</div>
+                        <a href="#" class="dropdown-item">Dresses 40% Off</a>
+                        <a href="#" class="dropdown-item">Shoes 25% Off</a>
+                    </div>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link">Collections</a>
+                <div class="dropdown-menu">
+                    <a href="#" class="dropdown-item">Spring 2024</a>
+                    <a href="#" class="dropdown-item">Summer Essentials</a>
+                    <a href="#" class="dropdown-item">New Arrivals</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="test-info">
+        <h3>🧪 Test Scenarios</h3>
+        <p>The following hover interactions should be captured by the extension:</p>
+        <ul>
+            <li><strong>Hover over "Men"</strong> - Should detect dropdown trigger and capture DOM changes</li>
+            <li><strong>Hover over "Women"</strong> - Should reveal women's dropdown menu</li>
+            <li><strong>Hover over "Sale"</strong> - Should reveal mega menu with multiple sections</li>
+            <li><strong>Hover over "Collections"</strong> - Should reveal collections dropdown</li>
+        </ul>
+        
+        <h3>📊 Expected Console Output</h3>
+        <p>You should see logs similar to:</p>
+        <div class="log-area">
+Unified: Captured hover interaction on dropdown trigger: Men<br>
+Unified: Sending event to background: HOVER<br>
+[BACKGROUND] Processing HOVER interaction for session: xxx<br>
+[WEBSOCKET] Hover event sent to backend successfully<br>
+        </div>
+        
+        <h3>🔍 What to Verify</h3>
+        <ul>
+            <li>✅ Hover events are only captured on navigation elements (not random page elements)</li>
+            <li>✅ DOM state changes are detected when dropdowns appear</li>
+            <li>✅ `hoverContext` includes `revealedElements` showing dropdown items</li>
+            <li>✅ Interaction type is correctly set to 'HOVER'</li>
+            <li>✅ No spam - hover events are debounced (max one per 300ms)</li>
+        </ul>
+    </div>
+
+    <script>
+        // Check if CodeSight extension is loaded
+        function checkExtensionStatus() {
+            const statusElement = document.getElementById('extension-status');
+            
+            if (window.UnifiedCodeSightTracker || window.UNIFIED_CODESIGHT_LOADED) {
+                statusElement.textContent = 'Extension Status: ✅ CodeSight Extension Loaded';
+                statusElement.className = 'status ready';
+            } else {
+                statusElement.textContent = 'Extension Status: ⚠️ CodeSight Extension Not Detected';
+                statusElement.className = 'status waiting';
+            }
+        }
+        
+        // Monitor for hover events in console
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            
+            // Check if this is a hover-related log
+            const message = args.join(' ');
+            if (message.includes('hover') || message.includes('HOVER')) {
+                const logArea = document.querySelector('.log-area');
+                if (logArea) {
+                    logArea.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+                    logArea.scrollTop = logArea.scrollHeight;
+                }
+            }
+        };
+        
+        // Check status on load and periodically
+        checkExtensionStatus();
+        setInterval(checkExtensionStatus, 2000);
+        
+        // Add click handlers to dropdown items for testing complete sequences
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Clicked dropdown item:', e.target.textContent);
+                alert(`Testing complete sequence: Hover revealed menu → Clicked "${e.target.textContent}"`);
+            });
+        });
+    </script>
+</body>
+</html>
