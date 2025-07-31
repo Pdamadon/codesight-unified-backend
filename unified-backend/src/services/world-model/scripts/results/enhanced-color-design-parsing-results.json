@@ -1,0 +1,168 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "domain": "www2.hm.com",
+  "processingTimestamp": "2025-07-30T18:17:55.101Z",
+  "extractionSummary": {
+    "totalVariants": 13,
+    "successfulExtractions": 13,
+    "successRate": "100.0%"
+  },
+  "productVariants": [
+    {
+      "baseProductId": "hm-09679551",
+      "productName": "T-Shirt",
+      "selectedColorVariant": {
+        "variantId": "0967955145",
+        "colorNumber": 13,
+        "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+        "wasViewed": true,
+        "wasSelected": true,
+        "colorName": "Navy blue",
+        "designText": "Carmine LTD",
+        "fullDescription": "Navy blue/Carmine LTD"
+      },
+      "colorVariants": [
+        {
+          "variantId": "0967955141",
+          "colorNumber": 1,
+          "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955108",
+          "colorNumber": 2,
+          "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955111",
+          "colorNumber": 3,
+          "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955112",
+          "colorNumber": 4,
+          "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955116",
+          "colorNumber": 5,
+          "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955117",
+          "colorNumber": 6,
+          "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955124",
+          "colorNumber": 7,
+          "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955129",
+          "colorNumber": 8,
+          "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955133",
+          "colorNumber": 9,
+          "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955135",
+          "colorNumber": 10,
+          "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955138",
+          "colorNumber": 11,
+          "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955139",
+          "colorNumber": 12,
+          "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+          "wasViewed": true,
+          "wasSelected": false,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        },
+        {
+          "variantId": "0967955145",
+          "colorNumber": 13,
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "wasViewed": true,
+          "wasSelected": true,
+          "colorName": "Navy blue",
+          "designText": "Carmine LTD",
+          "fullDescription": "Navy blue/Carmine LTD"
+        }
+      ],
+      "finalSelection": {
+        "color": "0967955145",
+        "size": "XXL",
+        "action": "Add to bag"
+      },
+      "userBehavior": {
+        "colorBrowsingPattern": "sequential",
+        "sizeTesting": "exhaustive",
+        "purchaseDecision": "completed"
+      }
+    }
+  ]
+}

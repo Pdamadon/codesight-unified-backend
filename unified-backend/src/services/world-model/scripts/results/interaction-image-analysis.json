@@ -1,0 +1,39 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "totalInteractions": 54,
+  "productPageInteractions": 39,
+  "imageAnalysis": {
+    "interactionsWithImageData": 0,
+    "potentialImageSources": []
+  },
+  "sampleInteractions": [
+    {
+      "type": "navigation_restored",
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "hasAttributes": false,
+      "hasNearbyElements": false,
+      "hasSiblingElements": false,
+      "attributeKeys": []
+    },
+    {
+      "type": "FOCUS",
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "hasAttributes": false,
+      "hasNearbyElements": false,
+      "hasSiblingElements": false,
+      "attributeKeys": []
+    },
+    {
+      "type": "CLICK",
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "elementText": "",
+      "elementTag": "div",
+      "hasAttributes": true,
+      "hasNearbyElements": true,
+      "hasSiblingElements": true,
+      "attributeKeys": [
+        "class"
+      ]
+    }
+  ]
+}

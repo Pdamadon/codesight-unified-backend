@@ -1,0 +1,351 @@
+{
+  "sessionAnalysis": {
+    "sessionId": "session_1753897349098_p9o66xuwm",
+    "totalVariants": 13,
+    "finalSelection": {
+      "variantNumber": 13,
+      "productId": "0967955145",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "startIndex": 40,
+      "interactions": [
+        {
+          "index": 41,
+          "text": "XS",
+          "tag": "div",
+          "timestamp": 1753897377439,
+          "type": "size"
+        },
+        {
+          "index": 43,
+          "text": "S",
+          "tag": "div",
+          "timestamp": 1753897378454,
+          "type": "size"
+        },
+        {
+          "index": 45,
+          "text": "M",
+          "tag": "div",
+          "timestamp": 1753897378960,
+          "type": "size"
+        },
+        {
+          "index": 47,
+          "text": "L",
+          "tag": "div",
+          "timestamp": 1753897379401,
+          "type": "size"
+        },
+        {
+          "index": 49,
+          "text": "XL",
+          "tag": "div",
+          "timestamp": 1753897379852,
+          "type": "size"
+        },
+        {
+          "index": 51,
+          "text": "XXL",
+          "tag": "div",
+          "timestamp": 1753897380637,
+          "type": "size"
+        },
+        {
+          "index": 53,
+          "text": "Add to bag",
+          "tag": "button",
+          "timestamp": 1753897381345,
+          "type": "action"
+        }
+      ]
+    },
+    "productSequence": [
+      {
+        "variantNumber": 1,
+        "productId": "0967955141",
+        "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+        "startIndex": 7,
+        "interactions": []
+      },
+      {
+        "variantNumber": 2,
+        "productId": "0967955108",
+        "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+        "startIndex": 11,
+        "interactions": []
+      },
+      {
+        "variantNumber": 3,
+        "productId": "0967955111",
+        "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+        "startIndex": 13,
+        "interactions": []
+      },
+      {
+        "variantNumber": 4,
+        "productId": "0967955112",
+        "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+        "startIndex": 15,
+        "interactions": []
+      },
+      {
+        "variantNumber": 5,
+        "productId": "0967955116",
+        "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+        "startIndex": 18,
+        "interactions": []
+      },
+      {
+        "variantNumber": 6,
+        "productId": "0967955117",
+        "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+        "startIndex": 21,
+        "interactions": []
+      },
+      {
+        "variantNumber": 7,
+        "productId": "0967955124",
+        "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+        "startIndex": 24,
+        "interactions": []
+      },
+      {
+        "variantNumber": 8,
+        "productId": "0967955129",
+        "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+        "startIndex": 26,
+        "interactions": []
+      },
+      {
+        "variantNumber": 9,
+        "productId": "0967955133",
+        "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+        "startIndex": 29,
+        "interactions": []
+      },
+      {
+        "variantNumber": 10,
+        "productId": "0967955135",
+        "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+        "startIndex": 31,
+        "interactions": []
+      },
+      {
+        "variantNumber": 11,
+        "productId": "0967955138",
+        "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+        "startIndex": 34,
+        "interactions": []
+      },
+      {
+        "variantNumber": 12,
+        "productId": "0967955139",
+        "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+        "startIndex": 37,
+        "interactions": []
+      },
+      {
+        "variantNumber": 13,
+        "productId": "0967955145",
+        "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+        "startIndex": 40,
+        "interactions": [
+          {
+            "index": 41,
+            "text": "XS",
+            "tag": "div",
+            "timestamp": 1753897377439,
+            "type": "size"
+          },
+          {
+            "index": 43,
+            "text": "S",
+            "tag": "div",
+            "timestamp": 1753897378454,
+            "type": "size"
+          },
+          {
+            "index": 45,
+            "text": "M",
+            "tag": "div",
+            "timestamp": 1753897378960,
+            "type": "size"
+          },
+          {
+            "index": 47,
+            "text": "L",
+            "tag": "div",
+            "timestamp": 1753897379401,
+            "type": "size"
+          },
+          {
+            "index": 49,
+            "text": "XL",
+            "tag": "div",
+            "timestamp": 1753897379852,
+            "type": "size"
+          },
+          {
+            "index": 51,
+            "text": "XXL",
+            "tag": "div",
+            "timestamp": 1753897380637,
+            "type": "size"
+          },
+          {
+            "index": 53,
+            "text": "Add to bag",
+            "tag": "button",
+            "timestamp": 1753897381345,
+            "type": "action"
+          }
+        ]
+      }
+    ]
+  },
+  "idealStructure": {
+    "baseProduct": {
+      "productName": "T-Shirt",
+      "baseProductId": "hm-tshirt-967955",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+    },
+    "colorVariants": [
+      {
+        "variantId": "0967955141",
+        "colorNumber": 1,
+        "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955108",
+        "colorNumber": 2,
+        "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955111",
+        "colorNumber": 3,
+        "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955112",
+        "colorNumber": 4,
+        "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955116",
+        "colorNumber": 5,
+        "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955117",
+        "colorNumber": 6,
+        "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955124",
+        "colorNumber": 7,
+        "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955129",
+        "colorNumber": 8,
+        "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955133",
+        "colorNumber": 9,
+        "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955135",
+        "colorNumber": 10,
+        "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955138",
+        "colorNumber": 11,
+        "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955139",
+        "colorNumber": 12,
+        "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+        "wasViewed": true,
+        "wasSelected": false
+      },
+      {
+        "variantId": "0967955145",
+        "colorNumber": 13,
+        "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+        "wasViewed": true,
+        "wasSelected": true
+      }
+    ],
+    "selectedAttributes": {
+      "sizes": [
+        {
+          "value": "XS",
+          "wasTested": true,
+          "finalSelection": false
+        },
+        {
+          "value": "S",
+          "wasTested": true,
+          "finalSelection": false
+        },
+        {
+          "value": "M",
+          "wasTested": true,
+          "finalSelection": false
+        },
+        {
+          "value": "L",
+          "wasTested": true,
+          "finalSelection": false
+        },
+        {
+          "value": "XL",
+          "wasTested": true,
+          "finalSelection": false
+        },
+        {
+          "value": "XXL",
+          "wasTested": true,
+          "finalSelection": true
+        }
+      ],
+      "actions": [
+        {
+          "action": "Add to bag",
+          "timestamp": 1753897381345
+        }
+      ]
+    },
+    "userBehavior": {
+      "colorBrowsingPattern": "sequential",
+      "sizeTesting": "exhaustive",
+      "purchaseDecision": "completed"
+    }
+  }
+}

@@ -255,7 +255,67 @@ export class OpenAIIntegrationService {
    */
   async uploadTrainingFile(data: any, metadata: any): Promise<string> {
     try {
-      const jsonlContent = data.messages.map((msg: any) => JSON.stringify(msg)).join('\n');
+      // Handle array of examples, convert to proper OpenAI format
+      const examples = Array.isArray(data) ? data : (data.messages || []);
+      
+      const systemMessage = {
+        role: "system",
+        content: "You are a helpful AI agent that writes Playwright code to navigate e-commerce websites based on user tasks and DOM context. You understand semantic journey context, shopping flows, product configuration states, and can generate reliable selectors for automated interactions."
+      };
+      
+      const fineTuningExamples = examples.map((example: any) => {
+        // If already in messages format, return as-is
+        if (example.messages && Array.isArray(example.messages)) {
+          return example;
+        }
+        
+        // Convert prompt/completion format to messages format
+        if (example.prompt && example.completion) {
+          return {
+            messages: [
+              systemMessage,
+              {
+                role: "user",
+                content: example.prompt
+              },
+              {
+                role: "assistant", 
+                content: example.completion
+              }
+            ]
+          };
+        }
+        
+        // Skip malformed examples
+        this.logger.warn("Skipping malformed training example", { example: Object.keys(example) });
+        return null;
+      }).filter(Boolean); // Remove null entries
+      
+      const jsonlContent = fineTuningExamples.map((example: any) => JSON.stringify(example)).join('\n');
+      
+      // Validate format before upload
+      this.logger.info("Training data conversion completed", { 
+        originalCount: examples.length,
+        convertedCount: fineTuningExamples.length,
+        sampleKeys: examples[0] ? Object.keys(examples[0]) : [],
+        hasMessages: fineTuningExamples[0]?.messages ? true : false
+      });
+      
+      // Validate first example structure
+      if (fineTuningExamples.length > 0) {
+        const firstExample = fineTuningExamples[0];
+        if (!firstExample.messages || !Array.isArray(firstExample.messages) || firstExample.messages.length < 2) {
+          throw new Error(`Invalid training data format. First example: ${JSON.stringify(firstExample, null, 2)}`);
+        }
+        
+        const hasSystemMsg = firstExample.messages.some((msg: any) => msg.role === 'system');
+        const hasUserMsg = firstExample.messages.some((msg: any) => msg.role === 'user');
+        const hasAssistantMsg = firstExample.messages.some((msg: any) => msg.role === 'assistant');
+        
+        if (!hasSystemMsg || !hasUserMsg || !hasAssistantMsg) {
+          throw new Error(`Missing required message roles. System: ${hasSystemMsg}, User: ${hasUserMsg}, Assistant: ${hasAssistantMsg}`);
+        }
+      }
       
       const blob = new Blob([jsonlContent], { type: 'application/jsonl' });
       const fileObject = Object.assign(blob, {

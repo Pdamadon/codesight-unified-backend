@@ -1,0 +1,67 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "extractionTimestamp": "2025-07-30T18:42:25.052Z",
+  "domainInformation": {
+    "domain": "www2.hm.com",
+    "domainName": "H&M US",
+    "siteStructure": {
+      "navigationPatterns": [],
+      "commonSelectors": []
+    },
+    "pageTypes": {
+      "homepage": {
+        "urlPattern": "https://www2.hm.com/en_us/index.html",
+        "elementPatterns": [
+          "tag:button",
+          "tag:a"
+        ],
+        "count": 1
+      },
+      "category": {
+        "urlPattern": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+        "elementPatterns": [
+          "tag:img"
+        ],
+        "count": 1
+      },
+      "product": {
+        "urlPattern": "en_us/*",
+        "elementPatterns": [
+          "tag:div",
+          "tag:button"
+        ],
+        "count": 13
+      }
+    },
+    "technicalMetadata": {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "commonClassPatterns": [],
+      "selectorReliability": {}
+    },
+    "brandingElements": {
+      "siteName": "H&M US",
+      "logoSelectors": []
+    },
+    "discoveryInfo": {
+      "totalInteractions": 54,
+      "uniquePages": 15,
+      "sessionCoverage": "81.5% meaningful interactions",
+      "discoveredAt": "2025-07-30T18:42:25.050Z"
+    }
+  },
+  "sessionSummary": {
+    "totalInteractions": 54,
+    "navigationEvents": 0,
+    "productInteractions": 7,
+    "productVariants": 1
+  },
+  "extractionSuccess": {
+    "siteStructure": false,
+    "pageTypes": true,
+    "technicalMetadata": false,
+    "brandingElements": true
+  }
+}

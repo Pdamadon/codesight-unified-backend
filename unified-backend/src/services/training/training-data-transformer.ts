@@ -237,13 +237,9 @@ export class TrainingDataTransformerImpl implements TrainingDataTransformerServi
     }
     
     // 🎯 SEMANTIC ENHANCEMENT: Get semantic journey context from SequenceAwareTrainer
-    const stageName = (this.sequenceAwareTrainer as any).getStageNameForInteraction ? 
-      (this.sequenceAwareTrainer as any).getStageNameForInteraction(interaction) : 'Navigation';
-    const pageClassification = (this.sequenceAwareTrainer as any).classifyPageSemantically ? 
-      (this.sequenceAwareTrainer as any).classifyPageSemantically(interaction) : { pageType: 'unknown', confidence: 0.5 };
-    const behaviorDescription = (this.sequenceAwareTrainer as any).getSemanticBehaviorDescription ? 
-      (this.sequenceAwareTrainer as any).getSemanticBehaviorDescription(pageClassification.pageType, interaction) : 
-      'User progressing through shopping interface';
+    const stageName = this.sequenceAwareTrainer.getStageNameForInteraction(interaction);
+    const pageClassification = this.sequenceAwareTrainer.classifyPageSemantically(interaction);
+    const behaviorDescription = this.sequenceAwareTrainer.getSemanticBehaviorDescription(pageClassification.pageType, interaction);
     
     // Build journey progression context (simplified for now)
     const journeyProgression = `${pageClassification.pageType} → ${stageName}`;
@@ -259,7 +255,10 @@ ${realJourneyContext.taskProgress.completedTasks.length > 0 ? `Completed: [${rea
 ${realJourneyContext.taskProgress.remainingTasks.length > 0 ? `Remaining: [${realJourneyContext.taskProgress.remainingTasks.map(t => `"${t}"`).join(', ')}]` : ''}
 
 [JOURNEY]
-Step: ${realJourneyContext.sessionStep}/${realJourneyContext.totalSteps} - ${realJourneyContext.taskProgress.currentTaskName}
+Step: ${realJourneyContext.sessionStep}/${realJourneyContext.totalSteps} - ${stageName}: ${behaviorDescription}
+Journey Stage: ${journeyProgression}
+Semantic Context: ${semanticContext}
+Shopping Flow: ${sequenceType} (Quality: ${sequenceQuality.toFixed(2)})
 Current Intent: ${realJourneyContext.currentIntent.action}${realJourneyContext.currentIntent.product ? ` (${realJourneyContext.currentIntent.product})` : ''} (confidence: ${realJourneyContext.currentIntent.confidence.toFixed(2)})
 Evidence: ${realJourneyContext.currentIntent.reasoning}
 Navigation Flow: ${realJourneyContext.navigationFlow.previousPages.slice(-2).join(' → ')} → ${realJourneyContext.navigationFlow.currentPage}

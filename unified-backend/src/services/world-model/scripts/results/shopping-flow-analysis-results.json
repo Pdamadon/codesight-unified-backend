@@ -1,0 +1,1809 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "extractionTimestamp": "2025-07-30T19:14:05.784Z",
+  "shoppingFlowAnalysis": {
+    "purchaseFunnel": {
+      "stages": [
+        {
+          "stageId": "stage_0",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:44.435Z",
+          "exitTime": "2025-07-30T17:42:47.472Z",
+          "duration": 3037,
+          "interactions": [
+            "08e7515d-0efc-4c73-a549-c28c434efd06",
+            "d779afd7-3f04-423b-897c-eb6abaa959ed",
+            "9883330e-b450-4919-ba9c-cb284d1d8332",
+            "cf219d2f-ba54-4cb1-bd50-b02c7c0be448"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_1",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:47.472Z",
+          "exitTime": "2025-07-30T17:42:47.529Z",
+          "duration": 57,
+          "interactions": [
+            "cf219d2f-ba54-4cb1-bd50-b02c7c0be448",
+            "cca294f4-407f-4709-881c-aa4c20e9cc20"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_2",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:47.529Z",
+          "exitTime": "2025-07-30T17:42:48.446Z",
+          "duration": 917,
+          "interactions": [
+            "cca294f4-407f-4709-881c-aa4c20e9cc20",
+            "57bc16d7-5b86-4cb3-9a97-f273080f118c",
+            "b9a83d3a-3751-499a-9365-3896ce53f2eb",
+            "517e5cc2-368c-4966-ba03-e073e3274261",
+            "0fe67059-f552-4d0a-a5d4-8dbd991d07cd"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_3",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:48.446Z",
+          "exitTime": "2025-07-30T17:42:48.526Z",
+          "duration": 80,
+          "interactions": [
+            "709aa503-dc1a-4e8a-a377-f390735f69f3",
+            "0fe67059-f552-4d0a-a5d4-8dbd991d07cd",
+            "3d313bf6-3f4c-4e34-b2d8-573791220388"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_4",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:48.526Z",
+          "exitTime": "2025-07-30T17:42:49.445Z",
+          "duration": 919,
+          "interactions": [
+            "3d313bf6-3f4c-4e34-b2d8-573791220388",
+            "6b821104-c2a1-482a-9b83-aa45cc07810f",
+            "6d73f36e-b7b6-435a-b7fa-c7451fdb2e5e",
+            "2dfdc8e5-900e-46cb-badf-2d475a0a61ed",
+            "7b0c4c9d-a913-45ab-b321-846cbfdc3ab3"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_5",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:49.445Z",
+          "exitTime": "2025-07-30T17:42:49.432Z",
+          "duration": -13,
+          "interactions": [],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_6",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:49.432Z",
+          "exitTime": "2025-07-30T17:42:50.443Z",
+          "duration": 1011,
+          "interactions": [
+            "2dfdc8e5-900e-46cb-badf-2d475a0a61ed",
+            "7b0c4c9d-a913-45ab-b321-846cbfdc3ab3",
+            "2219ac94-e450-4a2c-9439-f4816cfcac6d",
+            "1b115831-3611-46b2-955b-9da5886090a1"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_7",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:50.443Z",
+          "exitTime": "2025-07-30T17:42:50.711Z",
+          "duration": 268,
+          "interactions": [
+            "1b115831-3611-46b2-955b-9da5886090a1",
+            "74adc4ff-0902-4f38-b608-5aea4d78acc8"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_8",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:50.711Z",
+          "exitTime": "2025-07-30T17:42:51.515Z",
+          "duration": 804,
+          "interactions": [
+            "74adc4ff-0902-4f38-b608-5aea4d78acc8",
+            "83bc44df-4cb4-4571-a9f1-ea1ad9d3ef05",
+            "0edb806d-7f77-4b91-9b05-a2cfa593d943",
+            "09bb6a96-d131-446d-be7a-99558ac39d14",
+            "0515728a-dc24-48e5-852e-7317f5776752"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_9",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:51.515Z",
+          "exitTime": "2025-07-30T17:42:52.395Z",
+          "duration": 880,
+          "interactions": [
+            "0515728a-dc24-48e5-852e-7317f5776752",
+            "2d7786eb-7596-4a7d-8b27-6c1f1a5245b5"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_10",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:52.395Z",
+          "exitTime": "2025-07-30T17:42:53.446Z",
+          "duration": 1051,
+          "interactions": [
+            "2d7786eb-7596-4a7d-8b27-6c1f1a5245b5",
+            "203ec9f9-7db7-45de-bbe6-78969c71dc25",
+            "4cd2b96e-24b1-413b-ad01-259d2818c336",
+            "e187456e-6867-4749-bdca-da9189c5f7d7",
+            "584157ae-2e6b-4009-b630-51d132cffaee"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_11",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:53.446Z",
+          "exitTime": "2025-07-30T17:42:54.423Z",
+          "duration": 977,
+          "interactions": [
+            "584157ae-2e6b-4009-b630-51d132cffaee",
+            "26d3894a-187f-48ab-a20c-b0a4cd4d42b4"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_12",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:54.423Z",
+          "exitTime": "2025-07-30T17:42:55.444Z",
+          "duration": 1021,
+          "interactions": [
+            "26d3894a-187f-48ab-a20c-b0a4cd4d42b4",
+            "24e5a584-3dd2-4a1f-8994-2264d7e626d0",
+            "d183d586-1343-40c1-9b6b-8b39b3c01808"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_13",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:55.444Z",
+          "exitTime": "2025-07-30T17:42:55.505Z",
+          "duration": 61,
+          "interactions": [
+            "d183d586-1343-40c1-9b6b-8b39b3c01808",
+            "8bfe816a-03a4-4bfe-8b4b-74feb67dafb5"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_14",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:55.505Z",
+          "exitTime": "2025-07-30T17:42:56.474Z",
+          "duration": 969,
+          "interactions": [
+            "8bfe816a-03a4-4bfe-8b4b-74feb67dafb5",
+            "00c4f6b6-8d77-4e70-9016-a85bf181f01b",
+            "b9fede42-ebd2-4d87-938f-e082a12a49d2"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_15",
+          "stageName": "Browsing",
+          "stageType": "browse",
+          "entryTime": "2025-07-30T17:42:56.474Z",
+          "exitTime": "2025-07-30T17:42:57.338Z",
+          "duration": 864,
+          "interactions": [
+            "b9fede42-ebd2-4d87-938f-e082a12a49d2",
+            "7b5045f2-8010-4890-8a4d-b5965c7d2284"
+          ],
+          "completionRate": 1
+        },
+        {
+          "stageId": "stage_16",
+          "stageName": "Product Viewing",
+          "stageType": "view_product",
+          "entryTime": "2025-07-30T17:42:57.338Z",
+          "exitTime": "2025-07-30T19:14:05.780Z",
+          "duration": 5468442,
+          "interactions": [
+            "7b5045f2-8010-4890-8a4d-b5965c7d2284",
+            "3b299dad-2f55-465d-91c7-cc09e865d44a",
+            "666a7cf5-2cd9-48cf-812a-6390f18d039f",
+            "c81dc01c-cca7-4c09-a298-54a06aeab3a0",
+            "b4e5f5aa-a4c3-435a-827f-00314d1cd8ee",
+            "f4bdec11-e339-416a-a025-5b416868828a",
+            "af3090bf-ab93-4cda-b670-46cd88c2085e",
+            "50f3e949-25cf-4af3-9059-e515ea8ee926",
+            "70d98e95-aebd-4e24-b4fb-fde5b2319396",
+            "08c24d32-5530-4483-a6ae-623347374f4e",
+            "fff8a630-15e6-424a-9a8e-2220cb10f9d5",
+            "c65d127c-5d50-4fbd-ad6a-fc84d15bfea1",
+            "a55e75a5-5f60-4c82-801d-ea838a946159",
+            "28d4d541-e67b-46d9-b0cd-caa9dfd0509f"
+          ],
+          "completionRate": 1
+        }
+      ],
+      "currentStage": "view_product",
+      "progression": [
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:44.435Z",
+          "triggerAction": "navigation_restored",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:47.472Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:47.529Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:48.446Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:48.526Z",
+          "triggerAction": "CLICK",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:49.445Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:49.432Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:50.443Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:50.711Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:51.515Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:52.395Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:53.446Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:54.423Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:55.444Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:55.505Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        },
+        {
+          "fromStage": "view_product",
+          "toStage": "browse",
+          "transitionTime": "2025-07-30T17:42:56.474Z",
+          "triggerAction": "NAVIGATION",
+          "success": true
+        },
+        {
+          "fromStage": "browse",
+          "toStage": "view_product",
+          "transitionTime": "2025-07-30T17:42:57.338Z",
+          "triggerAction": "FOCUS",
+          "success": true
+        }
+      ],
+      "completionStatus": "in_progress",
+      "dropOffPoints": [],
+      "conversionEvents": []
+    },
+    "cartWorkflow": {
+      "cartActions": [
+        {
+          "actionId": "cart_action_0",
+          "actionType": "add_to_cart",
+          "timestamp": "2025-07-30T17:43:01.345Z",
+          "productId": "0967955145",
+          "quantity": 1,
+          "triggeredBy": "Add to bag",
+          "success": true
+        }
+      ],
+      "cartState": {
+        "items": [
+          {
+            "productId": "0967955145",
+            "productName": "Unknown Product",
+            "quantity": 1,
+            "unitPrice": 0,
+            "totalPrice": 0,
+            "addedAt": "2025-07-30T17:43:01.345Z",
+            "configuration": {}
+          }
+        ],
+        "totalItems": 1,
+        "totalValue": 0,
+        "currency": "USD",
+        "lastUpdated": "2025-07-30T19:14:05.780Z",
+        "cartStatus": "active"
+      },
+      "cartInteractions": [],
+      "abandonmentAnalysis": {
+        "abandoned": false,
+        "abandonmentReason": "unknown"
+      }
+    },
+    "productConfigurationFlow": {
+      "configurationSteps": [
+        {
+          "stepId": "step_0",
+          "stepType": "color_selection",
+          "stepName": "Color Selection",
+          "startTime": "2025-07-30T17:42:43.841Z",
+          "endTime": "2025-07-30T17:42:43.841Z",
+          "completed": true,
+          "selectedValue": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        },
+        {
+          "stepId": "step_0",
+          "stepType": "size_selection",
+          "stepName": "Size Selection",
+          "startTime": "2025-07-30T17:42:57.439Z",
+          "endTime": "2025-07-30T17:42:57.439Z",
+          "completed": true,
+          "selectedValue": "XS",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        },
+        {
+          "stepId": "step_1",
+          "stepType": "size_selection",
+          "stepName": "Size Selection",
+          "startTime": "2025-07-30T17:42:58.454Z",
+          "endTime": "2025-07-30T17:42:58.454Z",
+          "completed": true,
+          "selectedValue": "S",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        },
+        {
+          "stepId": "step_2",
+          "stepType": "size_selection",
+          "stepName": "Size Selection",
+          "startTime": "2025-07-30T17:42:58.960Z",
+          "endTime": "2025-07-30T17:42:58.960Z",
+          "completed": true,
+          "selectedValue": "M",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        },
+        {
+          "stepId": "step_3",
+          "stepType": "size_selection",
+          "stepName": "Size Selection",
+          "startTime": "2025-07-30T17:42:59.401Z",
+          "endTime": "2025-07-30T17:42:59.401Z",
+          "completed": true,
+          "selectedValue": "L",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        },
+        {
+          "stepId": "step_4",
+          "stepType": "size_selection",
+          "stepName": "Size Selection",
+          "startTime": "2025-07-30T17:42:59.852Z",
+          "endTime": "2025-07-30T17:42:59.852Z",
+          "completed": true,
+          "selectedValue": "XL",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        },
+        {
+          "stepId": "step_5",
+          "stepType": "size_selection",
+          "stepName": "Size Selection",
+          "startTime": "2025-07-30T17:43:00.637Z",
+          "endTime": "2025-07-30T17:43:00.637Z",
+          "completed": true,
+          "selectedValue": "XXL",
+          "availableOptions": [],
+          "userBehavior": "quick_decision"
+        }
+      ],
+      "selectionSequence": [
+        {
+          "sequenceId": "seq_unknown",
+          "product": "unknown",
+          "selectionOrder": [
+            "color_selection"
+          ],
+          "selectionTimings": [
+            0
+          ],
+          "finalConfiguration": {
+            "color_selection": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi..."
+          },
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955141",
+          "product": "0967955141",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955108",
+          "product": "0967955108",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955111",
+          "product": "0967955111",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955112",
+          "product": "0967955112",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955116",
+          "product": "0967955116",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955117",
+          "product": "0967955117",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955124",
+          "product": "0967955124",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955129",
+          "product": "0967955129",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955133",
+          "product": "0967955133",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955135",
+          "product": "0967955135",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955138",
+          "product": "0967955138",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955139",
+          "product": "0967955139",
+          "selectionOrder": [],
+          "selectionTimings": [],
+          "finalConfiguration": {},
+          "decisionQuality": "confident"
+        },
+        {
+          "sequenceId": "seq_0967955145",
+          "product": "0967955145",
+          "selectionOrder": [
+            "size_selection",
+            "size_selection",
+            "size_selection",
+            "size_selection",
+            "size_selection",
+            "size_selection"
+          ],
+          "selectionTimings": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "finalConfiguration": {
+            "size_selection": "XXL"
+          },
+          "decisionQuality": "exploratory"
+        }
+      ],
+      "userDecisionPattern": {
+        "decisionStyle": "comparison_focused",
+        "selectionSpeed": "fast",
+        "changeFrequency": 7,
+        "commitmentLevel": "high"
+      },
+      "configurationCompleteness": {
+        "requiredFields": [
+          "size",
+          "color"
+        ],
+        "completedFields": [
+          "color_selection",
+          "size_selection",
+          "size_selection",
+          "size_selection",
+          "size_selection",
+          "size_selection",
+          "size_selection"
+        ],
+        "missingFields": [],
+        "completionPercentage": 3.5,
+        "readyForPurchase": true
+      }
+    },
+    "checkoutSequence": {
+      "checkoutSteps": [],
+      "paymentFlow": {
+        "paymentMethods": [],
+        "paymentAttempts": [],
+        "paymentStatus": "not_attempted"
+      },
+      "formCompletions": [],
+      "checkoutBarriers": [],
+      "completionStatus": "not_started"
+    },
+    "shoppingBehaviorPatterns": [
+      {
+        "patternId": "browsing_pattern",
+        "patternType": "browsing",
+        "patternName": "Product Browsing",
+        "confidence": 0.8,
+        "behaviors": [
+          {
+            "behavior": "product_viewing",
+            "frequency": 39,
+            "intensity": "medium",
+            "context": "product_discovery"
+          }
+        ],
+        "duration": 0,
+        "outcome": "continued_browsing"
+      },
+      {
+        "patternId": "comparison_pattern",
+        "patternType": "comparison",
+        "patternName": "Product Comparison",
+        "confidence": 0.6,
+        "behaviors": [],
+        "duration": 0,
+        "outcome": "continued_browsing"
+      }
+    ],
+    "ecommerceActionSequences": [
+      {
+        "sequenceId": "seq_0",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:36.053Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/index.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/index.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Clothing",
+            "timestamp": "2025-07-30T17:42:36.575Z",
+            "target": "Clothing",
+            "context": {
+              "url": "https://www2.hm.com/en_us/index.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/index.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_2",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:39.115Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/index.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/index.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_3",
+            "actionType": "interaction",
+            "actionName": "T-shirts & Tops",
+            "timestamp": "2025-07-30T17:42:39.620Z",
+            "target": "T-shirts & Tops",
+            "context": {
+              "url": "https://www2.hm.com/en_us/index.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/index.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_1",
+        "sequenceType": "variant_selection",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:40.538Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:43.701Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_2",
+            "actionType": "color_selection",
+            "actionName": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+            "timestamp": "2025-07-30T17:42:43.841Z",
+            "target": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+            "context": {
+              "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_2",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:44.435Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955141.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:46.909Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955141.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_2",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:47.037Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955141.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_3",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:47.472Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_4",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:47.529Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955108.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:47.612Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955108.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_5",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:47.982Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955111.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:48.059Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955111.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_6",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:48.452Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955112.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_7",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:48.446Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_8",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:48.526Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955112.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_9",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:48.880Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955116.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:48.957Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955116.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_10",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:49.445Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_11",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:49.432Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955117.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:49.563Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955117.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_12",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:50.443Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_13",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:50.711Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955124.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:50.797Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955124.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_14",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:51.248Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955129.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:51.408Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955129.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_15",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:51.515Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_16",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:52.395Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955133.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:52.523Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955133.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_17",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:53.042Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955135.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:53.157Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955135.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_18",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:53.446Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_19",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:54.423Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955138.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:54.571Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955138.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_20",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:55.444Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_21",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:55.505Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955139.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:55.617Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955139.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_22",
+        "sequenceType": "product_discovery",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:56.474Z",
+            "target": "unknown",
+            "context": {
+              "url": "",
+              "pageType": "unknown",
+              "productContext": {}
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "low"
+      },
+      {
+        "sequenceId": "seq_23",
+        "sequenceType": "variant_selection",
+        "actions": [
+          {
+            "actionId": "action_0",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:57.338Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_1",
+            "actionType": "size_selection",
+            "actionName": "XS",
+            "timestamp": "2025-07-30T17:42:57.439Z",
+            "target": "XS",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "engagement"
+          },
+          {
+            "actionId": "action_2",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:58.325Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_3",
+            "actionType": "size_selection",
+            "actionName": "S",
+            "timestamp": "2025-07-30T17:42:58.454Z",
+            "target": "S",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "engagement"
+          },
+          {
+            "actionId": "action_4",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:58.868Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_5",
+            "actionType": "size_selection",
+            "actionName": "M",
+            "timestamp": "2025-07-30T17:42:58.960Z",
+            "target": "M",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "engagement"
+          },
+          {
+            "actionId": "action_6",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:59.331Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_7",
+            "actionType": "size_selection",
+            "actionName": "L",
+            "timestamp": "2025-07-30T17:42:59.401Z",
+            "target": "L",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "engagement"
+          },
+          {
+            "actionId": "action_8",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:42:59.777Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_9",
+            "actionType": "size_selection",
+            "actionName": "XL",
+            "timestamp": "2025-07-30T17:42:59.852Z",
+            "target": "XL",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "engagement"
+          },
+          {
+            "actionId": "action_10",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:43:00.542Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_11",
+            "actionType": "size_selection",
+            "actionName": "XXL",
+            "timestamp": "2025-07-30T17:43:00.637Z",
+            "target": "XXL",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "engagement"
+          },
+          {
+            "actionId": "action_12",
+            "actionType": "interaction",
+            "actionName": "Unknown Action",
+            "timestamp": "2025-07-30T17:43:01.239Z",
+            "target": "unknown",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          },
+          {
+            "actionId": "action_13",
+            "actionType": "interaction",
+            "actionName": "Add to bag",
+            "timestamp": "2025-07-30T17:43:01.345Z",
+            "target": "Add to bag",
+            "context": {
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "pageType": "unknown",
+              "productContext": {
+                "url": "https://www2.hm.com/en_us/productpage.0967955145.html"
+              }
+            },
+            "outcome": "success",
+            "businessImpact": "research"
+          }
+        ],
+        "sequenceQuality": 0.8,
+        "userIntent": "browsing_intent",
+        "businessValue": "medium"
+      }
+    ],
+    "discoveryMetadata": {
+      "totalShoppingActions": 8,
+      "funnelCompletionRate": 1,
+      "shoppingIntentStrength": 0.14814814814814814,
+      "extractedAt": "2025-07-30T19:14:05.781Z"
+    }
+  },
+  "extractionSummary": {
+    "purchaseFunnel": {
+      "stages": 17,
+      "currentStage": "view_product",
+      "completionStatus": "in_progress",
+      "conversionEvents": 0
+    },
+    "cartWorkflow": {
+      "cartActions": 1,
+      "cartStatus": "active",
+      "abandoned": false
+    },
+    "productConfiguration": {
+      "configurationSteps": 7,
+      "completionPercentage": 3.5,
+      "readyForPurchase": true,
+      "decisionStyle": "comparison_focused"
+    },
+    "checkoutSequence": {
+      "completionStatus": "not_started",
+      "paymentStatus": "not_attempted"
+    },
+    "behaviorPatterns": {
+      "totalPatterns": 2,
+      "dominantPattern": "browsing"
+    },
+    "ecommerceSequences": {
+      "totalSequences": 24,
+      "dominantSequenceType": "product_discovery"
+    }
+  },
+  "extractionSuccess": {
+    "purchaseFunnelExtraction": true,
+    "cartWorkflowExtraction": true,
+    "configurationFlowExtraction": true,
+    "behaviorPatternExtraction": true,
+    "actionSequenceExtraction": true
+  }
+}

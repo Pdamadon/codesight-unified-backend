@@ -11,6 +11,7 @@
 import { HybridJourneyTracker } from '../journey/hybrid-journey-tracker';
 import { ProductStateAccumulator, ProductConfigurationState } from './product-state-accumulator';
 import { DynamicPatternMatcher } from './dynamic-pattern-matcher';
+import { UniversalSequenceDetector, UniversalSequence, PageClassification } from './universal-sequence-detector';
 import { 
   EnhancedInteractionData, 
   TrainingExample
@@ -41,11 +42,13 @@ export class SequenceAwareTrainer {
   private journeyTracker: HybridJourneyTracker;
   private productStateAccumulator: ProductStateAccumulator;
   private patternMatcher: DynamicPatternMatcher;
+  private universalSequenceDetector: UniversalSequenceDetector;
 
   constructor() {
     this.journeyTracker = new HybridJourneyTracker();
     this.productStateAccumulator = new ProductStateAccumulator();
     this.patternMatcher = new DynamicPatternMatcher();
+    this.universalSequenceDetector = new UniversalSequenceDetector();
   }
 
   /**
@@ -107,54 +110,159 @@ export class SequenceAwareTrainer {
   }
 
   /**
-   * 🚀 ENHANCED SEQUENCE IDENTIFICATION (PHASE 5): Now includes hover→dropdown navigation patterns
-   * Identify complete shopping sequences from interactions including hover-guided navigation
+   * 🚀 ENHANCED SEQUENCE IDENTIFICATION with UniversalSequenceDetector
+   * Uses advanced semantic analysis to identify complete shopping sequences
    */
   private identifyShoppingSequences(interactions: EnhancedInteractionData[]): ShoppingSequence[] {
+    console.log('🌟 [UNIVERSAL SEQUENCE] Using UniversalSequenceDetector for advanced sequence analysis');
+    
+    // Use UniversalSequenceDetector for sophisticated sequence analysis
+    const universalSequence = this.universalSequenceDetector.detectSequence(interactions);
+    
+    if (!universalSequence) {
+      console.log('❌ [UNIVERSAL SEQUENCE] No valid sequence detected');
+      return [];
+    }
+    
+    console.log('✅ [UNIVERSAL SEQUENCE] Advanced sequence detected', {
+      overallType: universalSequence.overallType,
+      qualityScore: universalSequence.qualityScore,
+      conversionComplete: universalSequence.conversionComplete,
+      segments: universalSequence.segments.length
+    });
+    
+    // Convert UniversalSequence to our ShoppingSequence format
     const sequences: ShoppingSequence[] = [];
-    let currentSequence: EnhancedInteractionData[] = [];
-    let sequenceStart: number | null = null;
     
-    for (let i = 0; i < interactions.length; i++) {
-      const interaction = interactions[i];
-      const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
-      const elementText = interaction.element?.text || '';
-      
-      // Detect sequence start (homepage, search, category page)
-      if (this.isSequenceStart(interaction)) {
-        if (currentSequence.length > 0) {
-          // Save previous sequence
-          const sequence = this.buildShoppingSequence(currentSequence, sequenceStart!);
-          if (sequence) sequences.push(sequence);
+    // Create a comprehensive sequence from the universal analysis
+    if (universalSequence.segments.length > 0) {
+      const sequence = this.buildShoppingSequenceFromUniversal(universalSequence, interactions);
+      if (sequence) {
+        sequences.push(sequence);
+      }
+    }
+    
+    // Also create individual sequences for each behavioral segment
+    for (const segment of universalSequence.segments) {
+      if (segment.interactions.length >= 2) {
+        const segmentSequence = this.buildSegmentSequence(segment, universalSequence);
+        if (segmentSequence) {
+          sequences.push(segmentSequence);
         }
-        currentSequence = [interaction];
-        sequenceStart = i;
-      }
-      // Detect sequence continuation
-      else if (this.isSequenceContinuation(interaction, currentSequence)) {
-        currentSequence.push(interaction);
-      }
-      // Detect sequence end (cart, checkout)
-      else if (this.isSequenceEnd(interaction) && currentSequence.length > 0) {
-        currentSequence.push(interaction);
-        const sequence = this.buildShoppingSequence(currentSequence, sequenceStart!);
-        if (sequence) sequences.push(sequence);
-        currentSequence = [];
-        sequenceStart = null;
       }
     }
     
-    // Handle final sequence
-    if (currentSequence.length > 1) {
-      const sequence = this.buildShoppingSequence(currentSequence, sequenceStart!);
-      if (sequence) sequences.push(sequence);
-    }
-    
+    console.log(`🌟 [UNIVERSAL SEQUENCE] Generated ${sequences.length} enhanced sequences`);
     return sequences;
   }
 
   /**
-   * Build a shopping sequence from interactions
+   * 🌟 NEW: Build shopping sequence from UniversalSequence analysis
+   */
+  private buildShoppingSequenceFromUniversal(universalSequence: UniversalSequence, interactions: EnhancedInteractionData[]): ShoppingSequence | null {
+    if (interactions.length < 2) return null;
+    
+    const startUrl = interactions[0].context?.pageUrl || (interactions[0].context as any)?.url || '';
+    const endUrl = interactions[interactions.length - 1].context?.pageUrl || (interactions[interactions.length - 1].context as any)?.url || '';
+    
+    // Map UniversalSequence type to our ShoppingSequence type
+    const sequenceTypeMapping = {
+      'browse_to_cart': 'browse_to_cart' as const,
+      'search_to_cart': 'search_to_cart' as const,
+      'product_configuration': 'product_configuration' as const,
+      'navigation_flow': 'navigation_flow' as const
+    };
+    
+    const sequenceType = sequenceTypeMapping[universalSequence.overallType] || 'navigation_flow';
+    
+    // Build product context if applicable
+    let productContext: ProductConfigurationState | undefined;
+    for (let i = 0; i < interactions.length; i++) {
+      const state = this.productStateAccumulator.processInteraction(
+        interactions[i], 
+        interactions, 
+        i
+      );
+      if (state) productContext = state;
+    }
+    
+    // Enhanced user intent from UniversalSequenceDetector
+    const userIntent = universalSequence.userIntent;
+    const completionGoal = this.extractCompletionGoalFromUniversal(universalSequence);
+    
+    // Check for hover sequences (enhanced detection)
+    const hasHoverSequences = this.hasSimpleHoverClickSequences(interactions);
+    
+    return {
+      interactions,
+      sequenceType,
+      startUrl,
+      endUrl,
+      productContext,
+      completionGoal,
+      userIntent,
+      sequenceQuality: universalSequence.qualityScore,
+      conversionComplete: universalSequence.conversionComplete,
+      hasHoverSequences
+    };
+  }
+  
+  /**
+   * 🌟 NEW: Build segment-specific sequence for detailed training
+   */
+  private buildSegmentSequence(segment: { type: 'browse' | 'focus' | 'configure' | 'convert'; interactions: EnhancedInteractionData[]; confidence: number; intent: string }, universalSequence: UniversalSequence): ShoppingSequence | null {
+    if (segment.interactions.length < 2) return null;
+    
+    const startUrl = segment.interactions[0].context?.pageUrl || '';
+    const endUrl = segment.interactions[segment.interactions.length - 1].context?.pageUrl || '';
+    
+    // Map segment type to sequence type
+    const segmentTypeMapping = {
+      'browse': 'navigation_flow' as const,
+      'focus': 'product_configuration' as const,
+      'configure': 'product_configuration' as const,
+      'convert': 'browse_to_cart' as const
+    };
+    
+    const sequenceType = segmentTypeMapping[segment.type] || 'navigation_flow';
+    
+    return {
+      interactions: segment.interactions,
+      sequenceType,
+      startUrl,
+      endUrl,
+      productContext: undefined, // Will be built during processing
+      completionGoal: segment.intent,
+      userIntent: universalSequence.userIntent,
+      sequenceQuality: segment.confidence,
+      conversionComplete: segment.type === 'convert',
+      hasHoverSequences: false
+    };
+  }
+  
+  /**
+   * 🌟 NEW: Extract completion goal from UniversalSequence
+   */
+  private extractCompletionGoalFromUniversal(universalSequence: UniversalSequence): string {
+    if (universalSequence.conversionComplete) {
+      return 'Complete purchase and add items to cart';
+    }
+    
+    const hasConfigureSegment = universalSequence.segments.some(s => s.type === 'configure');
+    if (hasConfigureSegment) {
+      return 'Configure product options and variants';
+    }
+    
+    const hasFocusSegment = universalSequence.segments.some(s => s.type === 'focus');
+    if (hasFocusSegment) {
+      return 'Examine product details and options';
+    }
+    
+    return 'Navigate and explore product options';
+  }
+
+  /**
+   * Build a shopping sequence from interactions (LEGACY - kept for compatibility)
    */
   private buildShoppingSequence(interactions: EnhancedInteractionData[], startIndex: number): ShoppingSequence | null {
     if (interactions.length < 2) return null;
@@ -568,7 +676,7 @@ export class SequenceAwareTrainer {
     return stages;
   }
 
-  private getStageNameForInteraction(interaction: EnhancedInteractionData): string {
+  public getStageNameForInteraction(interaction: EnhancedInteractionData): string {
     const url = interaction.context?.pageUrl || '';
     
     if (url.includes('/search')) return 'Search';
@@ -658,9 +766,27 @@ export class SequenceAwareTrainer {
   }
 
   /**
-   * Semantic page classification methods
+   * 🌟 ENHANCED: Semantic page classification using UniversalSequenceDetector
    */
-  private classifyPageSemantically(interaction: EnhancedInteractionData): { pageType: string; confidence: number; indicators: string[] } {
+  public classifyPageSemantically(interaction: EnhancedInteractionData): { pageType: string; confidence: number; indicators: string[] } {
+    // First try UniversalSequenceDetector's advanced classification
+    const advancedClassification = (this.universalSequenceDetector as any).classifyPage(interaction);
+    
+    if (advancedClassification && advancedClassification.confidence > 0.6) {
+      console.log('🌟 [UNIVERSAL CLASSIFICATION] Using advanced page classification', {
+        pageType: advancedClassification.pageType,
+        confidence: advancedClassification.confidence,
+        indicators: advancedClassification.indicators
+      });
+      
+      return {
+        pageType: advancedClassification.pageType,
+        confidence: advancedClassification.confidence,
+        indicators: advancedClassification.indicators
+      };
+    }
+    
+    // Fallback to original classification logic
     const url = interaction.context?.pageUrl || (interaction.context as any)?.url || '';
     const pageTitle = interaction.context?.pageTitle || '';
     const elementText = interaction.element?.text || '';
@@ -786,7 +912,7 @@ export class SequenceAwareTrainer {
   /**
    * Build semantic journey context for training prompts
    */
-  private buildSemanticJourneyContext(sequence: ShoppingSequence): string {
+  public buildSemanticJourneyContext(sequence: ShoppingSequence): string {
     const pageClassifications = sequence.interactions.map(i => this.classifyPageSemantically(i));
     
     // Build journey narrative
@@ -813,7 +939,7 @@ export class SequenceAwareTrainer {
   /**
    * Get semantic behavior description for page types
    */
-  private getSemanticBehaviorDescription(pageType: string, interaction: EnhancedInteractionData): string {
+  public getSemanticBehaviorDescription(pageType: string, interaction: EnhancedInteractionData): string {
     const elementText = interaction.element?.text || '';
     
     switch (pageType) {

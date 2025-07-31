@@ -723,3 +723,44 @@ enum AgentType {
   SITE_COMPREHENSION
   CLICK_EXECUTION
 }
+
+// =============================================
+// OPENAI FINE-TUNING MANAGEMENT
+// =============================================
+
+model FineTuningJob {
+  id                String   @id @default(uuid())
+  
+  // OpenAI identifiers
+  jobId             String   @unique // OpenAI job ID
+  fileId            String   // OpenAI file ID
+  
+  // Relationship to training data
+  trainingDataId    String?  // Link to our TrainingData record
+  
+  // Job configuration
+  model             String   // Base model used (e.g., gpt-4o-mini-2024-07-18)
+  suffix            String?  // Model name suffix
+  hyperparameters   Json     @default("{}")  // Training hyperparameters
+  
+  // Status tracking
+  status            String   // validating_files, queued, running, succeeded, failed, cancelled
+  trainedTokens     Int      @default(0)
+  estimatedFinish   DateTime?
+  
+  // Results
+  fineTunedModel    String?  // Final model name when completed
+  resultFiles       Json     @default("[]")  // OpenAI result file IDs
+  
+  // Error tracking
+  error             Json?    // Error details if failed
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([jobId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("fine_tuning_jobs")
+}

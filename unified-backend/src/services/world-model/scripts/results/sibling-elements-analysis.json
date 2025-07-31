@@ -1,0 +1,73 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "summary": {
+    "totalInteractions": 54,
+    "interactionsWithSiblings": 13,
+    "totalSiblings": 13,
+    "uniqueSiblingTypes": [
+      "unknown"
+    ],
+    "interactiveSiblingsCount": 0,
+    "textSiblingsCount": 1,
+    "imageRelatedSiblingsCount": 12
+  },
+  "details": {
+    "interactiveSiblings": [],
+    "textSiblings": [
+      {
+        "text": "Navigation Menu men-products-/en_us/men/products.h",
+        "interactionIndex": 1
+      }
+    ],
+    "imageRelatedSiblings": [
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 9
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 12
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 14
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 17
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 19
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 22
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 25
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 27
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 30
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 32
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 35
+      },
+      {
+        "selector": "[data-testid=\"next-image\"]",
+        "interactionIndex": 38
+      }
+    ]
+  }
+}

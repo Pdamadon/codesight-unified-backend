@@ -1,0 +1,754 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "extractionTimestamp": "2025-07-30T18:59:12.347Z",
+  "navigationArchitecture": {
+    "categoryHierarchy": {
+      "rootCategories": [],
+      "categoryTree": [
+        {
+          "category": {
+            "categoryId": "men/products-1753901952344-2",
+            "categoryName": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+            "categoryPath": "men/products",
+            "parentCategory": "men",
+            "childCategories": [],
+            "level": 1,
+            "selector": "",
+            "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+            "displayText": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+            "isActive": true,
+            "interactionCount": 1,
+            "discoveredAt": "2025-07-30T18:59:12.344Z"
+          },
+          "children": [],
+          "depth": 1,
+          "siblings": []
+        }
+      ],
+      "breadcrumbPatterns": [
+        {
+          "pageType": "other",
+          "breadcrumbStructure": [
+            {
+              "text": "Loose Fit Printed T-shirt - Navy blue",
+              "isClickable": true,
+              "position": 0,
+              "isCurrentPage": false
+            },
+            {
+              "text": "Carmine LTD",
+              "isClickable": true,
+              "position": 1,
+              "isCurrentPage": false
+            },
+            {
+              "text": "Light blue",
+              "isClickable": true,
+              "position": 2,
+              "isCurrentPage": false
+            },
+            {
+              "text": "Le Club Bleu",
+              "isClickable": true,
+              "position": 3,
+              "isCurrentPage": false
+            },
+            {
+              "text": "White",
+              "isClickable": true,
+              "position": 4,
+              "isCurrentPage": false
+            },
+            {
+              "text": "Pasta",
+              "isClickable": true,
+              "position": 5,
+              "isCurrentPage": false
+            },
+            {
+              "text": "Plum",
+              "isClickable": true,
+              "position": 6,
+              "isCurrentPage": false
+            },
+            {
+              "text": "Handle wi...",
+              "isClickable": false,
+              "position": 7,
+              "isCurrentPage": true
+            }
+          ],
+          "separator": "/",
+          "containerSelector": "",
+          "itemSelector": ""
+        }
+      ],
+      "categoryRelationships": [
+        {
+          "sourceCategory": "men",
+          "targetCategory": "men/products-1753901952344-2",
+          "relationshipType": "child",
+          "strength": 1,
+          "discoveredFrom": "navigation"
+        }
+      ]
+    },
+    "navigationPatterns": {
+      "primaryNavigation": [
+        {
+          "elementId": "nav-1-1753901952344",
+          "elementType": "button",
+          "text": "Clothing",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/index.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 1,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "low"
+          }
+        },
+        {
+          "elementId": "nav-3-1753901952344",
+          "elementType": "link",
+          "text": "T-shirts & Tops",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/index.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 3,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "low"
+          }
+        },
+        {
+          "elementId": "nav-6-1753901952344",
+          "elementType": "link",
+          "text": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 6,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "low"
+          }
+        },
+        {
+          "elementId": "nav-41-1753901952344",
+          "elementType": "link",
+          "text": "XS",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 41,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "low"
+          }
+        },
+        {
+          "elementId": "nav-43-1753901952344",
+          "elementType": "link",
+          "text": "S",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 43,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "high"
+          }
+        },
+        {
+          "elementId": "nav-45-1753901952344",
+          "elementType": "link",
+          "text": "M",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 45,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "medium"
+          }
+        },
+        {
+          "elementId": "nav-47-1753901952344",
+          "elementType": "link",
+          "text": "L",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 47,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "high"
+          }
+        },
+        {
+          "elementId": "nav-49-1753901952344",
+          "elementType": "link",
+          "text": "XL",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 49,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "medium"
+          }
+        },
+        {
+          "elementId": "nav-51-1753901952344",
+          "elementType": "link",
+          "text": "XXL",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 51,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "low"
+          }
+        },
+        {
+          "elementId": "nav-53-1753901952344",
+          "elementType": "button",
+          "text": "Add to bag",
+          "selector": "",
+          "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "hasSubMenu": false,
+          "subMenuItems": [],
+          "position": {
+            "order": 53,
+            "section": "primary"
+          },
+          "interactionData": {
+            "clickCount": 1,
+            "lastInteracted": "2025-07-30T18:59:12.344Z",
+            "userEngagement": "low"
+          }
+        }
+      ],
+      "secondaryNavigation": [],
+      "footerNavigation": []
+    },
+    "crossPageRelationships": [
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/index.html",
+          "pageType": "homepage",
+          "pageTitle": "H&M | Online Fashion, Homeware & Kids Clothes | H&M US",
+          "productId": "unknown-product"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+          "pageType": "other",
+          "pageTitle": "",
+          "categoryPath": "men/products",
+          "productId": "unknown-product"
+        },
+        "relationshipType": "navigation",
+        "connectionMethod": "link",
+        "userFlow": "homepage_to_other",
+        "frequency": 1
+      },
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+          "pageType": "other",
+          "pageTitle": "Men's T-Shirts & Tops | Polo Shirts, Tanks & Graphics | H&M US",
+          "categoryPath": "men/products",
+          "productId": "unknown-product"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+          "pageType": "product",
+          "pageTitle": "",
+          "productId": "hm-0967955141"
+        },
+        "relationshipType": "navigation",
+        "connectionMethod": "link",
+        "userFlow": "other_to_product",
+        "frequency": 1
+      },
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+          "pageType": "product",
+          "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+          "productId": "hm-0967955108"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+          "pageType": "product",
+          "pageTitle": "",
+          "productId": "hm-0967955111"
+        },
+        "relationshipType": "related",
+        "connectionMethod": "link",
+        "userFlow": "product_to_product",
+        "frequency": 1
+      },
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+          "pageType": "product",
+          "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+          "productId": "hm-0967955111"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+          "pageType": "product",
+          "pageTitle": "",
+          "productId": "hm-0967955112"
+        },
+        "relationshipType": "related",
+        "connectionMethod": "link",
+        "userFlow": "product_to_product",
+        "frequency": 1
+      },
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+          "pageType": "product",
+          "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+          "productId": "hm-0967955112"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+          "pageType": "product",
+          "pageTitle": "",
+          "productId": "hm-0967955116"
+        },
+        "relationshipType": "related",
+        "connectionMethod": "link",
+        "userFlow": "product_to_product",
+        "frequency": 1
+      },
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+          "pageType": "product",
+          "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+          "productId": "hm-0967955124"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+          "pageType": "product",
+          "pageTitle": "",
+          "productId": "hm-0967955129"
+        },
+        "relationshipType": "related",
+        "connectionMethod": "link",
+        "userFlow": "product_to_product",
+        "frequency": 1
+      },
+      {
+        "sourcePage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+          "pageType": "product",
+          "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+          "productId": "hm-0967955133"
+        },
+        "targetPage": {
+          "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+          "pageType": "product",
+          "pageTitle": "",
+          "productId": "hm-0967955135"
+        },
+        "relationshipType": "related",
+        "connectionMethod": "link",
+        "userFlow": "product_to_product",
+        "frequency": 1
+      }
+    ],
+    "urlPatternAnalysis": {
+      "routingPatterns": [
+        {
+          "pattern": "https://www2.hm.com/en_us/index.html",
+          "pageType": "homepage",
+          "examples": [
+            "https://www2.hm.com/en_us/index.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+          "pageType": "other",
+          "examples": [
+            "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955141.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955141.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955108.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955108.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955111.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955111.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955112.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955112.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955116.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955116.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955117.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955117.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955124.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955124.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955129.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955129.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955133.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955133.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955135.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955135.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955138.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955138.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955139.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955139.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        },
+        {
+          "pattern": "https://www2.hm.com/en_us/productpage.0967955145.html",
+          "pageType": "product",
+          "examples": [
+            "https://www2.hm.com/en_us/productpage.0967955145.html"
+          ],
+          "parameterStructure": {},
+          "frequency": 1
+        }
+      ],
+      "parameterPatterns": [],
+      "navigationFlows": [
+        {
+          "flowName": "user_journey",
+          "steps": [
+            {
+              "stepNumber": 1,
+              "pageType": "homepage",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 2,
+              "pageType": "homepage",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 3,
+              "pageType": "other",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 4,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 5,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 6,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 7,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 8,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 9,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 10,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 11,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 12,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 13,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 14,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 15,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 16,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 17,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 18,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 19,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 20,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 21,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            },
+            {
+              "stepNumber": 22,
+              "pageType": "product",
+              "action": "navigate",
+              "expectedOutcome": "page_load"
+            }
+          ],
+          "userIntent": "browse_and_explore",
+          "completionRate": 1,
+          "averageTime": 0
+        }
+      ],
+      "siteStructure": {
+        "depth": 4,
+        "breadth": 1,
+        "totalPages": 15,
+        "sectionMapping": {
+          "en_us": [
+            "https://www2.hm.com/en_us/index.html",
+            "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+            "https://www2.hm.com/en_us/productpage.0967955141.html",
+            "https://www2.hm.com/en_us/productpage.0967955108.html",
+            "https://www2.hm.com/en_us/productpage.0967955111.html",
+            "https://www2.hm.com/en_us/productpage.0967955112.html",
+            "https://www2.hm.com/en_us/productpage.0967955116.html",
+            "https://www2.hm.com/en_us/productpage.0967955117.html",
+            "https://www2.hm.com/en_us/productpage.0967955124.html",
+            "https://www2.hm.com/en_us/productpage.0967955129.html",
+            "https://www2.hm.com/en_us/productpage.0967955133.html",
+            "https://www2.hm.com/en_us/productpage.0967955135.html",
+            "https://www2.hm.com/en_us/productpage.0967955138.html",
+            "https://www2.hm.com/en_us/productpage.0967955139.html",
+            "https://www2.hm.com/en_us/productpage.0967955145.html"
+          ]
+        },
+        "criticalPaths": [
+          "https://www2.hm.com/en_us/index.html",
+          "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html"
+        ]
+      }
+    },
+    "discoveryMetadata": {
+      "totalNavigationPoints": 10,
+      "hierarchyDepth": 0,
+      "navigationCoverage": "0.0% navigation coverage",
+      "extractedAt": "2025-07-30T18:59:12.345Z"
+    }
+  },
+  "extractionSummary": {
+    "categoryHierarchy": {
+      "rootCategories": 0,
+      "categoryTree": 1,
+      "breadcrumbPatterns": 1,
+      "relationships": 1
+    },
+    "navigationPatterns": {
+      "primary": 10,
+      "secondary": 0,
+      "footer": 0
+    },
+    "crossPageRelationships": 7,
+    "urlPatterns": {
+      "routingPatterns": 15,
+      "parameterPatterns": 0,
+      "navigationFlows": 1
+    }
+  },
+  "extractionSuccess": {
+    "categoryExtraction": false,
+    "navigationExtraction": true,
+    "relationshipExtraction": true,
+    "urlPatternExtraction": true
+  }
+}

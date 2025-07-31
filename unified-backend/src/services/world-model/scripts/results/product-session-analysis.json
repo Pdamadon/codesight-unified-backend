@@ -1,0 +1,486 @@
+{
+  "sessionId": "session_1753897349098_p9o66xuwm",
+  "qualityScore": 82,
+  "productUrls": [
+    "https://www2.hm.com/en_us/productpage.0967955141.html",
+    "https://www2.hm.com/en_us/productpage.0967955108.html",
+    "https://www2.hm.com/en_us/productpage.0967955111.html",
+    "https://www2.hm.com/en_us/productpage.0967955112.html",
+    "https://www2.hm.com/en_us/productpage.0967955116.html",
+    "https://www2.hm.com/en_us/productpage.0967955117.html",
+    "https://www2.hm.com/en_us/productpage.0967955124.html",
+    "https://www2.hm.com/en_us/productpage.0967955129.html",
+    "https://www2.hm.com/en_us/productpage.0967955133.html",
+    "https://www2.hm.com/en_us/productpage.0967955135.html",
+    "https://www2.hm.com/en_us/productpage.0967955138.html",
+    "https://www2.hm.com/en_us/productpage.0967955139.html",
+    "https://www2.hm.com/en_us/productpage.0967955145.html"
+  ],
+  "productClicks": [
+    {
+      "index": 41,
+      "text": "XS",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "div",
+      "timestamp": 1753897377439
+    },
+    {
+      "index": 43,
+      "text": "S",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "div",
+      "timestamp": 1753897378454
+    },
+    {
+      "index": 45,
+      "text": "M",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "div",
+      "timestamp": 1753897378960
+    },
+    {
+      "index": 47,
+      "text": "L",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "div",
+      "timestamp": 1753897379401
+    },
+    {
+      "index": 49,
+      "text": "XL",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "div",
+      "timestamp": 1753897379852
+    },
+    {
+      "index": 51,
+      "text": "XXL",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "div",
+      "timestamp": 1753897380637
+    },
+    {
+      "index": 53,
+      "text": "Add to bag",
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "tag": "button",
+      "timestamp": 1753897381345
+    }
+  ],
+  "detailedSequence": [
+    {
+      "index": 0,
+      "type": "FOCUS",
+      "timestamp": 1753897356053,
+      "url": "https://www2.hm.com/en_us/index.html",
+      "isProductPage": false
+    },
+    {
+      "index": 1,
+      "type": "CLICK",
+      "timestamp": 1753897356575,
+      "url": "https://www2.hm.com/en_us/index.html",
+      "elementText": "Clothing",
+      "elementTag": "button",
+      "isProductPage": false
+    },
+    {
+      "index": 2,
+      "type": "FOCUS",
+      "timestamp": 1753897359115,
+      "url": "https://www2.hm.com/en_us/index.html",
+      "isProductPage": false
+    },
+    {
+      "index": 3,
+      "type": "CLICK",
+      "timestamp": 1753897359620,
+      "url": "https://www2.hm.com/en_us/index.html",
+      "elementText": "T-shirts & Tops",
+      "elementTag": "a",
+      "isProductPage": false
+    },
+    {
+      "index": 4,
+      "type": "navigation_restored",
+      "timestamp": 1753897360538,
+      "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+      "isProductPage": false
+    },
+    {
+      "index": 5,
+      "type": "FOCUS",
+      "timestamp": 1753897363701,
+      "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+      "isProductPage": false
+    },
+    {
+      "index": 6,
+      "type": "CLICK",
+      "timestamp": 1753897363841,
+      "url": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+      "elementText": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD/Light blue/Le Club Bleu/White/Pasta/Plum/Handle wi...",
+      "elementTag": "img",
+      "isProductPage": false
+    },
+    {
+      "index": 7,
+      "type": "navigation_restored",
+      "timestamp": 1753897364435,
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "isProductPage": true
+    },
+    {
+      "index": 8,
+      "type": "FOCUS",
+      "timestamp": 1753897366909,
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "isProductPage": true
+    },
+    {
+      "index": 9,
+      "type": "CLICK",
+      "timestamp": 1753897367037,
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 10,
+      "type": "NAVIGATION",
+      "timestamp": 1753897367472,
+      "isProductPage": false
+    },
+    {
+      "index": 11,
+      "type": "FOCUS",
+      "timestamp": 1753897367529,
+      "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+      "isProductPage": true
+    },
+    {
+      "index": 12,
+      "type": "CLICK",
+      "timestamp": 1753897367612,
+      "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 13,
+      "type": "FOCUS",
+      "timestamp": 1753897367982,
+      "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+      "isProductPage": true
+    },
+    {
+      "index": 14,
+      "type": "CLICK",
+      "timestamp": 1753897368059,
+      "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 15,
+      "type": "FOCUS",
+      "timestamp": 1753897368452,
+      "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+      "isProductPage": true
+    },
+    {
+      "index": 16,
+      "type": "NAVIGATION",
+      "timestamp": 1753897368446,
+      "isProductPage": false
+    },
+    {
+      "index": 17,
+      "type": "CLICK",
+      "timestamp": 1753897368526,
+      "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 18,
+      "type": "FOCUS",
+      "timestamp": 1753897368880,
+      "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+      "isProductPage": true
+    },
+    {
+      "index": 19,
+      "type": "CLICK",
+      "timestamp": 1753897368957,
+      "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 20,
+      "type": "NAVIGATION",
+      "timestamp": 1753897369445,
+      "isProductPage": false
+    },
+    {
+      "index": 21,
+      "type": "FOCUS",
+      "timestamp": 1753897369432,
+      "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+      "isProductPage": true
+    },
+    {
+      "index": 22,
+      "type": "CLICK",
+      "timestamp": 1753897369563,
+      "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 23,
+      "type": "NAVIGATION",
+      "timestamp": 1753897370443,
+      "isProductPage": false
+    },
+    {
+      "index": 24,
+      "type": "FOCUS",
+      "timestamp": 1753897370711,
+      "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+      "isProductPage": true
+    },
+    {
+      "index": 25,
+      "type": "CLICK",
+      "timestamp": 1753897370797,
+      "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 26,
+      "type": "FOCUS",
+      "timestamp": 1753897371248,
+      "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+      "isProductPage": true
+    },
+    {
+      "index": 27,
+      "type": "CLICK",
+      "timestamp": 1753897371408,
+      "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 28,
+      "type": "NAVIGATION",
+      "timestamp": 1753897371515,
+      "isProductPage": false
+    },
+    {
+      "index": 29,
+      "type": "FOCUS",
+      "timestamp": 1753897372395,
+      "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+      "isProductPage": true
+    },
+    {
+      "index": 30,
+      "type": "CLICK",
+      "timestamp": 1753897372523,
+      "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 31,
+      "type": "FOCUS",
+      "timestamp": 1753897373042,
+      "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+      "isProductPage": true
+    },
+    {
+      "index": 32,
+      "type": "CLICK",
+      "timestamp": 1753897373157,
+      "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 33,
+      "type": "NAVIGATION",
+      "timestamp": 1753897373446,
+      "isProductPage": false
+    },
+    {
+      "index": 34,
+      "type": "FOCUS",
+      "timestamp": 1753897374423,
+      "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+      "isProductPage": true
+    },
+    {
+      "index": 35,
+      "type": "CLICK",
+      "timestamp": 1753897374571,
+      "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 36,
+      "type": "NAVIGATION",
+      "timestamp": 1753897375444,
+      "isProductPage": false
+    },
+    {
+      "index": 37,
+      "type": "FOCUS",
+      "timestamp": 1753897375505,
+      "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+      "isProductPage": true
+    },
+    {
+      "index": 38,
+      "type": "CLICK",
+      "timestamp": 1753897375617,
+      "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+      "elementText": "",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 39,
+      "type": "NAVIGATION",
+      "timestamp": 1753897376474,
+      "isProductPage": false
+    },
+    {
+      "index": 40,
+      "type": "FOCUS",
+      "timestamp": 1753897377338,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 41,
+      "type": "CLICK",
+      "timestamp": 1753897377439,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "XS",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 42,
+      "type": "FOCUS",
+      "timestamp": 1753897378325,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 43,
+      "type": "CLICK",
+      "timestamp": 1753897378454,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "S",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 44,
+      "type": "FOCUS",
+      "timestamp": 1753897378868,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 45,
+      "type": "CLICK",
+      "timestamp": 1753897378960,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "M",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 46,
+      "type": "FOCUS",
+      "timestamp": 1753897379331,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 47,
+      "type": "CLICK",
+      "timestamp": 1753897379401,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "L",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 48,
+      "type": "FOCUS",
+      "timestamp": 1753897379777,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 49,
+      "type": "CLICK",
+      "timestamp": 1753897379852,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "XL",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 50,
+      "type": "FOCUS",
+      "timestamp": 1753897380542,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 51,
+      "type": "CLICK",
+      "timestamp": 1753897380637,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "XXL",
+      "elementTag": "div",
+      "isProductPage": true
+    },
+    {
+      "index": 52,
+      "type": "FOCUS",
+      "timestamp": 1753897381239,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "isProductPage": true
+    },
+    {
+      "index": 53,
+      "type": "CLICK",
+      "timestamp": 1753897381345,
+      "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+      "elementText": "Add to bag",
+      "elementTag": "button",
+      "isProductPage": true
+    }
+  ]
+}

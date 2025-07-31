@@ -1,0 +1,543 @@
+{
+  "id": "9883330e-b450-4919-ba9c-cb284d1d8332",
+  "type": "CLICK",
+  "state": {
+    "before": {
+      "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+      "title": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+      "viewport": {
+        "width": 1317,
+        "height": 813,
+        "scrollX": 0,
+        "scrollY": 158,
+        "devicePixelRatio": 2
+      },
+      "timestamp": 1753897367032,
+      "activeElement": {
+        "id": null,
+        "tagName": "a",
+        "selector": ".undefined.e2ff32.f5deaf",
+        "className": "undefined e2ff32 f5deaf"
+      },
+      "scrollPosition": {
+        "x": 0,
+        "y": 158
+      },
+      "visibleElements": 1645
+    }
+  },
+  "action": {
+    "type": "click",
+    "selector": ".d947f7",
+    "timestamp": "2025-07-30T17:42:47.022Z"
+  },
+  "visual": {
+    "viewport": {
+      "width": 1317,
+      "height": 813,
+      "scrollX": 0,
+      "scrollY": 158,
+      "devicePixelRatio": 2
+    },
+    "boundingBox": {
+      "x": 828.171875,
+      "y": 209.3984375,
+      "top": 209.3984375,
+      "left": 828.171875,
+      "right": 894.59375,
+      "width": 66.421875,
+      "bottom": 309.53125,
+      "height": 100.1328125
+    },
+    "coordinates": {
+      "pageX": 858,
+      "pageY": 448,
+      "clientX": 858,
+      "clientY": 290,
+      "offsetX": 29,
+      "offsetY": 81
+    },
+    "isInViewport": true,
+    "percentVisible": 100
+  },
+  "context": {
+    "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+    "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+    "pageContext": {
+      "htmlHash": "sha256-5b4b7230",
+      "domSnapshot": {
+        "tag": "div",
+        "children": [
+          {
+            "tag": "section",
+            "children": [
+              {
+                "tag": "h2",
+                "text": "Color:",
+                "children": [],
+                "attributes": {
+                  "class": "a269b3 ed5dd7 be0069"
+                }
+              },
+              {
+                "tag": "p",
+                "text": "Light blue/Wasted Potential",
+                "children": [],
+                "attributes": {
+                  "class": "bce387 b97b34"
+                }
+              },
+              {
+                "tag": "div",
+                "children": [
+                  {
+                    "tag": "div",
+                    "children": [
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "c0d578 undefined e2ff32 f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 ef8a9c f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 ed3e5b f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 ed3e5b f5deaf"
+                        }
+                      },
+                      {
+                        "tag": "a",
+                        "children": [],
+                        "attributes": {
+                          "role": "radio",
+                          "class": "undefined e2ff32 ed3e5b f5deaf"
+                        }
+                      }
+                    ],
+                    "attributes": {
+                      "role": "radiogroup",
+                      "class": "b804e8",
+                      "data-testid": "grid"
+                    }
+                  }
+                ],
+                "attributes": {
+                  "class": "ff18ac ab7eab"
+                }
+              },
+              {
+                "tag": "div",
+                "children": [
+                  {
+                    "tag": "div",
+                    "children": [
+                      {
+                        "tag": "div",
+                        "children": [],
+                        "attributes": {
+                          "role": "presentation",
+                          "class": "ca2623"
+                        }
+                      }
+                    ],
+                    "attributes": {
+                      "role": "radiogroup",
+                      "class": ""
+                    }
+                  }
+                ],
+                "attributes": {
+                  "class": "e31f93 ab7eab"
+                }
+              }
+            ],
+            "attributes": {
+              "class": "f28282 dad6be",
+              "data-testid": "color-selector"
+            }
+          }
+        ],
+        "attributes": {
+          "class": "f9fa8d"
+        }
+      },
+      "networkRequests": []
+    }
+  },
+  "element": {
+    "tag": "div",
+    "text": "",
+    "value": null,
+    "attributes": {
+      "class": "d947f7"
+    },
+    "nearbyElements": [
+      {
+        "text": "Light blue/Wasted Potential",
+        "tagName": "a",
+        "distance": 1,
+        "selector": ".undefined.e2ff32.f5deaf",
+        "direction": "above",
+        "isVisible": true,
+        "isInteractive": true
+      },
+      {
+        "text": "Cream/Listener",
+        "tagName": "a",
+        "distance": 65,
+        "selector": ".undefined.e2ff32.f5deaf",
+        "direction": "right",
+        "isVisible": true,
+        "isInteractive": true
+      },
+      {
+        "text": "Navy blue/Carmine LTD",
+        "tagName": "a",
+        "distance": 66,
+        "selector": ".c0d578.undefined.e2ff32",
+        "direction": "left",
+        "isVisible": true,
+        "isInteractive": true
+      },
+      {
+        "text": "Sage green/Angel Ridge",
+        "tagName": "a",
+        "distance": 98,
+        "selector": ".undefined.e2ff32.ed3e5b",
+        "direction": "below",
+        "isVisible": true,
+        "isInteractive": true
+      }
+    ],
+    "parentElements": [
+      {
+        "id": null,
+        "role": "radio",
+        "text": "Light blue/Wasted Potential",
+        "level": 1,
+        "tagName": "a",
+        "selector": ".undefined.e2ff32.f5deaf",
+        "className": "undefined e2ff32 f5deaf"
+      },
+      {
+        "id": null,
+        "role": "radiogroup",
+        "text": "+ 3",
+        "level": 2,
+        "tagName": "div",
+        "selector": "[data-testid=\"grid\"]",
+        "className": "b804e8"
+      },
+      {
+        "id": null,
+        "role": null,
+        "text": "+ 3",
+        "level": 3,
+        "tagName": "div",
+        "selector": ".ff18ac.ab7eab",
+        "className": "ff18ac ab7eab"
+      },
+      {
+        "id": null,
+        "role": null,
+        "text": "Color:Light blue/Wasted Potential+ 3PreviousNext",
+        "level": 4,
+        "tagName": "section",
+        "selector": "[data-testid=\"color-selector\"]",
+        "className": "dad6be"
+      },
+      {
+        "id": null,
+        "role": null,
+        "text": "Color:Light blue/Wasted Potential+ 3PreviousNext",
+        "level": 5,
+        "tagName": "div",
+        "selector": ".f9fa8d",
+        "className": "f9fa8d"
+      }
+    ],
+    "siblingElements": [
+      {
+        "text": "",
+        "tagName": "div",
+        "distance": 1,
+        "position": "after",
+        "selector": "[data-testid=\"next-image\"]",
+        "boundingBox": {
+          "x": 829.171875,
+          "y": 210.3984375,
+          "top": 210.3984375,
+          "left": 829.171875,
+          "right": 893.59375,
+          "width": 64.421875,
+          "bottom": 308.53125,
+          "height": 98.1328125
+        },
+        "isInteractive": false
+      }
+    ]
+  },
+  "metadata": {
+    "userId": "anon-user",
+    "pageUrl": "https://www2.hm.com/en_us/productpage.0967955141.html",
+    "viewport": {
+      "width": 1317,
+      "height": 813,
+      "scrollX": 0,
+      "scrollY": 158,
+      "devicePixelRatio": 2
+    },
+    "pageTitle": "Loose Fit Printed T-shirt - Navy blue/Carmine LTD - Men | H&M US",
+    "sessionId": "session_1753897349098_p9o66xuwm",
+    "timestamp": "2025-07-30T17:42:47.022Z"
+  },
+  "overlays": [],
+  "sequence": 2,
+  "selectors": {
+    "xpath": "//main[@id='main-content']/div[2]/div/div/div[2]/div/div/div[4]/section/div[1]/div/a[2]/div[1]",
+    "cssPath": "#main-content > div.rOGz:nth-of-type(2) > div.d30ea1 > div.f710cb.d6f077 > div.da810d.ad9b1a:nth-of-type(2) > div.d98c0e > div.e29f99.af7ae9 > div.f9fa8d:nth-of-type(4) > section.dad6be > div.ff18ac.ab7eab:nth-of-type(1) > div.b804e8 > a.undefined.e2ff32:nth-of-type(2) > div.d947f7:nth-of-type(1)",
+    "primary": ".d947f7",
+    "reliability": {
+      "div": 0.1,
+      ".d947f7": 0.1,
+      "//main[@id='main-content']/div[2]/div/div/div[2]/div/div/div[4]/section/div[1]/div/a[2]/div[1]": 0.7,
+      "#main-content > div.rOGz:nth-of-type(2) > div.d30ea1 > div.f710cb.d6f077 > div.da810d.ad9b1a:nth-of-type(2) > div.d98c0e > div.e29f99.af7ae9 > div.f9fa8d:nth-of-type(4) > section.dad6be > div.ff18ac.ab7eab:nth-of-type(1) > div.b804e8 > a.undefined.e2ff32:nth-of-type(2) > div.d947f7:nth-of-type(1)": 0.4
+    },
+    "alternatives": [
+      ".d947f7",
+      "div"
+    ]
+  },
+  "timestamp": 1753897367037,
+  "contextData": {
+    "parent": {
+      "id": null,
+      "tag": "a",
+      "classes": [
+        "undefined",
+        "e2ff32",
+        "f5deaf"
+      ],
+      "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.f5deaf:nth-child(2)"
+    },
+    "siblings": [
+      {
+        "tag": "div",
+        "text": "",
+        "position": "after",
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.f5deaf:nth-child(2) > div.be8654.fcc68c.a33b36.f6e252:nth-child(2)"
+      }
+    ],
+    "ancestors": [
+      {
+        "id": null,
+        "tag": "a",
+        "classes": [
+          "undefined",
+          "e2ff32",
+          "f5deaf"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.f5deaf:nth-child(2)"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "b804e8"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "ff18ac",
+          "ab7eab"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1)"
+      },
+      {
+        "id": null,
+        "tag": "section",
+        "classes": [
+          "f28282",
+          "dad6be"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "f9fa8d"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4)"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "e29f99",
+          "af7ae9",
+          "e4a848"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "d98c0e"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "da810d",
+          "ad9b1a",
+          "d583b2",
+          "ce90e7"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2)"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "f710cb",
+          "d6f077",
+          "c8d723"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723"
+      },
+      {
+        "id": null,
+        "tag": "div",
+        "classes": [
+          "d30ea1"
+        ],
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1"
+      }
+    ],
+    "nearestClickable": [
+      {
+        "tag": "a",
+        "text": "",
+        "distance": 1,
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.f5deaf:nth-child(2)"
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "distance": 65,
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.f5deaf:nth-child(3)"
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "distance": 66,
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.c0d578.undefined.e2ff32.f5deaf:nth-child(1)"
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "distance": 98,
+        "css_selector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.ed3e5b.f5deaf:nth-child(9)"
+      }
+    ]
+  },
+  "interaction": {
+    "modifiers": {
+      "altKey": false,
+      "ctrlKey": false,
+      "metaKey": false,
+      "shiftKey": false
+    },
+    "confidence": 0.5
+  },
+  "sessionTime": 17921,
+  "elementDetails": {
+    "tag": "div",
+    "text": "",
+    "xpath": "//main[@id='main-content']/div[2]/div/div/div[2]/div/div/div[4]/section/div[1]/div/a[2]/div[1]",
+    "attributes": {
+      "class": "d947f7"
+    },
+    "boundingBox": {
+      "x": 828,
+      "y": 209,
+      "width": 66,
+      "height": 100
+    },
+    "cssSelector": "main#main-content > div.rOGz:nth-child(2) > div.d30ea1 > div.f710cb.d6f077.c8d723 > div.da810d.ad9b1a.d583b2.ce90e7:nth-child(2) > div.d98c0e > div.e29f99.af7ae9.e4a848 > div.f9fa8d:nth-child(4) > section.f28282.dad6be > div.ff18ac.ab7eab:nth-child(1) > div.b804e8 > a.undefined.e2ff32.f5deaf:nth-child(2) > div.d947f7:nth-child(1)",
+    "computedStyle": {
+      "cursor": "pointer",
+      "display": "block",
+      "z_index": "10",
+      "position": "absolute",
+      "visibility": "visible"
+    }
+  }
+}

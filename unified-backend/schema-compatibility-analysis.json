@@ -1,0 +1,470 @@
+{
+  "domainData": [
+    {
+      "domain": "The Home Depot",
+      "siteType": "ecommerce",
+      "pageTypes": {
+        "other": {
+          "urlPattern": "*",
+          "elementPatterns": [
+            "tag:div",
+            "tag:svg",
+            "tag:span",
+            "tag:input",
+            "tag:p",
+            "tag:img",
+            "tag:button"
+          ],
+          "count": 3
+        },
+        "product": {
+          "urlPattern": "p/*",
+          "elementPatterns": [
+            "tag:input",
+            "tag:span",
+            "tag:div",
+            "tag:button"
+          ],
+          "count": 2
+        },
+        "cart": {
+          "urlPattern": "*",
+          "elementPatterns": [
+            "tag:button",
+            "tag:input",
+            "tag:div"
+          ],
+          "count": 3
+        }
+      },
+      "siteCoverage": {
+        "totalPages": 0,
+        "crawledPages": 0,
+        "lastCrawlDate": "2025-07-30T21:28:39.859Z"
+      },
+      "siteStructure": {
+        "patterns": [],
+        "selectors": []
+      },
+      "reliability": {
+        "overallSuccessRate": 0.8,
+        "lastVerified": "2025-07-30T21:28:39.859Z",
+        "totalSessions": 1
+      }
+    },
+    {
+      "domain": "H&M US",
+      "siteType": "ecommerce",
+      "pageTypes": {
+        "homepage": {
+          "urlPattern": "https://www2.hm.com/en_us/index.html",
+          "elementPatterns": [
+            "tag:button",
+            "tag:a"
+          ],
+          "count": 1
+        },
+        "category": {
+          "urlPattern": "https://www2.hm.com/en_us/men/products/t-shirts-tank-tops.html",
+          "elementPatterns": [
+            "tag:img"
+          ],
+          "count": 1
+        },
+        "product": {
+          "urlPattern": "en_us/*",
+          "elementPatterns": [
+            "tag:div",
+            "tag:button"
+          ],
+          "count": 13
+        }
+      },
+      "siteCoverage": {
+        "totalPages": 0,
+        "crawledPages": 0,
+        "lastCrawlDate": "2025-07-30T21:28:39.861Z"
+      },
+      "siteStructure": {
+        "patterns": [],
+        "selectors": []
+      },
+      "reliability": {
+        "overallSuccessRate": 0.8,
+        "lastVerified": "2025-07-30T21:28:39.861Z",
+        "totalSessions": 1
+      }
+    },
+    {
+      "domain": "Gap",
+      "siteType": "ecommerce",
+      "pageTypes": {
+        "homepage": {
+          "urlPattern": "https://www.gap.com/",
+          "elementPatterns": [
+            "tag:a"
+          ],
+          "count": 1
+        },
+        "other": {
+          "urlPattern": "https://www.gap.com/#",
+          "elementPatterns": [
+            "tag:a"
+          ],
+          "count": 1
+        },
+        "category": {
+          "urlPattern": "browse/*",
+          "elementPatterns": [
+            "tag:a",
+            "tag:span",
+            "tag:li"
+          ],
+          "count": 26
+        }
+      },
+      "siteCoverage": {
+        "totalPages": 0,
+        "crawledPages": 0,
+        "lastCrawlDate": "2025-07-30T21:28:39.864Z"
+      },
+      "siteStructure": {
+        "patterns": [],
+        "selectors": []
+      },
+      "reliability": {
+        "overallSuccessRate": 0.8,
+        "lastVerified": "2025-07-30T21:28:39.864Z",
+        "totalSessions": 1
+      }
+    }
+  ],
+  "categoryData": [
+    {
+      "domainId": "domain_id_placeholder",
+      "categoryPath": "women",
+      "categoryName": "Men",
+      "categoryType": "primary",
+      "parentCategoryPath": null,
+      "discoveryContexts": [
+        {
+          "discoveredFrom": "navigation",
+          "discoveryType": "PRIMARY",
+          "discoveredAt": "2025-07-30T21:28:39.864Z",
+          "contextData": {
+            "section": "main-nav",
+            "interactionType": "click"
+          }
+        }
+      ],
+      "siblingCategories": [],
+      "reliability": {
+        "successRate": 0.8,
+        "totalDiscoveries": 1,
+        "lastSeen": "2025-07-30T21:28:39.864Z"
+      }
+    },
+    {
+      "domainId": "domain_id_placeholder",
+      "categoryPath": "men",
+      "categoryName": "Girls",
+      "categoryType": "primary",
+      "parentCategoryPath": null,
+      "discoveryContexts": [
+        {
+          "discoveredFrom": "navigation",
+          "discoveryType": "PRIMARY",
+          "discoveredAt": "2025-07-30T21:28:39.864Z",
+          "contextData": {
+            "section": "main-nav",
+            "interactionType": "click"
+          }
+        }
+      ],
+      "siblingCategories": [],
+      "reliability": {
+        "successRate": 0.8,
+        "totalDiscoveries": 1,
+        "lastSeen": "2025-07-30T21:28:39.864Z"
+      }
+    },
+    {
+      "domainId": "domain_id_placeholder",
+      "categoryPath": "girls",
+      "categoryName": "Boys",
+      "categoryType": "primary",
+      "parentCategoryPath": null,
+      "discoveryContexts": [
+        {
+          "discoveredFrom": "navigation",
+          "discoveryType": "PRIMARY",
+          "discoveredAt": "2025-07-30T21:28:39.864Z",
+          "contextData": {
+            "section": "main-nav",
+            "interactionType": "click"
+          }
+        }
+      ],
+      "siblingCategories": [],
+      "reliability": {
+        "successRate": 0.8,
+        "totalDiscoveries": 1,
+        "lastSeen": "2025-07-30T21:28:39.864Z"
+      }
+    }
+  ],
+  "productData": [
+    {
+      "domain": "www2.hm.com",
+      "productId": "hm-09679551",
+      "productName": "T-Shirt",
+      "sku": "",
+      "productType": "clothing",
+      "discoveryContexts": [
+        {
+          "categoryPath": "inferred_category",
+          "pageType": "product",
+          "positionOnPage": 1,
+          "discoveredAt": "2025-07-30T21:28:39.861Z",
+          "contextSpecificData": {
+            "originalPrice": 0,
+            "searchQuery": "",
+            "filterApplied": []
+          }
+        }
+      ],
+      "currentState": {
+        "price": 0,
+        "currency": "USD",
+        "availability": "AVAILABLE",
+        "lastPriceUpdate": "2025-07-30T21:28:39.861Z",
+        "inStock": true
+      },
+      "variants": {
+        "colors": {
+          "type": "color",
+          "options": [
+            {
+              "variantId": "0967955141",
+              "colorNumber": 1,
+              "url": "https://www2.hm.com/en_us/productpage.0967955141.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955108",
+              "colorNumber": 2,
+              "url": "https://www2.hm.com/en_us/productpage.0967955108.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955111",
+              "colorNumber": 3,
+              "url": "https://www2.hm.com/en_us/productpage.0967955111.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955112",
+              "colorNumber": 4,
+              "url": "https://www2.hm.com/en_us/productpage.0967955112.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955116",
+              "colorNumber": 5,
+              "url": "https://www2.hm.com/en_us/productpage.0967955116.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955117",
+              "colorNumber": 6,
+              "url": "https://www2.hm.com/en_us/productpage.0967955117.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955124",
+              "colorNumber": 7,
+              "url": "https://www2.hm.com/en_us/productpage.0967955124.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955129",
+              "colorNumber": 8,
+              "url": "https://www2.hm.com/en_us/productpage.0967955129.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955133",
+              "colorNumber": 9,
+              "url": "https://www2.hm.com/en_us/productpage.0967955133.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955135",
+              "colorNumber": 10,
+              "url": "https://www2.hm.com/en_us/productpage.0967955135.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955138",
+              "colorNumber": 11,
+              "url": "https://www2.hm.com/en_us/productpage.0967955138.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955139",
+              "colorNumber": 12,
+              "url": "https://www2.hm.com/en_us/productpage.0967955139.html",
+              "wasViewed": true,
+              "wasSelected": false,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            },
+            {
+              "variantId": "0967955145",
+              "colorNumber": 13,
+              "url": "https://www2.hm.com/en_us/productpage.0967955145.html",
+              "wasViewed": true,
+              "wasSelected": true,
+              "colorName": "Navy blue",
+              "designText": "Carmine LTD",
+              "fullDescription": "Navy blue/Carmine LTD"
+            }
+          ],
+          "layout": {
+            "arrangement": "horizontal_row"
+          },
+          "discoveryInfo": {
+            "totalOptionsFound": 13,
+            "discoveredAt": "2025-07-30T21:28:39.861Z"
+          }
+        },
+        "sizes": {
+          "type": "size",
+          "options": [
+            {
+              "size": "XS",
+              "timestamp": 1753897377439,
+              "wasTested": true,
+              "finalSelection": false,
+              "clickIndex": 41
+            },
+            {
+              "size": "S",
+              "timestamp": 1753897378454,
+              "wasTested": true,
+              "finalSelection": false,
+              "clickIndex": 43
+            },
+            {
+              "size": "M",
+              "timestamp": 1753897378960,
+              "wasTested": true,
+              "finalSelection": false,
+              "clickIndex": 45
+            },
+            {
+              "size": "L",
+              "timestamp": 1753897379401,
+              "wasTested": true,
+              "finalSelection": false,
+              "clickIndex": 47
+            },
+            {
+              "size": "XL",
+              "timestamp": 1753897379852,
+              "wasTested": true,
+              "finalSelection": false,
+              "clickIndex": 49
+            },
+            {
+              "size": "XXL",
+              "timestamp": 1753897380637,
+              "wasTested": true,
+              "finalSelection": true,
+              "clickIndex": 51
+            }
+          ],
+          "layout": {
+            "arrangement": "horizontal_row"
+          },
+          "discoveryInfo": {
+            "totalOptionsFound": 6,
+            "discoveredAt": "2025-07-30T21:28:39.861Z"
+          }
+        }
+      }
+    }
+  ],
+  "uiComponentData": [
+    {
+      "componentsExtracted": 21,
+      "interactionPatternsFound": 0,
+      "designConsistency": 0,
+      "accessibilityScore": 0,
+      "extractionValue": "high"
+    },
+    {
+      "componentsExtracted": 12,
+      "interactionPatternsFound": 0,
+      "designConsistency": 0,
+      "accessibilityScore": 0,
+      "extractionValue": "high"
+    },
+    {
+      "componentsExtracted": 29,
+      "interactionPatternsFound": 0,
+      "designConsistency": 0,
+      "accessibilityScore": 0,
+      "extractionValue": "high"
+    }
+  ],
+  "schemaIssues": [],
+  "recommendations": [
+    "Extend world model schema for UI component intelligence"
+  ]
+}

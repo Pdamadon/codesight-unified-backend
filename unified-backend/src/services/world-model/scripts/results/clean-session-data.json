@@ -1,0 +1,120 @@
+{
+  "sessionId": "session_1753894420339_mkfvw24za",
+  "domain": "www.gap.com",
+  "qualityScore": 89,
+  "sessionContext": {
+    "pageType": "category",
+    "userIntent": "browse",
+    "shoppingStage": "awareness",
+    "behaviorType": "brand_loyal"
+  },
+  "navigationEvents": [
+    {
+      "clickIndex": 2,
+      "clickText": "New",
+      "clickUrl": "https://www.gap.com/",
+      "resultUrl": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A",
+      "timestamp": 1753894425168,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "New",
+        "categoryPath": "women",
+        "url": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 3,
+      "clickText": "New",
+      "clickUrl": "https://www.gap.com/#",
+      "resultUrl": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A",
+      "timestamp": 1753894428595,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "New",
+        "categoryPath": "women",
+        "url": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 5,
+      "clickText": "Women",
+      "clickUrl": "https://www.gap.com/#",
+      "resultUrl": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A",
+      "timestamp": 1753894433413,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "Women",
+        "categoryPath": "women",
+        "url": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 8,
+      "clickText": "Men",
+      "clickUrl": "https://www.gap.com/browse/women?cid=5643&mlink=39813%2C30012485%2CMegnav_Women&nav=meganav%3AWomen%3A%3A",
+      "resultUrl": "https://www.gap.com/browse/men?cid=5063&mlink=39813%2C30012485%2CMegnav_Men&clink=30012485&nav=meganav%3AMen%3A%3A",
+      "timestamp": 1753894438180,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "Men",
+        "categoryPath": "men",
+        "url": "https://www.gap.com/browse/men?cid=5063&mlink=39813%2C30012485%2CMegnav_Men&clink=30012485&nav=meganav%3AMen%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 11,
+      "clickText": "Girls",
+      "clickUrl": "https://www.gap.com/browse/men?cid=5063&mlink=39813%2C30012485%2CMegnav_Men&clink=30012485&nav=meganav%3AMen%3A%3A",
+      "resultUrl": "https://www.gap.com/browse/girls?cid=1137865&mlink=39813%2C30012485%2CMegnav_Girls&clink=30012485&nav=meganav%3AGirls%3A%3A",
+      "timestamp": 1753894441986,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "Girls",
+        "categoryPath": "girls",
+        "url": "https://www.gap.com/browse/girls?cid=1137865&mlink=39813%2C30012485%2CMegnav_Girls&clink=30012485&nav=meganav%3AGirls%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 14,
+      "clickText": "Boys",
+      "clickUrl": "https://www.gap.com/browse/girls?cid=1137865&mlink=39813%2C30012485%2CMegnav_Girls&clink=30012485&nav=meganav%3AGirls%3A%3A",
+      "resultUrl": "https://www.gap.com/browse/boys?cid=1137867&mlink=39813%2C30012485%2CMegnav_Boys&clink=30012485&nav=meganav%3ABoys%3A%3A",
+      "timestamp": 1753894445395,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "Boys",
+        "categoryPath": "boys",
+        "url": "https://www.gap.com/browse/boys?cid=1137867&mlink=39813%2C30012485%2CMegnav_Boys&clink=30012485&nav=meganav%3ABoys%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 17,
+      "clickText": "Baby & Toddler",
+      "clickUrl": "https://www.gap.com/browse/boys?cid=1137867&mlink=39813%2C30012485%2CMegnav_Boys&clink=30012485&nav=meganav%3ABoys%3A%3A",
+      "resultUrl": "https://www.gap.com/browse/baby-and-toddler?cid=1137869&mlink=39813%2C30012485%2CMegnav_Baby&clink=30012485&nav=meganav%3ABaby+%26+Toddler%3A%3A",
+      "timestamp": 1753894448517,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "Baby & Toddler",
+        "categoryPath": "baby-and-toddler",
+        "url": "https://www.gap.com/browse/baby-and-toddler?cid=1137869&mlink=39813%2C30012485%2CMegnav_Baby&clink=30012485&nav=meganav%3ABaby+%26+Toddler%3A%3A"
+      }
+    },
+    {
+      "clickIndex": 88,
+      "clickText": "Sale",
+      "clickUrl": "https://www.gap.com/browse/women/maternity?cid=1127956&nav=meganav%3AWomen%3ACategories%3AMaternity#pageId=0&department=136",
+      "resultUrl": "https://www.gap.com/browse/women/sale?cid=65179&nav=meganav%3AWomen%3ACategories%3ASale#pageId=0&department=136",
+      "timestamp": 1753894553152,
+      "categoryType": "category",
+      "extractedData": {
+        "name": "Sale",
+        "categoryPath": "women",
+        "url": "https://www.gap.com/browse/women/sale?cid=65179&nav=meganav%3AWomen%3ACategories%3ASale#pageId=0&department=136"
+      }
+    }
+  ],
+  "productInteractions": [],
+  "totalInteractions": 90,
+  "processingTimestamp": "2025-07-30T17:39:29.749Z"
+}

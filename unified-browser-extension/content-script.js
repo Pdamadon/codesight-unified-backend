@@ -351,6 +351,9 @@
       
       console.log('Unified: Tracking stopped, captured', this.events.length, 'events');
       
+      // 🆕 Download collected interaction data
+      await this.downloadSessionData();
+      
       return sessionData;
     }
 
@@ -548,7 +551,7 @@
           parent: this.getParentElementInfo(element),
           ancestors: this.getAncestorChain(element),
           siblings: this.getSiblingElements(element),
-          nearestClickable: this.findNearbyClickableElements(element, 100)
+          nearestClickable: this.findNearbyElementsExpanded(element, 300)
         },
         overlays: this.detectActiveOverlays(),
         action: {
@@ -556,6 +559,9 @@
           selector: selectors.primary,
           timestamp: new Date(timestamp).toISOString()
         },
+
+        // 🆕 Phase 2: Comprehensive price and product data extraction
+        priceData: this.extractPriceData(element),
         
         // 6) Coordinates & modifiers
         coordinates: {
@@ -631,7 +637,78 @@
           hasOverlays: !!interactionData.overlays,
           hasAction: !!interactionData.action,
           overlayCount: interactionData.overlays?.length || 0
-        }
+        },
+        
+        // 🆕 Phase 1: Enhanced nearby elements with quality scoring
+        nearbyElements: {
+          totalCount: interactionData.contextData?.nearestClickable?.length || 0,
+          radius: '300px (expanded from 100px)',
+          qualityScores: interactionData.contextData?.nearestClickable?.slice(0, 3).map(el => ({
+            element: el.text?.substring(0, 30) + '...',
+            score: el.qualityScore?.score,
+            confidence: el.qualityScore?.confidence,
+            signals: el.qualityScore?.signals?.slice(0, 2)
+          })) || [],
+          categorization: {
+            priceElements: interactionData.contextData?.nearestClickable?.filter(el => el.elementCategory?.type === 'price').length || 0,
+            productElements: interactionData.contextData?.nearestClickable?.filter(el => el.elementCategory?.type === 'product').length || 0,
+            shoppingActions: interactionData.contextData?.nearestClickable?.filter(el => el.elementCategory?.type === 'shopping-action').length || 0,
+            interactiveElements: interactionData.contextData?.nearestClickable?.filter(el => el.elementCategory?.type === 'interactive').length || 0
+          }
+        },
+
+        // 🆕 Phase 2: Comprehensive price and product data
+        priceData: interactionData.priceData ? {
+          clickedElementPrices: {
+            count: interactionData.priceData.clickedElementPrices?.length || 0,
+            examples: interactionData.priceData.clickedElementPrices?.slice(0, 2).map(p => ({
+              raw: p.raw,
+              currency: p.currency,
+              amount: p.amount,
+              normalized: p.normalized
+            })) || []
+          },
+          nearbyPrices: {
+            count: interactionData.priceData.nearbyPrices?.length || 0,
+            avgConfidence: interactionData.priceData.nearbyPrices?.length > 0 
+              ? Math.round((interactionData.priceData.nearbyPrices.reduce((sum, p) => sum + p.confidence, 0) / interactionData.priceData.nearbyPrices.length) * 100) / 100
+              : 0,
+            topPrices: interactionData.priceData.nearbyPrices?.slice(0, 2).map(p => ({
+              price: p.price,
+              confidence: p.confidence,
+              distance: p.element?.distance
+            })) || []
+          },
+          productInfo: {
+            hasName: !!interactionData.priceData.productInfo?.name,
+            name: interactionData.priceData.productInfo?.name?.substring(0, 50) + (interactionData.priceData.productInfo?.name?.length > 50 ? '...' : ''),
+            hasBrand: !!interactionData.priceData.productInfo?.brand,
+            brand: interactionData.priceData.productInfo?.brand,
+            hasSKU: !!interactionData.priceData.productInfo?.sku,
+            hasCategory: !!interactionData.priceData.productInfo?.category,
+            category: interactionData.priceData.productInfo?.category
+          },
+          variants: {
+            hasSize: !!interactionData.priceData.variants?.size,
+            size: interactionData.priceData.variants?.size,
+            hasColor: !!interactionData.priceData.variants?.color,
+            color: interactionData.priceData.variants?.color,
+            hasStyle: !!interactionData.priceData.variants?.style,
+            optionsCount: interactionData.priceData.variants?.options?.length || 0
+          },
+          discounts: {
+            isOnSale: interactionData.priceData.discounts?.isOnSale || false,
+            hasOriginalPrice: !!interactionData.priceData.discounts?.originalPrice,
+            hasSalePrice: !!interactionData.priceData.discounts?.salePrice,
+            discountAmount: interactionData.priceData.discounts?.discount,
+            discountType: interactionData.priceData.discounts?.discountType
+          },
+          context: {
+            pageType: interactionData.priceData.context?.pageType,
+            isProductPage: interactionData.priceData.context?.isProductPage,
+            isCartPage: interactionData.priceData.context?.isCartPage
+          }
+        } : { error: 'No price data extracted' }
       });
 
       // Wait for screenshot and link to visual context
@@ -840,7 +917,17 @@
     }
 
     isDropdownTrigger(element) {
-      if (!element) return false;
+      // Check if element is a valid DOM element
+      if (!element || !element.nodeType || element.nodeType !== Node.ELEMENT_NODE) {
+        return false;
+      }
+      
+      // Ensure element has required DOM methods
+      if (typeof element.hasAttribute !== 'function' || 
+          typeof element.classList !== 'object' ||
+          typeof element.closest !== 'function') {
+        return false;
+      }
       
       // 1. Semantic indicators - ARIA and data attributes
       const hasDropdownAttributes = element.hasAttribute('aria-haspopup') ||
@@ -2185,6 +2272,9 @@
       // Send to background script for processing
       this.sendEventToBackground(eventData);
       
+      // 🆕 Collect interaction data for session download
+      this.collectInteractionForDownload(eventData);
+      
       // Save state
       this.saveState();
       
@@ -2215,6 +2305,142 @@
         this.events[index] = { ...this.events[index], ...eventData };
         this.saveState();
       }
+    }
+
+    // 🆕 Collect interaction data for session download
+    collectInteractionForDownload(eventData) {
+      if (!this.downloadData) {
+        this.downloadData = {
+          session: {
+            sessionId: this.sessionId,
+            startTime: this.startTime,
+            url: window.location.href,
+            userAgent: navigator.userAgent
+          },
+          interactions: [],
+          summary: {
+            totalInteractions: 0,
+            priceInteractions: 0,
+            productInteractions: 0,
+            totalPricesFound: 0
+          }
+        };
+      }
+
+      // Add interaction to download collection
+      this.downloadData.interactions.push({
+        timestamp: eventData.timestamp,
+        type: eventData.type,
+        element: {
+          tag: eventData.element?.tagName,
+          text: eventData.element?.text,
+          selector: eventData.selectors?.primary
+        },
+        priceData: eventData.priceData,
+        nearbyElements: eventData.contextData?.nearestClickable,
+        fullData: eventData // Include complete data for detailed analysis
+      });
+
+      // Update summary
+      this.downloadData.summary.totalInteractions++;
+      if (eventData.priceData) {
+        this.downloadData.summary.priceInteractions++;
+        this.downloadData.summary.totalPricesFound += 
+          (eventData.priceData.clickedElementPrices?.length || 0) + 
+          (eventData.priceData.nearbyPrices?.length || 0);
+      }
+      if (eventData.priceData?.productInfo?.name) {
+        this.downloadData.summary.productInteractions++;
+      }
+    }
+
+    // 🆕 Download all session data when tracking stops
+    async downloadSessionData() {
+      try {
+        if (!this.downloadData || this.downloadData.interactions.length === 0) {
+          console.log('📥 No interaction data to download');
+          return;
+        }
+
+        // Finalize session data
+        this.downloadData.session.endTime = Date.now();
+        this.downloadData.session.duration = this.downloadData.session.endTime - this.downloadData.session.startTime;
+        this.downloadData.session.finalUrl = window.location.href;
+
+        // Create comprehensive download package
+        const downloadPackage = {
+          metadata: {
+            extensionVersion: '2.0.0',
+            downloadTime: new Date().toISOString(),
+            phaseEnhancements: ['Phase 1: Expanded nearby elements', 'Phase 2: Price data extraction']
+          },
+          ...this.downloadData,
+          analytics: this.generateSessionAnalytics()
+        };
+
+        // Create and download the file
+        const blob = new Blob([JSON.stringify(downloadPackage, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `codesight-session-${this.sessionId}-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        console.log('📥 DOWNLOADED SESSION DATA:', {
+          filename: a.download,
+          totalInteractions: this.downloadData.summary.totalInteractions,
+          priceInteractions: this.downloadData.summary.priceInteractions,
+          productInteractions: this.downloadData.summary.productInteractions,
+          totalPricesFound: this.downloadData.summary.totalPricesFound,
+          fileSize: `${Math.round(blob.size / 1024)}KB`
+        });
+
+        // Clear download data
+        this.downloadData = null;
+
+      } catch (error) {
+        console.error('Failed to download session data:', error);
+      }
+    }
+
+    // Generate analytics summary for the session
+    generateSessionAnalytics() {
+      if (!this.downloadData) return {};
+
+      const interactions = this.downloadData.interactions;
+      
+      return {
+        clicksWithPrices: interactions.filter(i => i.type === 'CLICK' && i.priceData?.clickedElementPrices?.length > 0).length,
+        averageNearbyElements: Math.round(
+          interactions.reduce((sum, i) => sum + (i.nearbyElements?.length || 0), 0) / interactions.length
+        ),
+        productPagesVisited: new Set(
+          interactions
+            .filter(i => i.priceData?.context?.pageType === 'product')
+            .map(i => i.priceData?.productInfo?.name)
+            .filter(Boolean)
+        ).size,
+        currenciesFound: new Set(
+          interactions
+            .flatMap(i => i.priceData?.clickedElementPrices || [])
+            .map(p => p.currency)
+            .filter(Boolean)
+        ),
+        topElements: interactions
+          .filter(i => i.nearbyElements?.length > 0)
+          .map(i => i.nearbyElements.filter(el => el.qualityScore?.score > 70))
+          .flat()
+          .slice(0, 5)
+          .map(el => ({
+            text: el.text?.substring(0, 30),
+            score: el.qualityScore?.score,
+            category: el.elementCategory?.type
+          }))
+      };
     }
 
     async sendEventToBackground(eventData) {
@@ -3619,7 +3845,7 @@
       return siblings;
     }
     
-    findNearbyClickableElements(targetElement, radius = 100) {
+    findNearbyClickableElements(targetElement, radius = 300) {
       const nearby = [];
       const targetRect = targetElement.getBoundingClientRect();
       const targetCenter = {
@@ -3657,6 +3883,842 @@
       });
       
       return nearby.sort((a, b) => a.distance - b.distance).slice(0, 5);
+    }
+
+    // 🆕 PHASE 1: Expanded nearby elements collection (per Extension Expansion Plan)
+    // Collects ALL nearby elements (not just clickable) including price/product information
+    findNearbyElementsExpanded(targetElement, radius = 300) {
+      const nearby = [];
+      const targetRect = targetElement.getBoundingClientRect();
+      const targetCenter = {
+        x: targetRect.left + targetRect.width / 2,
+        y: targetRect.top + targetRect.height / 2
+      };
+
+      // Comprehensive selectors for ALL relevant elements (not just clickable)
+      const comprehensiveSelectors = [
+        // Interactive elements
+        'a', 'button', 'input', 'select', 'textarea', '[role="button"]', '[onclick]', '[tabindex]',
+        // Price and product elements
+        '[class*="price"]', '[data-price]', '[class*="cost"]', '[class*="money"]',
+        '[class*="product"]', '[data-product]', '[class*="item"]',
+        // Shopping specific
+        '[class*="cart"]', '[data-cart]', '[class*="add-to"]', '[class*="buy"]',
+        '[class*="variant"]', '[class*="size"]', '[class*="color"]', '[class*="option"]',
+        // Content elements with potential value
+        'span', 'div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        // Images and media
+        'img', 'picture', 'video'
+      ].join(', ');
+
+      const candidates = document.querySelectorAll(comprehensiveSelectors);
+      
+      candidates.forEach(element => {
+        if (element === targetElement) return;
+        
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        
+        const center = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+        
+        const distance = Math.sqrt(
+          Math.pow(center.x - targetCenter.x, 2) + 
+          Math.pow(center.y - targetCenter.y, 2)
+        );
+        
+        if (distance <= radius) {
+          const elementText = this.getElementText(element);
+          
+          // 🎯 Multi-layered detection with confidence scoring
+          const elementCategory = this.categorizeElement(element);
+          const priceAnalysis = this.containsPricePattern(elementText, element);
+          const productAnalysis = this.containsProductPattern(elementText, element);
+          
+          const elementData = {
+            tag: element.tagName.toLowerCase(),
+            text: elementText.substring(0, 100), // Increased from 50 to capture more context
+            css_selector: this.generateCSSSelector(element),
+            distance: Math.round(distance),
+            direction: this.getRelativeDirection(targetCenter, center),
+            isVisible: this.isElementVisible(element),
+            isInteractive: this.isInteractiveElement(element),
+            
+            // 🆕 Enhanced multi-signal categorization per Extension Expansion Plan
+            elementType: elementCategory.type,
+            elementConfidence: elementCategory.confidence,
+            elementSignals: elementCategory.signals,
+            
+            // 🆕 Rich price analysis
+            hasPrice: priceAnalysis.hasPrice,
+            priceConfidence: priceAnalysis.confidence,
+            priceSignals: priceAnalysis.signals,
+            priceInfo: priceAnalysis.extractedPrices,
+            
+            // 🆕 Rich product analysis
+            hasProduct: productAnalysis.hasProduct,
+            productConfidence: productAnalysis.confidence,
+            productSignals: productAnalysis.signals,
+            productInfo: productAnalysis.extractedProduct,
+            
+            // Enhanced attributes and context
+            attributes: this.getRelevantAttributes(element),
+            boundingBox: {
+              x: Math.round(rect.left),
+              y: Math.round(rect.top),
+              width: Math.round(rect.width),
+              height: Math.round(rect.height)
+            },
+            
+            // 🆕 Overall quality score for backend filtering
+            qualityScore: this.calculateElementQuality(elementCategory, priceAnalysis, productAnalysis, elementText)
+          };
+
+          nearby.push(elementData);
+        }
+      });
+      
+      // Sort by distance and return closest 25 (expanded from 10 per plan)
+      return nearby.sort((a, b) => a.distance - b.distance).slice(0, 25);
+    }
+
+    // 🎯 Multi-signal element categorization with confidence scoring
+    categorizeElement(element) {
+      const tag = element.tagName.toLowerCase();
+      const classes = element.className || '';
+      const text = (element.textContent || '').trim();
+      const attributes = this.getElementAttributes(element);
+      
+      // Layer 1: Explicit high-confidence indicators
+      const explicitCategory = this.getExplicitCategory(element, classes, attributes);
+      if (explicitCategory.confidence > 0.8) {
+        return explicitCategory;
+      }
+      
+      // Layer 2: Contextual pattern analysis
+      const contextualCategory = this.getContextualCategory(element, text, classes);
+      if (contextualCategory.confidence > 0.6) {
+        return contextualCategory;
+      }
+      
+      // Layer 3: Heuristic detection
+      const heuristicCategory = this.getHeuristicCategory(element, tag, text);
+      if (heuristicCategory.confidence > 0.4) {
+        return heuristicCategory;
+      }
+      
+      // Layer 4: Fallback categorization
+      return this.getFallbackCategory(element, tag);
+    }
+
+    // Layer 1: High-confidence explicit indicators
+    getExplicitCategory(element, classes, attributes) {
+      let signals = [];
+      let confidence = 0;
+      
+      // Data attributes (highest confidence)
+      if (attributes['data-price'] || attributes['data-cost']) {
+        return { type: 'price', confidence: 0.95, signals: ['data-price-attribute'] };
+      }
+      if (attributes['data-product'] || attributes['data-sku']) {
+        return { type: 'product', confidence: 0.95, signals: ['data-product-attribute'] };
+      }
+      if (attributes['data-cart'] || attributes['data-add-to-cart']) {
+        return { type: 'shopping-action', confidence: 0.95, signals: ['data-cart-attribute'] };
+      }
+      
+      // Class-based indicators (high confidence)
+      const priceClasses = ['price', 'cost', 'money', 'amount', 'total', 'subtotal'];
+      const productClasses = ['product', 'item', 'listing', 'card'];
+      const cartClasses = ['cart', 'add-to-cart', 'buy-now', 'purchase'];
+      
+      const matchedPriceClasses = priceClasses.filter(cls => classes.toLowerCase().includes(cls));
+      if (matchedPriceClasses.length > 0) {
+        confidence = 0.85;
+        signals = [`price-class-${matchedPriceClasses.join('-')}`];
+        return { type: 'price', confidence, signals };
+      }
+      
+      const matchedProductClasses = productClasses.filter(cls => classes.toLowerCase().includes(cls));
+      if (matchedProductClasses.length > 0) {
+        confidence = 0.85;
+        signals = [`product-class-${matchedProductClasses.join('-')}`];
+        return { type: 'product', confidence, signals };
+      }
+      
+      const matchedCartClasses = cartClasses.filter(cls => classes.toLowerCase().includes(cls));
+      if (matchedCartClasses.length > 0) {
+        confidence = 0.85;
+        signals = [`cart-class-${matchedCartClasses.join('-')}`];
+        return { type: 'shopping-action', confidence, signals };
+      }
+      
+      return { type: null, confidence: 0, signals: [] };
+    }
+
+    // Layer 2: Contextual pattern analysis
+    getContextualCategory(element, text, classes) {
+      let signals = [];
+      let confidence = 0;
+      
+      // Context from parent/ancestor elements
+      const priceContainer = element.closest('[class*="price"], [class*="cost"], [data-price]');
+      const productContainer = element.closest('[class*="product"], [class*="item"], [data-product]');
+      const cartContainer = element.closest('[class*="cart"], [class*="checkout"], [data-cart]');
+      
+      if (priceContainer && this.containsCurrencyOrNumbers(text)) {
+        confidence = 0.75;
+        signals.push('price-container-context');
+        return { type: 'price', confidence, signals };
+      }
+      
+      if (productContainer && text.length > 5 && text.length < 200) {
+        confidence = 0.65;
+        signals.push('product-container-context');
+        return { type: 'product', confidence, signals };
+      }
+      
+      if (cartContainer && /\b(add|buy|purchase|cart)\b/i.test(text)) {
+        confidence = 0.7;
+        signals.push('cart-container-context');
+        return { type: 'shopping-action', confidence, signals };
+      }
+      
+      // Sibling element context
+      const siblings = Array.from(element.parentElement?.children || []);
+      const hasPriceSiblings = siblings.some(sib => this.containsCurrencyOrNumbers(sib.textContent || ''));
+      const hasProductSiblings = siblings.some(sib => sib.querySelector('img') || /\b(size|color|variant)\b/i.test(sib.textContent || ''));
+      
+      if (hasPriceSiblings && this.containsCurrencyOrNumbers(text)) {
+        confidence = 0.6;
+        signals.push('price-sibling-context');
+        return { type: 'price', confidence, signals };
+      }
+      
+      if (hasProductSiblings && text.length > 10) {
+        confidence = 0.55;
+        signals.push('product-sibling-context');
+        return { type: 'product', confidence, signals };
+      }
+      
+      return { type: null, confidence: 0, signals: [] };
+    }
+
+    // Layer 3: Heuristic detection
+    getHeuristicCategory(element, tag, text) {
+      let signals = [];
+      let confidence = 0;
+      
+      // Text-based heuristics
+      if (this.containsCurrencyOrNumbers(text)) {
+        confidence = 0.5;
+        signals.push('currency-text-pattern');
+        return { type: 'price', confidence, signals };
+      }
+      
+      // Product name heuristics (flexible patterns)
+      if (this.looksLikeProductName(text)) {
+        confidence = 0.45;
+        signals.push('product-name-pattern');
+        return { type: 'product', confidence, signals };
+      }
+      
+      // Shopping action heuristics
+      if (/\b(add to cart|buy now|purchase|checkout|add to bag)\b/i.test(text)) {
+        confidence = 0.6;
+        signals.push('shopping-action-text');
+        return { type: 'shopping-action', confidence, signals };
+      }
+      
+      // Variant/option heuristics
+      if (/\b(size|color|variant|option|select|choose)\b/i.test(text) && text.length < 50) {
+        confidence = 0.5;
+        signals.push('variant-text-pattern');
+        return { type: 'product-variant', confidence, signals };
+      }
+      
+      return { type: null, confidence: 0, signals: [] };
+    }
+
+    // Layer 4: Fallback categorization
+    getFallbackCategory(element, tag) {
+      // Interactive elements
+      if (['button', 'a', 'input'].includes(tag) || element.onclick || element.tabIndex >= 0) {
+        return { type: 'interactive', confidence: 0.9, signals: ['tag-based'] };
+      }
+      
+      // Content elements
+      if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
+        return { type: 'heading', confidence: 0.9, signals: ['tag-based'] };
+      }
+      
+      if (['img', 'picture', 'video'].includes(tag)) {
+        return { type: 'media', confidence: 0.9, signals: ['tag-based'] };
+      }
+      
+      return { type: 'content', confidence: 0.3, signals: ['fallback'] };
+    }
+
+    // 🎯 Multi-signal price detection with confidence scoring
+    containsPricePattern(text, element) {
+      if (!text) return { hasPrice: false, confidence: 0, signals: [] };
+      
+      let confidence = 0;
+      let signals = [];
+      
+      // Signal 1: Currency symbols (broad international support)
+      const currencyPattern = /[\$€£¥₹₽¢₩₪₴₨₡₦₵₸KčDkr₨]/;
+      if (currencyPattern.test(text)) {
+        confidence += 0.4;
+        signals.push('currency-symbol');
+      }
+      
+      // Signal 2: Price format patterns (flexible)
+      const priceFormats = [
+        /\d+[,.]\d{2}(?!\d)/,  // XX.XX or XX,XX (not followed by more digits)
+        /\d{1,3}[,\s]\d{3}[,.]\d{2}/,  // 1,234.56 or 1 234,56
+        /\d+[,.]\d{1}(?!\d)/,   // XX.X (sometimes used)
+        /\d+(?:\s*[kmb])?(?=\s*[\$€£¥₹₽])/i  // 5k, 2.5m followed by currency
+      ];
+      
+      if (priceFormats.some(pattern => pattern.test(text))) {
+        confidence += 0.3;
+        signals.push('price-format');
+      }
+      
+      // Signal 3: Context clues from element or ancestors
+      if (element && element.closest('[class*="price"], [class*="cost"], [data-price]')) {
+        confidence += 0.2;
+        signals.push('price-context');
+      }
+      
+      // Signal 4: Monetary formatting indicators
+      if (element && this.hasMonetaryFormatting(element)) {
+        confidence += 0.1;
+        signals.push('monetary-formatting');
+      }
+      
+      // Signal 5: Text patterns that suggest pricing
+      const priceIndicators = /\b(price|cost|total|subtotal|tax|shipping|discount|sale|was|now|save)\b/i;
+      if (priceIndicators.test(text)) {
+        confidence += 0.1;
+        signals.push('price-indicators');
+      }
+      
+      return {
+        hasPrice: confidence > 0.5,
+        confidence: Math.min(confidence, 1.0),
+        signals,
+        extractedPrices: confidence > 0.5 ? this.extractPriceFromText(text) : null
+      };
+    }
+
+    // 🎯 Multi-signal product detection with confidence scoring  
+    containsProductPattern(text, element) {
+      if (!text) return { hasProduct: false, confidence: 0, signals: [] };
+      
+      let confidence = 0;
+      let signals = [];
+      
+      // Signal 1: In product-like container
+      if (element && element.closest('[class*="product"], [class*="item"], [data-product], [class*="card"]')) {
+        confidence += 0.3;
+        signals.push('product-container');
+      }
+      
+      // Signal 2: Has product-like attributes or child elements
+      if (element && (element.querySelector('img') || element.hasAttribute('data-sku') || element.hasAttribute('data-product-id'))) {
+        confidence += 0.2;
+        signals.push('product-attributes');
+      }
+      
+      // Signal 3: Text patterns suggesting product descriptors (broader than hard-coded lists)
+      const productDescriptors = /\b\w+\s*(?:size|color|variant|model|brand|style|type|material|fabric|finish)\b/i;
+      if (productDescriptors.test(text)) {
+        confidence += 0.2;
+        signals.push('product-descriptors');
+      }
+      
+      // Signal 4: Length and structure suggests product name (not too short, not too long)
+      if (text.length >= 8 && text.length <= 150 && !/\b(click|buy|add|cart|login|signup|menu|search)\b/i.test(text)) {
+        confidence += 0.1;
+        signals.push('product-text-length');
+      }
+      
+      // Signal 5: Contains alphanumeric patterns that look like model numbers/SKUs
+      if (/\b[A-Z0-9]{3,}-?[A-Z0-9]{2,}\b/.test(text)) {
+        confidence += 0.15;
+        signals.push('model-number-pattern');
+      }
+      
+      // Signal 6: Sibling elements suggest product context
+      if (element && this.hasProductSiblings(element)) {
+        confidence += 0.1;
+        signals.push('product-siblings');
+      }
+      
+      return {
+        hasProduct: confidence > 0.4,
+        confidence: Math.min(confidence, 1.0),
+        signals,
+        extractedProduct: confidence > 0.4 ? this.extractProductFromText(text) : null
+      };
+    }
+
+    // Helper: Check if element has monetary-style formatting
+    hasMonetaryFormatting(element) {
+      try {
+        const style = window.getComputedStyle(element);
+        // Common price styling patterns
+        return (
+          style.fontWeight === 'bold' ||
+          style.fontSize.includes('larger') ||
+          style.textAlign === 'right' ||
+          style.color === 'red' ||
+          style.color.includes('rgb(255') // Red-ish colors often used for prices
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    // Helper: Check for product-related sibling elements
+    hasProductSiblings(element) {
+      try {
+        const siblings = Array.from(element.parentElement?.children || []);
+        return siblings.some(sib => 
+          sib.querySelector('img') || 
+          /\b(size|color|variant|price|buy|add to cart)\b/i.test(sib.textContent || '') ||
+          sib.className.toLowerCase().includes('price') ||
+          sib.className.toLowerCase().includes('product')
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    // Helper: Flexible currency and number detection
+    containsCurrencyOrNumbers(text) {
+      if (!text) return false;
+      const currencyOrNumber = /[\$€£¥₹₽¢₩₪₴₨₡₦₵₸]|\d+[,.]\d+|\b\d{2,}\b/;
+      return currencyOrNumber.test(text);
+    }
+
+    // Helper: Heuristic to identify product names
+    looksLikeProductName(text) {
+      if (!text || text.length < 5 || text.length > 200) return false;
+      
+      // Exclude common UI text
+      const uiPatterns = /\b(click|select|choose|buy|add|cart|menu|login|signup|search|filter|sort|view|more|less|show|hide)\b/i;
+      if (uiPatterns.test(text)) return false;
+      
+      // Look for product-like patterns
+      const productPatterns = [
+        /\b\w+\s+(for|with|in|by)\s+\w+/i,  // "Shirt for Men", "Phone with Case"
+        /\b\w+\s*[-–]\s*\w+/,               // "Nike - Air Max"
+        /\b[A-Z][a-z]+\s+[A-Z][a-z]+/,      // "Brand Name" pattern
+        /\d+[a-z]*\s*(inch|gb|ml|oz|cm|mm)/i // Size/capacity indicators
+      ];
+      
+      return productPatterns.some(pattern => pattern.test(text));
+    }
+
+    // Helper method to extract price information from text
+    extractPriceFromText(text) {
+      const pricePattern = /([\$€£¥₹₽])\s*(\d+([,.]\d{2})?)|(\d+([,.]\d{2})?\s*([\$€£¥₹₽]))/g;
+      const matches = text.match(pricePattern);
+      return matches ? matches.map(match => match.trim()) : [];
+    }
+
+    // Helper method to extract product information from text
+    extractProductFromText(text) {
+      const words = text.split(/\s+/).filter(word => word.length > 2);
+      return {
+        fullText: text.substring(0, 200),
+        keywords: words.slice(0, 10)
+      };
+    }
+
+    // Helper method to get relevant attributes for context
+    getRelevantAttributes(element) {
+      const relevantAttrs = {};
+      const attrs = ['class', 'id', 'data-product', 'data-price', 'data-sku', 'data-variant', 'aria-label', 'title', 'alt'];
+      
+      attrs.forEach(attr => {
+        const value = element.getAttribute(attr);
+        if (value) {
+          relevantAttrs[attr] = value;
+        }
+      });
+      
+      return relevantAttrs;
+    }
+
+    // 🆕 Calculate overall element quality score for backend filtering
+    calculateElementQuality(elementCategory, priceAnalysis, productAnalysis, elementText) {
+      let qualityScore = 0;
+      let confidence = 0;
+      let signals = [];
+
+      // Base score from element categorization
+      if (elementCategory.confidence > 0) {
+        qualityScore += elementCategory.confidence * 40; // Up to 40 points
+        confidence = Math.max(confidence, elementCategory.confidence);
+        signals = signals.concat(elementCategory.signals);
+      }
+
+      // Price analysis contribution
+      if (priceAnalysis.confidence > 0) {
+        qualityScore += priceAnalysis.confidence * 30; // Up to 30 points
+        confidence = Math.max(confidence, priceAnalysis.confidence);
+        signals = signals.concat(priceAnalysis.signals);
+      }
+
+      // Product analysis contribution  
+      if (productAnalysis.confidence > 0) {
+        qualityScore += productAnalysis.confidence * 20; // Up to 20 points
+        confidence = Math.max(confidence, productAnalysis.confidence);
+        signals = signals.concat(productAnalysis.signals);
+      }
+
+      // Text quality bonus (up to 10 points)
+      const textLength = elementText.length;
+      if (textLength > 5 && textLength < 200) {
+        qualityScore += 5;
+        signals.push('appropriate-text-length');
+      }
+      if (textLength > 20 && textLength < 100) {
+        qualityScore += 5; // Sweet spot for descriptive text
+        signals.push('optimal-text-length');
+      }
+
+      // Remove duplicate signals
+      signals = [...new Set(signals)];
+
+      return {
+        score: Math.min(100, Math.round(qualityScore)), // Cap at 100
+        confidence: Math.round(confidence * 100) / 100, // Round to 2 decimals
+        signals: signals,
+        breakdown: {
+          elementCategory: elementCategory.confidence * 40,
+          priceAnalysis: priceAnalysis.confidence * 30,
+          productAnalysis: productAnalysis.confidence * 20,
+          textQuality: qualityScore - (elementCategory.confidence * 40) - (priceAnalysis.confidence * 30) - (productAnalysis.confidence * 20)
+        }
+      };
+    }
+
+    // 🆕 Phase 2: Extract comprehensive price data from clicked elements
+    extractPriceData(clickedElement) {
+      const priceData = {
+        clickedElementPrices: [],
+        nearbyPrices: [],
+        productInfo: {},
+        variants: {},
+        discounts: {},
+        context: {}
+      };
+
+      // Extract prices from the clicked element itself
+      priceData.clickedElementPrices = this.findPricesInElement(clickedElement);
+
+      // Extract prices from nearby elements (within 200px radius)
+      const nearbyElements = this.findNearbyElementsExpanded(clickedElement, 200);
+      nearbyElements.forEach(elementData => {
+        if (elementData.priceAnalysis && elementData.priceAnalysis.confidence > 0.3) {
+          priceData.nearbyPrices.push({
+            price: elementData.priceAnalysis.extractedPrice,
+            confidence: elementData.priceAnalysis.confidence,
+            signals: elementData.priceAnalysis.signals,
+            element: {
+              text: elementData.text,
+              selector: elementData.selector,
+              distance: elementData.distance
+            }
+          });
+        }
+      });
+
+      // Extract product information
+      priceData.productInfo = this.extractProductInfo(clickedElement);
+
+      // Extract variant information (size, color, etc.)
+      priceData.variants = this.extractVariantInfo(clickedElement);
+
+      // Detect discount/sale information
+      priceData.discounts = this.extractDiscountInfo(clickedElement);
+
+      // Add contextual information
+      priceData.context = {
+        pageType: this.detectPageType(),
+        isProductPage: this.isProductPage(),
+        isCartPage: this.isCartPage(),
+        timestamp: Date.now()
+      };
+
+      return priceData;
+    }
+
+    // Helper: Find all prices within an element
+    findPricesInElement(element) {
+      const prices = [];
+      const text = this.getElementText(element);
+      
+      // Enhanced price patterns supporting multiple currencies and formats
+      const pricePatterns = [
+        // Standard formats: $12.99, €15,50, £20.00
+        /([\$€£¥₹₽¢])\s*(\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?)/g,
+        // Reverse formats: 12.99$, 15,50€, 20.00£
+        /(\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?)\s*([\$€£¥₹₽¢])/g,
+        // USD/EUR format: 12.99 USD, 15,50 EUR
+        /(\d{1,3}(?:[,.]\d{3})*(?:[,.]\d{2})?)\s+(USD|EUR|GBP|JPY|CAD|AUD)/gi,
+        // Decimal only in price context: 12.99 (when near price-related terms)
+        /(\d{1,3}(?:[,.]\d{3})*[,.]\d{2})/g
+      ];
+
+      pricePatterns.forEach(pattern => {
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+          const fullMatch = match[0];
+          const currency = match[1] || match[2] || match[3] || 'USD';
+          const amount = match[2] || match[1] || match[1];
+          
+          prices.push({
+            raw: fullMatch,
+            currency: currency,
+            amount: amount,
+            normalized: this.normalizePrice(fullMatch),
+            context: this.getPriceContext(element, fullMatch)
+          });
+        }
+      });
+
+      return prices;
+    }
+
+    // Helper: Extract product information from clicked element
+    extractProductInfo(element) {
+      const productInfo = {
+        name: null,
+        brand: null,
+        sku: null,
+        category: null,
+        description: null
+      };
+
+      // Look for product name in various places
+      productInfo.name = this.findProductName(element);
+      productInfo.brand = this.findBrandInfo(element);
+      productInfo.sku = this.findSKU(element);
+      productInfo.category = this.findCategory(element);
+      productInfo.description = this.findDescription(element);
+
+      return productInfo;
+    }
+
+    // Helper: Extract variant information (size, color, style)
+    extractVariantInfo(element) {
+      const variants = {
+        size: null,
+        color: null,
+        style: null,
+        options: []
+      };
+
+      // Look for size information
+      variants.size = this.findVariantInfo(element, ['size', 'sz']);
+      variants.color = this.findVariantInfo(element, ['color', 'colour', 'clr']);
+      variants.style = this.findVariantInfo(element, ['style', 'variant', 'type']);
+
+      // Find all variant options in nearby selectors
+      const variantSelectors = element.closest('form, .product, .item')?.querySelectorAll('select, [class*="size"], [class*="color"], [class*="variant"]');
+      if (variantSelectors) {
+        variantSelectors.forEach(selector => {
+          const option = this.extractSelectorOption(selector);
+          if (option) {
+            variants.options.push(option);
+          }
+        });
+      }
+
+      return variants;
+    }
+
+    // Helper: Extract discount/sale information
+    extractDiscountInfo(element) {
+      const discounts = {
+        isOnSale: false,
+        originalPrice: null,
+        salePrice: null,
+        discount: null,
+        discountType: null
+      };
+
+      const text = this.getElementText(element);
+      const container = element.closest('.price, .product, .item') || element;
+
+      // Look for sale indicators
+      const salePatterns = /\b(sale|discount|off|save|was|orig\.?|regular|msrp)\b/i;
+      discounts.isOnSale = salePatterns.test(text);
+
+      if (discounts.isOnSale) {
+        // Try to find original and sale prices
+        const priceElements = container.querySelectorAll('[class*="price"], [data-price]');
+        const prices = Array.from(priceElements).map(el => this.findPricesInElement(el)).flat();
+        
+        if (prices.length >= 2) {
+          // Assume highest price is original, lowest is sale
+          prices.sort((a, b) => parseFloat(b.normalized) - parseFloat(a.normalized));
+          discounts.originalPrice = prices[0];
+          discounts.salePrice = prices[prices.length - 1];
+          
+          const originalAmount = parseFloat(discounts.originalPrice.normalized);
+          const saleAmount = parseFloat(discounts.salePrice.normalized);
+          discounts.discount = originalAmount - saleAmount;
+          discounts.discountType = discounts.discount > 0 ? 'amount' : 'percentage';
+        }
+      }
+
+      return discounts;
+    }
+
+    // Helper: Normalize price for comparison
+    normalizePrice(priceString) {
+      return priceString.replace(/[^\d.,]/g, '').replace(',', '.');
+    }
+
+    // Helper: Get price context (crossed out, bold, etc.)
+    getPriceContext(element, priceText) {
+      const computedStyle = window.getComputedStyle(element);
+      return {
+        isStrikethrough: computedStyle.textDecoration.includes('line-through'),
+        isBold: computedStyle.fontWeight === 'bold' || parseInt(computedStyle.fontWeight) >= 700,
+        color: computedStyle.color,
+        fontSize: computedStyle.fontSize
+      };
+    }
+
+    // Helper methods for product information extraction
+    findProductName(element) {
+      // Look in order of preference: data attributes, headings, alt text, aria-label, text content
+      const productName = element.getAttribute('data-product-name') ||
+                         element.getAttribute('data-title') ||
+                         element.closest('[data-product-name]')?.getAttribute('data-product-name') ||
+                         element.querySelector('h1, h2, h3, .title, .name')?.textContent?.trim() ||
+                         element.querySelector('img')?.alt ||
+                         element.getAttribute('aria-label');
+      
+      return productName && productName.length > 5 ? productName.substring(0, 200) : null;
+    }
+
+    findBrandInfo(element) {
+      const brand = element.getAttribute('data-brand') ||
+                   element.closest('[data-brand]')?.getAttribute('data-brand') ||
+                   element.querySelector('.brand, [class*="brand"]')?.textContent?.trim();
+      
+      return brand && brand.length > 1 ? brand.substring(0, 50) : null;
+    }
+
+    findSKU(element) {
+      const sku = element.getAttribute('data-sku') ||
+                 element.getAttribute('data-product-id') ||
+                 element.closest('[data-sku], [data-product-id]')?.getAttribute('data-sku') ||
+                 element.closest('[data-sku], [data-product-id]')?.getAttribute('data-product-id');
+      
+      return sku || null;
+    }
+
+    findCategory(element) {
+      const category = element.getAttribute('data-category') ||
+                      element.closest('[data-category]')?.getAttribute('data-category') ||
+                      element.querySelector('.category, [class*="category"]')?.textContent?.trim();
+      
+      return category && category.length > 2 ? category.substring(0, 100) : null;
+    }
+
+    findDescription(element) {
+      const description = element.getAttribute('data-description') ||
+                         element.querySelector('.description, [class*="description"], .details')?.textContent?.trim();
+      
+      return description && description.length > 10 ? description.substring(0, 500) : null;
+    }
+
+    findVariantInfo(element, keywords) {
+      for (const keyword of keywords) {
+        // Check data attributes first
+        const dataAttr = element.getAttribute(`data-${keyword}`) ||
+                        element.closest(`[data-${keyword}]`)?.getAttribute(`data-${keyword}`);
+        if (dataAttr) return dataAttr;
+
+        // Check selected options in nearby selectors
+        const selector = element.querySelector(`select[class*="${keyword}"], [class*="${keyword}"] select`) ||
+                        element.closest('form, .product')?.querySelector(`select[class*="${keyword}"], [class*="${keyword}"] select`);
+        if (selector?.selectedOptions?.length > 0) {
+          return selector.selectedOptions[0].textContent.trim();
+        }
+
+        // Check class-based elements with keyword
+        const keywordElement = element.querySelector(`[class*="${keyword}"]`) ||
+                              element.closest(`.product, .item`)?.querySelector(`[class*="${keyword}"]`);
+        if (keywordElement) {
+          const text = keywordElement.textContent?.trim();
+          if (text && text.length < 50) return text;
+        }
+      }
+      return null;
+    }
+
+    extractSelectorOption(selector) {
+      if (selector.tagName.toLowerCase() === 'select' && selector.selectedOptions?.length > 0) {
+        return {
+          type: this.getSelecterType(selector),
+          value: selector.selectedOptions[0].value,
+          text: selector.selectedOptions[0].textContent.trim(),
+          allOptions: Array.from(selector.options).map(opt => ({
+            value: opt.value,
+            text: opt.textContent.trim(),
+            selected: opt.selected
+          }))
+        };
+      }
+      return null;
+    }
+
+    getSelecterType(selector) {
+      const className = selector.className.toLowerCase();
+      if (className.includes('size')) return 'size';
+      if (className.includes('color') || className.includes('colour')) return 'color';
+      if (className.includes('variant') || className.includes('style')) return 'variant';
+      return 'option';
+    }
+
+    detectPageType() {
+      const url = window.location.href.toLowerCase();
+      const bodyClasses = document.body.className.toLowerCase();
+      
+      if (url.includes('/product/') || url.includes('/item/') || bodyClasses.includes('product')) {
+        return 'product';
+      }
+      if (url.includes('/cart') || url.includes('/bag') || bodyClasses.includes('cart')) {
+        return 'cart';
+      }
+      if (url.includes('/checkout') || bodyClasses.includes('checkout')) {
+        return 'checkout';
+      }
+      if (url.includes('/category/') || url.includes('/shop/') || bodyClasses.includes('category')) {
+        return 'category';
+      }
+      return 'other';
+    }
+
+    isProductPage() {
+      return this.detectPageType() === 'product';
+    }
+
+    isCartPage() {
+      return this.detectPageType() === 'cart';
     }
     
     detectActiveOverlays() {
